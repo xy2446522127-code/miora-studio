@@ -5,7 +5,7 @@
     const SCALE_OPTIONS = ['auto', '60', '65', '70', '75', '80', '85', '90', '95', '100', '115', '125', '140'];
 
     function currentTheme(){
-        return localStorage.getItem(KEY) || localStorage.getItem(LEGACY_KEY) || 'light';
+        return localStorage.getItem(KEY) || localStorage.getItem(LEGACY_KEY) || 'dark';
     }
 
     function applyTheme(theme){
@@ -13,9 +13,13 @@
         const dark = next === 'dark';
         document.documentElement.classList.toggle('studio-theme-dark', dark);
         document.documentElement.classList.toggle('theme-dark', dark);
+        document.documentElement.classList.toggle('studio-theme-light', !dark);
+        document.documentElement.classList.toggle('theme-light', !dark);
         if(document.body){
             document.body.classList.toggle('studio-theme-dark', dark);
             document.body.classList.toggle('theme-dark', dark);
+            document.body.classList.toggle('studio-theme-light', !dark);
+            document.body.classList.toggle('theme-light', !dark);
         }
         window.dispatchEvent(new CustomEvent('studio-theme-change', { detail: { theme: next } }));
     }

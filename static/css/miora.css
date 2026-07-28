@@ -1,0 +1,653 @@
+/* MIORA Studio shared visual system.
+   Loaded after the legacy page styles so existing application behavior and
+   DOM hooks remain intact while the core surfaces share one design. */
+:root {
+    --miora-bg: #070a12;
+    --miora-bg-soft: #0b1020;
+    --miora-panel: rgba(16, 22, 37, .88);
+    --miora-panel-solid: #101625;
+    --miora-panel-raised: #151d2f;
+    --miora-border: rgba(139, 160, 205, .18);
+    --miora-border-strong: rgba(113, 128, 255, .38);
+    --miora-text: #f4f7ff;
+    --miora-muted: #91a0bd;
+    --miora-cyan: #57e6ff;
+    --miora-violet: #776cff;
+    --miora-purple: #c15cff;
+    --miora-gradient: linear-gradient(135deg, #57e6ff 0%, #776cff 52%, #c15cff 100%);
+    --miora-glow: 0 18px 50px rgba(47, 74, 180, .22);
+    --miora-shadow: 0 20px 60px rgba(0, 0, 0, .36);
+    color-scheme: dark;
+}
+
+html.theme-light,
+html.studio-theme-light {
+    --miora-bg: #edf2fb;
+    --miora-bg-soft: #f7f9fd;
+    --miora-panel: rgba(255, 255, 255, .9);
+    --miora-panel-solid: #ffffff;
+    --miora-panel-raised: #f6f8fc;
+    --miora-border: rgba(44, 61, 96, .14);
+    --miora-border-strong: rgba(99, 82, 238, .3);
+    --miora-text: #14192a;
+    --miora-muted: #667089;
+    --miora-shadow: 0 18px 48px rgba(51, 66, 102, .14);
+    color-scheme: light;
+}
+
+html,
+body {
+    background: var(--miora-bg) !important;
+    color: var(--miora-text);
+}
+
+body {
+    font-family: Inter, "SF Pro Display", "Segoe UI Variable", "Segoe UI", "Microsoft YaHei", sans-serif !important;
+}
+
+button,
+input,
+select,
+textarea {
+    font: inherit;
+}
+
+button:focus-visible,
+a:focus-visible,
+input:focus-visible,
+select:focus-visible,
+textarea:focus-visible {
+    outline: 2px solid var(--miora-cyan) !important;
+    outline-offset: 2px;
+}
+
+/* Main studio shell */
+body .app-shell {
+    background:
+        radial-gradient(circle at 82% 8%, rgba(119, 108, 255, .12), transparent 34%),
+        radial-gradient(circle at 18% 92%, rgba(87, 230, 255, .08), transparent 32%),
+        var(--miora-bg);
+}
+
+body .sidebar {
+    width: 88px;
+    min-width: 88px;
+    padding: 22px 14px 16px;
+    border-right: 1px solid var(--miora-border);
+    background: rgba(8, 12, 23, .92);
+    box-shadow: 10px 0 40px rgba(0, 0, 0, .18);
+    backdrop-filter: blur(24px);
+}
+
+body .sidebar:hover,
+body .sidebar.is-pinned {
+    width: 252px;
+}
+
+body .logo-ring {
+    width: 56px;
+    height: 56px;
+    min-height: 56px;
+    margin-bottom: 22px !important;
+    border: 1px solid var(--miora-border-strong);
+    border-radius: 18px;
+    background: linear-gradient(145deg, rgba(87, 230, 255, .14), rgba(119, 108, 255, .18));
+    box-shadow: 0 12px 34px rgba(36, 49, 125, .28);
+    color: var(--miora-text);
+    overflow: hidden;
+}
+
+body .logo-ring:hover,
+body .logo-ring:focus-visible,
+body .sidebar:hover .logo-ring,
+body .sidebar.is-pinned .logo-ring {
+    width: 220px;
+    border-radius: 18px;
+    transform: none;
+}
+
+.miora-logo-letter {
+    width: 32px;
+    height: 32px;
+    flex: 0 0 32px;
+    display: grid;
+    place-items: center;
+    border-radius: 10px;
+    background: var(--miora-gradient);
+    color: #07101b;
+    font-size: 18px;
+    font-weight: 950;
+    letter-spacing: -.04em;
+}
+
+.miora-logo-word {
+    width: 0;
+    max-width: 0;
+    opacity: 0;
+    overflow: hidden;
+    color: var(--miora-text);
+    font-size: 13px;
+    font-weight: 850;
+    letter-spacing: .14em;
+    white-space: nowrap;
+    transition: opacity .24s ease, max-width .3s ease, margin .3s ease;
+}
+
+body .sidebar:hover .miora-logo-word,
+body .sidebar.is-pinned .miora-logo-word {
+    width: auto;
+    max-width: 150px;
+    margin-left: 12px;
+    opacity: 1;
+}
+
+body .nav-item,
+body .nav-fold-toggle,
+body .side-pill {
+    border: 1px solid transparent;
+    border-radius: 13px;
+    color: var(--miora-muted);
+}
+
+body .nav-item:hover,
+body .nav-fold-toggle:hover,
+body .side-pill:hover {
+    border-color: var(--miora-border);
+    background: rgba(119, 108, 255, .09);
+    color: var(--miora-text);
+}
+
+body .nav-item.active {
+    border-color: rgba(87, 230, 255, .24);
+    background: linear-gradient(135deg, rgba(87, 230, 255, .18), rgba(119, 108, 255, .2));
+    box-shadow: inset 3px 0 0 var(--miora-cyan), 0 8px 28px rgba(41, 64, 155, .15);
+    color: var(--miora-text);
+}
+
+[data-update-source="modelscope"] {
+    display: none !important;
+}
+
+body .stage {
+    margin: 14px 14px 14px 12px;
+    border: 1px solid var(--miora-border);
+    border-radius: 28px;
+    background: var(--miora-bg-soft);
+    box-shadow: var(--miora-shadow);
+    overflow: hidden;
+}
+
+body .author-box {
+    height: 74px;
+    flex-basis: 74px;
+}
+
+body .author-box > .dx-letter,
+body .author-box > .author-content-wrap {
+    display: none !important;
+}
+
+.miora-credit-compact {
+    font-size: 12px;
+    font-weight: 950;
+    color: var(--miora-cyan);
+}
+
+.miora-credit-full {
+    display: none;
+    text-align: left;
+    line-height: 1.35;
+}
+
+.miora-credit-full strong {
+    display: block;
+    color: var(--miora-text);
+    font-size: 12px;
+}
+
+.miora-credit-full span {
+    display: block;
+    color: var(--miora-muted);
+    font-size: 9px;
+}
+
+body .sidebar:hover .miora-credit-compact,
+body .sidebar.is-pinned .miora-credit-compact {
+    display: none;
+}
+
+body .sidebar:hover .miora-credit-full,
+body .sidebar.is-pinned .miora-credit-full {
+    display: block;
+}
+
+/* Project and canvas manager */
+.miora-workspace-brand {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin: 2px 4px 22px;
+    padding: 14px;
+    border: 1px solid var(--miora-border);
+    border-radius: 16px;
+    background: linear-gradient(145deg, rgba(87, 230, 255, .08), rgba(119, 108, 255, .12));
+}
+
+.miora-workspace-brand img {
+    width: 38px;
+    height: 38px;
+}
+
+.miora-workspace-brand strong,
+.miora-workspace-brand span {
+    display: block;
+}
+
+.miora-workspace-brand strong {
+    color: var(--miora-text);
+    font-size: 13px;
+    letter-spacing: .13em;
+}
+
+.miora-workspace-brand span {
+    margin-top: 3px;
+    color: var(--miora-muted);
+    font-size: 10px;
+}
+
+body .workspace {
+    padding: 14px;
+    gap: 14px;
+    background:
+        radial-gradient(circle at 90% 10%, rgba(119, 108, 255, .11), transparent 28%),
+        var(--miora-bg);
+}
+
+body .ws-sidebar {
+    width: 292px;
+    border: 1px solid var(--miora-border);
+    border-radius: 22px;
+    background: var(--miora-panel);
+    box-shadow: var(--miora-shadow);
+    backdrop-filter: blur(22px);
+}
+
+body .ws-main {
+    border: 1px solid var(--miora-border);
+    border-radius: 22px;
+    background: var(--miora-bg-soft);
+    box-shadow: var(--miora-shadow);
+    overflow: hidden;
+}
+
+body .ws-topbar {
+    min-height: 76px;
+    padding: 0 26px;
+    border-bottom: 1px solid var(--miora-border);
+    background: rgba(13, 18, 31, .82);
+    backdrop-filter: blur(20px);
+}
+
+body .ws-board {
+    background-color: var(--miora-bg-soft);
+    background-image:
+        linear-gradient(rgba(118, 138, 180, .07) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(118, 138, 180, .07) 1px, transparent 1px),
+        radial-gradient(circle at center, rgba(119, 108, 255, .08), transparent 56%);
+    background-size: 28px 28px, 28px 28px, 100% 100%;
+}
+
+body .ws-side-head {
+    border-color: var(--miora-border);
+}
+
+body .ws-project-row,
+body .ws-trash-entry {
+    border: 1px solid transparent;
+    border-radius: 12px;
+    color: var(--miora-muted);
+}
+
+body .ws-project-row:hover,
+body .ws-trash-entry:hover {
+    border-color: var(--miora-border);
+    background: rgba(119, 108, 255, .08);
+}
+
+body .ws-project-row.active {
+    border-color: rgba(87, 230, 255, .24);
+    background: linear-gradient(135deg, rgba(87, 230, 255, .12), rgba(119, 108, 255, .17));
+    color: var(--miora-text);
+}
+
+body .ws-card,
+body .ws-create-card,
+body .ws-trash-card {
+    border: 1px solid var(--miora-border);
+    border-radius: 18px;
+    background: rgba(16, 22, 37, .94);
+    box-shadow: 0 14px 44px rgba(0, 0, 0, .24);
+}
+
+body .ws-card:hover {
+    border-color: var(--miora-border-strong);
+    transform: translateY(-3px);
+    box-shadow: var(--miora-glow);
+}
+
+body .ws-primary-btn,
+body .ws-mini-btn.primary,
+body .ws-confirm-btn {
+    border: 0;
+    background: var(--miora-gradient);
+    color: #08111e;
+    font-weight: 850;
+    box-shadow: 0 10px 28px rgba(83, 93, 225, .28);
+}
+
+/* Infinite canvas editor */
+.miora-canvas-brand {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    min-width: 154px;
+    padding-right: 14px;
+    border-right: 1px solid var(--miora-border);
+}
+
+.miora-canvas-brand img {
+    width: 34px;
+    height: 34px;
+}
+
+.miora-canvas-brand strong,
+.miora-canvas-brand span {
+    display: block;
+}
+
+.miora-canvas-brand strong {
+    color: var(--miora-text);
+    font-size: 12px;
+    letter-spacing: .11em;
+}
+
+.miora-canvas-brand span {
+    color: var(--miora-muted);
+    font-size: 9px;
+}
+
+body .shell {
+    --card: #101625;
+    --card-solid: #101625;
+    --soft: #0c1220;
+    --soft-2: #172036;
+    --line: rgba(139, 160, 205, .18);
+    --line-2: rgba(113, 128, 255, .38);
+    --text: #f4f7ff;
+    --muted: #91a0bd;
+    --faint: #66728b;
+    background: var(--miora-bg);
+}
+
+html.theme-light body .shell,
+html.studio-theme-light body .shell {
+    --card: #ffffff;
+    --card-solid: #ffffff;
+    --soft: #f4f7fc;
+    --soft-2: #edf2fa;
+    --line: rgba(44, 61, 96, .14);
+    --line-2: rgba(99, 82, 238, .3);
+    --text: #14192a;
+    --muted: #667089;
+    --faint: #929cb2;
+}
+
+body .topbar {
+    top: 14px;
+    left: 14px;
+    right: 14px;
+    z-index: 120;
+    gap: 12px;
+}
+
+body .topbar .panel,
+body .toolbar {
+    border: 1px solid var(--miora-border);
+    border-radius: 16px;
+    background: rgba(12, 17, 29, .9);
+    box-shadow: 0 16px 50px rgba(0, 0, 0, .3);
+    backdrop-filter: blur(22px);
+}
+
+body .canvas-nav {
+    min-height: 58px;
+    padding: 8px 12px;
+}
+
+body .current-canvas-title {
+    color: var(--miora-text);
+    font-weight: 820;
+}
+
+body .current-canvas-time {
+    color: var(--miora-muted);
+}
+
+body .tool-btn,
+body .menu-btn,
+body .canvas-asset-icon-btn,
+body .preview-icon-btn {
+    border-color: transparent;
+    border-radius: 11px;
+    color: var(--miora-muted);
+}
+
+body .tool-btn:hover,
+body .menu-btn:hover,
+body .canvas-asset-icon-btn:hover,
+body .preview-icon-btn:hover {
+    border-color: var(--miora-border);
+    background: rgba(119, 108, 255, .12);
+    color: var(--miora-text);
+}
+
+body .board {
+    background-color: var(--miora-bg);
+    background-image:
+        radial-gradient(circle, rgba(122, 143, 188, .19) 1px, transparent 1.4px),
+        radial-gradient(circle at 50% 45%, rgba(73, 66, 180, .1), transparent 45%);
+    background-size: 24px 24px, 100% 100%;
+}
+
+body .node,
+body .prompt-node,
+body .generator-node,
+body .output-node,
+body .image-node,
+body .loop-node,
+body .llm-node,
+body .msgen-node,
+body .video-node,
+body .rh-node,
+body .comfy-node,
+body .group-node,
+body .ltxDirector-node,
+body .ltx-director-node {
+    border: 1px solid var(--miora-border) !important;
+    border-radius: 18px !important;
+    background: rgba(15, 21, 35, .96) !important;
+    box-shadow: 0 18px 54px rgba(0, 0, 0, .34) !important;
+    color: var(--miora-text);
+    backdrop-filter: blur(18px);
+}
+
+body .node:hover,
+body .prompt-node:hover,
+body .generator-node:hover,
+body .output-node:hover,
+body .image-node:hover {
+    border-color: rgba(87, 230, 255, .3) !important;
+}
+
+body .node.selected {
+    border-color: var(--miora-cyan) !important;
+    box-shadow: 0 0 0 2px rgba(87, 230, 255, .16), var(--miora-glow) !important;
+}
+
+body #nodes .node::before {
+    background: var(--card) !important;
+}
+
+body #nodes .node-head {
+    background: linear-gradient(180deg, rgba(255, 255, 255, .025), transparent);
+    border-color: var(--miora-border);
+}
+
+body #nodes .prompt-node textarea,
+body #nodes .llm-node textarea,
+body #nodes .generator-node input,
+body #nodes .generator-node select {
+    background: rgba(5, 9, 18, .7) !important;
+    border-color: var(--miora-border) !important;
+    color: var(--miora-text) !important;
+}
+
+body .node input,
+body .node textarea,
+body .node select,
+body .canvas-asset-select {
+    border: 1px solid var(--miora-border) !important;
+    border-radius: 10px !important;
+    background: rgba(5, 9, 18, .62) !important;
+    color: var(--miora-text) !important;
+}
+
+body .gen-btn,
+body .comfy-run,
+body .workflow-transfer-btn.primary,
+body .image-edit-btn.primary {
+    border: 0 !important;
+    background: var(--miora-gradient) !important;
+    color: #07111d !important;
+    font-weight: 850;
+    box-shadow: 0 10px 28px rgba(83, 93, 225, .24);
+}
+
+body .port,
+body .hub-port,
+body .link-dot {
+    border-color: var(--miora-cyan) !important;
+    box-shadow: 0 0 0 3px rgba(87, 230, 255, .12);
+}
+
+body .canvas-asset-panel {
+    top: 86px;
+    right: 14px;
+    bottom: 14px;
+    width: 356px;
+    border: 1px solid var(--miora-border);
+    border-radius: 20px;
+    background: rgba(12, 17, 29, .94);
+    box-shadow: var(--miora-shadow);
+    backdrop-filter: blur(24px);
+}
+
+body .canvas-asset-head,
+body .canvas-asset-row {
+    border-color: var(--miora-border);
+}
+
+body .canvas-asset-item {
+    border: 1px solid var(--miora-border);
+    border-radius: 13px;
+    background: var(--miora-panel-raised);
+}
+
+body .create-menu,
+body .workflow-transfer-panel,
+body .asset-manager-panel,
+body .image-edit-panel,
+body .log-panel {
+    border: 1px solid var(--miora-border);
+    border-radius: 18px;
+    background: rgba(12, 17, 29, .96);
+    box-shadow: var(--miora-shadow);
+    color: var(--miora-text);
+    backdrop-filter: blur(24px);
+}
+
+body .minimap {
+    right: 18px;
+    bottom: 18px;
+    border: 1px solid var(--miora-border);
+    border-radius: 16px;
+    background: rgba(10, 15, 27, .88);
+    box-shadow: 0 14px 40px rgba(0, 0, 0, .24);
+}
+
+body .minimap-viewport {
+    border-color: var(--miora-cyan);
+    background: rgba(87, 230, 255, .08);
+}
+
+@media (max-width: 900px) {
+    body .workspace {
+        padding: 8px;
+        gap: 8px;
+    }
+
+    body .ws-sidebar {
+        width: 222px;
+    }
+
+    .miora-workspace-brand span,
+    .miora-canvas-brand span {
+        display: none;
+    }
+
+    body .canvas-asset-panel {
+        width: min(340px, calc(100vw - 28px));
+    }
+}
+
+@media (max-width: 640px) {
+    body .sidebar,
+    body .sidebar:hover,
+    body .sidebar.is-pinned {
+        width: 70px;
+        min-width: 70px;
+        padding-inline: 8px;
+    }
+
+    body .stage {
+        margin: 8px;
+        border-radius: 18px;
+    }
+
+    body .workspace {
+        display: block;
+    }
+
+    body .ws-sidebar {
+        position: absolute;
+        z-index: 30;
+        width: min(286px, calc(100vw - 32px));
+        height: calc(100vh - 16px);
+        transform: translateX(calc(-100% - 18px));
+    }
+
+    body .topbar {
+        top: 8px;
+        left: 8px;
+        right: 8px;
+    }
+
+    .miora-canvas-brand {
+        min-width: 44px;
+        padding-right: 8px;
+    }
+
+    .miora-canvas-brand > div {
+        display: none;
+    }
+}

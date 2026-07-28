@@ -8,7 +8,7 @@
   </style>
 </head>
 <body><main class="wrap">
-  <div class="top"><div><h1>插件中心</h1><p>本机扫描 <code>plugins/&lt;插件 ID&gt;/plugin.json</code>；账号、积分和任务数据仅保存在本机。</p></div><div><button onclick="location.href='/static/canvas.html'">返回画布</button> <button class="primary" onclick="loadPlugins()">刷新插件</button></div></div>
+  <div class="top"><div><h1>插件中心</h1><p>本机扫描 <code>plugins/&lt;插件 ID&gt;/plugin.json</code>；账号、积分和任务数据仅保存在本机。</p></div><div><button onclick="location.href='/static/canvas.html?v=2026.07.28.1.1785237167'">返回画布</button> <button class="primary" onclick="loadPlugins()">刷新插件</button></div></div>
   <div class="hint">插件源码可以开源共享；浏览器配置文件、Cookie、邮箱、积分和下载成品不会上传 GitHub。视频任务要由插件的独立后台进程执行。</div>
   <section id="plugins" class="grid"><div class="empty">正在扫描插件…</div></section>
 </main><dialog id="accountDialog"><form id="accountForm" method="dialog"><h2 id="dialogTitle">添加账号</h2><input id="pluginId" type="hidden"><label>账号名称<input id="label" required placeholder="例如：Miora 账号 01"></label><label>比特浏览器配置文件 ID<input id="profile" placeholder="例如：b7036527…"></label><label>当前积分<input id="credits" type="number" min="0" step="0.01" value="0"></label><div class="actions"><button value="cancel">取消</button><button class="primary" value="default">保存到本机</button></div></form></dialog>

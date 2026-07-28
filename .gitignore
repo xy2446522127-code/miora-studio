@@ -2,6 +2,8 @@
 data/local/
 data/accounts.json
 data/tasks.json
+data/canvases/
+data/projects.json
 data/*.db
 data/*.sqlite
 data/*.sqlite3
@@ -17,6 +19,7 @@ plugins/*/downloads/
 *.cookie
 
 # Python and Node build artifacts.
+.venv/
 __pycache__/
 *.py[cod]
 node_modules/

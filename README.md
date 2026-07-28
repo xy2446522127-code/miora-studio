@@ -1,4 +1,37 @@
-# Infinite-Canvas
+# MIORA Studio
+
+> A professional, local-first AI creation workspace built on the Infinite Canvas project.
+
+**MIORA Studio · Developed by [xy2446522127-code](https://github.com/xy2446522127-code)**
+
+Based on [hero8152/Infinite-Canvas](https://github.com/hero8152/Infinite-Canvas) by
+hero8152 / wuli大雄. This derivative remains open source and follows the
+upstream non-commercial and attribution requirements.
+
+## MIORA highlights
+
+- Unified professional dark workspace across the studio, project manager, and infinite canvas.
+- Pluggable video-generation runtime retained from the MIORA maintenance branch.
+- Safe self-update channel scoped to the MIORA repository, so upstream releases cannot overwrite local customizations.
+- Python 3.12 virtual-environment workflow with `Start-MIORA.ps1` and `run.bat`.
+
+### Quick start on Windows
+
+```powershell
+py -3.12 -m venv .venv
+.\.venv\Scripts\Activate.ps1
+python -m pip install -r requirements.txt "uvicorn[standard]"
+.\Start-MIORA.ps1
+```
+
+Open `http://127.0.0.1:3000/`.
+
+UI previews and verified application screenshots are stored in
+[`docs/ui-preview`](docs/ui-preview).
+
+---
+
+# Infinite-Canvas upstream documentation
 Supports comfyui/API calls/modelscope calls
 
 配套的chrome采集插件已经上线：https://chromewebstore.google.com/detail/infinite-canvas-%E5%9B%BE%E5%83%8F%E8%A7%86%E9%A2%91%E6%96%87%E5%AD%97%E6%8A%93%E5%8F%96%E5%B7%A5/ajfhnbklbmpfaaookhfakohabnpmlcic?authuser=0&hl=en

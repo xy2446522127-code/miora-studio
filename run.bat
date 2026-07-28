@@ -1,10 +1,11 @@
 @echo off
 cd /d "%~dp0"
 
-set "PYEXE=%~dp0python\python.exe"
+set "PYEXE=%~dp0.venv\Scripts\python.exe"
+if not exist "%PYEXE%" set "PYEXE=%~dp0python\python.exe"
 if not exist "%PYEXE%" set "PYEXE=python"
 
-echo Starting ComfyUI-API-Modelscope...
+echo Starting MIORA Studio...
 echo Visit: http://127.0.0.1:3000/
 echo Press Ctrl+C to stop.
 echo.
@@ -12,7 +13,7 @@ echo.
 "%PYEXE%" -c "import fastapi, uvicorn, requests, pydantic, multipart, httpx; from PIL import Image" >nul 2>&1
 if errorlevel 1 (
     echo [INFO] Required Python packages are missing. Installing them now...
-    call "%~dp0°²×°ÒÀÀµ.bat"
+    call "%~dp0å®‰è£…ä¾èµ–.bat"
     if errorlevel 1 (
         echo [ERROR] Dependency installation failed.
         pause
