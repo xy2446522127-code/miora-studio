@@ -26,6 +26,12 @@ python -m pip install -r requirements.txt "uvicorn[standard]"
 
 Open `http://127.0.0.1:3000/`.
 
+Create project-folder and desktop shortcuts with the bundled 花海画布 icon:
+
+```powershell
+.\Create-Huahai-Shortcut.ps1
+```
+
 UI previews and verified application screenshots are stored in
 [`docs/ui-preview`](docs/ui-preview).
 

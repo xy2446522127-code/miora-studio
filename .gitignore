@@ -5,6 +5,7 @@ data/tasks.json
 data/canvases/
 data/projects.json
 data/prompt_libraries.json
+/启动花海画布.lnk
 data/*.db
 data/*.sqlite
 data/*.sqlite3
