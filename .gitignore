@@ -4,6 +4,7 @@ data/accounts.json
 data/tasks.json
 data/canvases/
 data/projects.json
+data/prompt_libraries.json
 data/*.db
 data/*.sqlite
 data/*.sqlite3

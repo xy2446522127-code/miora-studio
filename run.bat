@@ -2,10 +2,13 @@
 cd /d "%~dp0"
 
 set "PYEXE=%~dp0.venv\Scripts\python.exe"
-if not exist "%PYEXE%" set "PYEXE=%~dp0python\python.exe"
-if not exist "%PYEXE%" set "PYEXE=python"
+if not exist "%PYEXE%" (
+    echo [ERROR] Virtual environment not found.
+    echo Run: py -3.12 -m venv "%~dp0.venv"
+    exit /b 1
+)
 
-echo Starting MIORA Studio...
+echo Starting 花海画布...
 echo Visit: http://127.0.0.1:3000/
 echo Press Ctrl+C to stop.
 echo.

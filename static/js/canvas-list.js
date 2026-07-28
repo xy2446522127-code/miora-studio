@@ -196,6 +196,8 @@ async function loadAll(){
         renderProjects();
         renderBoard();
         resetView();
+        requestAnimationFrame(resetView);
+        setTimeout(resetView, 180);
         refreshTrashCount();
     } catch(e){
         console.error(e);
@@ -378,8 +380,17 @@ function renderBoard(){
     updateBoardHeader();
     const items = canvasesInProject(currentProjectId);
     autoLayoutNulls(items);
+    const featuredId = items.reduce((latest, item) => (
+        !latest || Number(item.updated_at || item.created_at || 0) > Number(latest.updated_at || latest.created_at || 0)
+            ? item
+            : latest
+    ), null)?.id;
     boardWorld.innerHTML = '';
-    items.forEach(c => boardWorld.appendChild(buildCard(c)));
+    items.forEach(c => {
+        const card = buildCard(c);
+        if(c.id === featuredId) card.classList.add('featured');
+        boardWorld.appendChild(card);
+    });
     boardEmptyHint.classList.toggle('hidden', items.length > 0);
     updatePasteBtn();
     refreshIcons();
@@ -406,6 +417,11 @@ function buildCard(c){
             <span class="ws-card-meta-dot"></span>
             <span class="ws-card-time">${formatCanvasTime(c.updated_at || c.created_at)}</span>
         </div>
+        <div class="ws-card-focus-actions">
+            <button class="ws-card-continue" type="button"><span>${L('继续编辑','Continue')}</span><i data-lucide="arrow-right"></i></button>
+            <button class="ws-card-quick" type="button" data-card-action="rename"><i data-lucide="pencil"></i><span>${L('重命名','Rename')}</span></button>
+            <button class="ws-card-quick" type="button" data-card-action="duplicate"><i data-lucide="copy"></i><span>${L('复制','Duplicate')}</span></button>
+        </div>
         <div class="ws-card-delete-confirm">
             <div class="ws-card-delete-title">${L('移入回收站？','Move to trash?')}</div>
             <div class="ws-card-delete-actions">
@@ -417,6 +433,11 @@ function buildCard(c){
     const menuBtn = card.querySelector('.ws-card-menu');
     menuBtn.onmousedown = e => e.stopPropagation();
     menuBtn.onclick = e => { e.stopPropagation(); openCardMenu(c.id, menuBtn); };
+    const focusActions = card.querySelector('.ws-card-focus-actions');
+    focusActions.onmousedown = e => e.stopPropagation();
+    card.querySelector('.ws-card-continue').onclick = e => { e.stopPropagation(); openCanvas(c); };
+    card.querySelector('[data-card-action="rename"]').onclick = e => { e.stopPropagation(); startCardRename(c.id); };
+    card.querySelector('[data-card-action="duplicate"]').onclick = e => { e.stopPropagation(); duplicateCanvas(c.id); };
     card.querySelector('.ws-card-delete-confirm').onmousedown = e => e.stopPropagation();
     card.querySelector('.ws-card-delete-yes').onclick = e => { e.stopPropagation(); deleteCanvas(c.id); };
     card.querySelector('.ws-card-delete-no').onclick = e => { e.stopPropagation(); card.classList.remove('confirming-delete'); };
@@ -427,7 +448,7 @@ function buildCard(c){
 function attachCardDrag(card, c){
     card.addEventListener('mousedown', e => {
         if(e.button !== 0) return;
-        if(e.target.closest('.ws-card-menu')) return;
+        if(e.target.closest('.ws-card-menu,.ws-card-focus-actions')) return;
         if(e.target.closest('.ws-card-delete-confirm')) return;
         if(card.querySelector('.ws-card-title-input')) return; // editing title
         e.stopPropagation();
@@ -460,6 +481,49 @@ function attachCardDrag(card, c){
         document.addEventListener('mousemove', onMove);
         document.addEventListener('mouseup', onUp);
     });
+}
+
+async function duplicateCanvas(canvasId){
+    try {
+        const sourceRes = await fetch(`/api/canvases/${encodeURIComponent(canvasId)}`);
+        if(!sourceRes.ok) throw new Error(L('读取画布失败','Failed to read canvas'));
+        const sourceData = await sourceRes.json();
+        const source = sourceData.canvas || sourceData;
+        const title = `${source.title || L('未命名画布','Untitled')} ${L('副本','Copy')}`.slice(0,80);
+        const createRes = await fetch('/api/canvases', {
+            method:'POST',
+            headers:{'Content-Type':'application/json'},
+            body:JSON.stringify({
+                title,
+                icon:source.icon || 'layers',
+                kind:source.kind || 'classic',
+                project:source.project || currentProjectId || 'default',
+                board_x:Number(source.board_x || 0) + 32,
+                board_y:Number(source.board_y || 0) + 32
+            })
+        });
+        const createdData = await createRes.json().catch(() => ({}));
+        if(!createRes.ok || !createdData.canvas?.id) throw new Error(L('创建副本失败','Failed to create copy'));
+        const saveRes = await fetch(`/api/canvases/${encodeURIComponent(createdData.canvas.id)}`, {
+            method:'PUT',
+            headers:{'Content-Type':'application/json'},
+            body:JSON.stringify({
+                title,
+                icon:source.icon || 'layers',
+                nodes:source.nodes || [],
+                connections:source.connections || [],
+                viewport:source.viewport || {},
+                logs:source.logs || [],
+                settings:source.settings || {}
+            })
+        });
+        if(!saveRes.ok) throw new Error(L('保存副本失败','Failed to save copy'));
+        setStatus(L('画布已复制','Canvas duplicated'));
+        await loadAll();
+    } catch(error){
+        console.error(error);
+        setStatus(error.message || L('复制失败','Duplicate failed'));
+    }
 }
 
 function openCanvas(c){
@@ -1049,3 +1113,9 @@ window.StudioI18n?.apply?.();
 applyViewport();
 loadAll();
 refreshIcons();
+window.addEventListener('load', () => setTimeout(resetView, 320), {once:true});
+let huahaiResizeTimer = null;
+window.addEventListener('resize', () => {
+    clearTimeout(huahaiResizeTimer);
+    huahaiResizeTimer = setTimeout(resetView, 180);
+});

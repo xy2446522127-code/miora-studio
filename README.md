@@ -1,19 +1,19 @@
-# MIORA Studio
+# 花海画布
 
 > A professional, local-first AI creation workspace built on the Infinite Canvas project.
 
-**MIORA Studio · Developed by [xy2446522127-code](https://github.com/xy2446522127-code)**
+**花海画布 · Developed by [xy2446522127-code](https://github.com/xy2446522127-code)**
 
 Based on [hero8152/Infinite-Canvas](https://github.com/hero8152/Infinite-Canvas) by
 hero8152 / wuli大雄. This derivative remains open source and follows the
 upstream non-commercial and attribution requirements.
 
-## MIORA highlights
+## 花海画布特色
 
-- Unified professional dark workspace across the studio, project manager, and infinite canvas.
-- Pluggable video-generation runtime retained from the MIORA maintenance branch.
-- Safe self-update channel scoped to the MIORA repository, so upstream releases cannot overwrite local customizations.
-- Python 3.12 virtual-environment workflow with `Start-MIORA.ps1` and `run.bat`.
+- 潮汐玻璃视觉系统覆盖首页、项目管理、无限画布与全部创作工具。
+- 鼠标跟随光效、悬停反馈和短促点击波纹不会干扰节点拖拽与连线。
+- 自更新仅指向本项目仓库，避免上游版本自动覆盖二次开发内容。
+- Python 3.12 虚拟环境工作流，使用 `Start-Huahai.ps1`、兼容入口 `Start-MIORA.ps1` 或 `run.bat`。
 
 ### Quick start on Windows
 
@@ -21,7 +21,7 @@ upstream non-commercial and attribution requirements.
 py -3.12 -m venv .venv
 .\.venv\Scripts\Activate.ps1
 python -m pip install -r requirements.txt "uvicorn[standard]"
-.\Start-MIORA.ps1
+.\Start-Huahai.ps1
 ```
 
 Open `http://127.0.0.1:3000/`.

@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="icon" href="/static/images/huahai-logo.png" type="image/png">
+    <title>花海画布 · 首页</title>
+    <script>
+        (function(){
+            try {
+                var theme = localStorage.getItem('studio_theme') || localStorage.getItem('canvas_theme') || 'dark';
+                document.documentElement.classList.add(theme === 'dark' ? 'theme-dark' : 'theme-light');
+                document.documentElement.classList.add(theme === 'dark' ? 'studio-theme-dark' : 'studio-theme-light');
+            } catch(e) {}
+        })();
+    </script>
+    <script src="/static/vendor/js/lucide.js?v=2026.07.28.2.1785236257"></script>
+    <script src="/static/js/theme.js?v=2026.07.28.2.1785254986"></script>
+</head>
+<body>
+    <main class="huahai-home">
+        <header class="huahai-home-head">
+            <div>
+                <h1>花海画布</h1>
+                <p>让灵感像潮汐一样自然流动</p>
+            </div>
+            <div class="huahai-service-pill" id="serviceState" role="status">
+                <i aria-hidden="true"></i>
+                <span>正在连接服务</span>
+            </div>
+        </header>
+
+        <section class="huahai-hero-grid" aria-label="快捷创作">
+            <article class="huahai-glass huahai-create">
+                <h2>今天想创作什么？</h2>
+                <textarea id="homePrompt" maxlength="2000" placeholder="描述你想创作的画面…"></textarea>
+                <div class="huahai-create-actions">
+                    <select id="homeCanvasKind" class="huahai-select" aria-label="画布类型">
+                        <option value="classic">无限画布</option>
+                        <option value="smart">智能画布</option>
+                    </select>
+                    <button id="openProjectsBtn" class="huahai-btn" type="button">
+                        <i data-lucide="folder-open"></i>
+                        查看项目
+                    </button>
+                    <button id="startCreateBtn" class="huahai-btn primary" type="button">
+                        进入画布
+                        <i data-lucide="arrow-right"></i>
+                    </button>
+                </div>
+            </article>
+
+            <article class="huahai-glass huahai-preview">
+                <h3>画布预览</h3>
+                <img src="/static/images/huahai-home-preview.png" alt="蓝色山湖创作预览">
+            </article>
+        </section>
+
+        <section class="huahai-recent" aria-labelledby="recentTitle">
+            <h2 id="recentTitle">最近项目</h2>
+            <div id="recentCanvases" class="huahai-recent-grid">
+                <div class="huahai-home-empty">正在读取最近画布…</div>
+            </div>
+        </section>
+    </main>
+    <script src="/static/js/home.js?v=2026.07.28.2.1785253455"></script>
+</body>
+</html>

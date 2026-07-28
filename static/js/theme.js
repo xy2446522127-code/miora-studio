@@ -3,6 +3,38 @@
     const LEGACY_KEY = 'canvas_theme';
     const SCALE_KEY = 'studio_ui_scale_mode';
     const SCALE_OPTIONS = ['auto', '60', '65', '70', '75', '80', '85', '90', '95', '100', '115', '125', '140'];
+    const HUAHAI_VERSION = '2026.07.28.2';
+
+    function ensureHuahaiAssets(){
+        if(!document.querySelector('link[data-huahai-theme]')){
+            const link = document.createElement('link');
+            link.rel = 'stylesheet';
+            link.href = `/static/css/huahai.css?v=${HUAHAI_VERSION}`;
+            link.dataset.huahaiTheme = 'true';
+            document.head.appendChild(link);
+        }
+        if(!document.querySelector('script[data-huahai-interactions]')){
+            const script = document.createElement('script');
+            script.src = `/static/js/huahai-interactions.js?v=${HUAHAI_VERSION}`;
+            script.defer = true;
+            script.dataset.huahaiInteractions = 'true';
+            document.head.appendChild(script);
+        }
+    }
+
+    function promoteHuahaiTheme(){
+        const link = document.querySelector('link[data-huahai-theme]');
+        if(link && document.head && document.head.lastElementChild !== link){
+            document.head.appendChild(link);
+        }
+    }
+
+    ensureHuahaiAssets();
+    if(document.readyState === 'loading'){
+        document.addEventListener('DOMContentLoaded', promoteHuahaiTheme, {once:true});
+    }else{
+        promoteHuahaiTheme();
+    }
 
     function currentTheme(){
         return localStorage.getItem(KEY) || localStorage.getItem(LEGACY_KEY) || 'dark';
@@ -181,7 +213,7 @@
         ensureScaleStyle();
         const next = normalizeScaleMode(mode);
         const optedOut = scaleOptedOut();
-        const value = scaleForMode(next);
+        const value = optedOut ? 1 : scaleForMode(next);
         const scaled = !optedOut && Math.abs(value - 1) > 0.01;
         document.documentElement.classList.add('studio-scale-managed');
         document.documentElement.classList.toggle('studio-ui-scaled', scaled);

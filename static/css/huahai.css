@@ -1,0 +1,1052 @@
+@import url('/static/vendor/css/fonts.css');
+
+:root {
+    --hh-bg: #030914;
+    --hh-bg-deep: #020711;
+    --hh-panel: rgba(13, 27, 47, .72);
+    --hh-panel-strong: rgba(16, 34, 57, .9);
+    --hh-panel-soft: rgba(20, 39, 63, .56);
+    --hh-line: rgba(150, 205, 236, .2);
+    --hh-line-strong: rgba(128, 218, 255, .62);
+    --hh-text: #f1f7fb;
+    --hh-muted: #9dadbf;
+    --hh-cyan: #65ddff;
+    --hh-cyan-soft: rgba(101, 221, 255, .18);
+    --hh-coral: #ff7b67;
+    --hh-coral-strong: #ff6957;
+    --hh-success: #5de0a4;
+    --hh-warning: #f1bf72;
+    --hh-danger: #ff6969;
+    --hh-radius-sm: 10px;
+    --hh-radius: 16px;
+    --hh-radius-lg: 22px;
+    --hh-shadow: 0 22px 70px rgba(0, 4, 13, .48);
+    --hh-glow: 0 0 0 1px rgba(113, 215, 255, .13), 0 18px 54px rgba(4, 112, 154, .14);
+    color-scheme: dark;
+}
+
+html.theme-light,
+html.studio-theme-light {
+    --hh-bg: #e8f1f7;
+    --hh-bg-deep: #dce8f1;
+    --hh-panel: rgba(244, 249, 252, .76);
+    --hh-panel-strong: rgba(250, 253, 255, .92);
+    --hh-panel-soft: rgba(238, 246, 251, .68);
+    --hh-line: rgba(51, 101, 134, .18);
+    --hh-line-strong: rgba(18, 137, 181, .46);
+    --hh-text: #102333;
+    --hh-muted: #637d8f;
+    --hh-cyan: #138bb8;
+    --hh-cyan-soft: rgba(19, 139, 184, .12);
+    --hh-shadow: 0 22px 60px rgba(40, 73, 94, .17);
+    color-scheme: light;
+}
+
+html,
+body {
+    background-color: var(--hh-bg) !important;
+    color: var(--hh-text);
+}
+
+body[data-huaha-surface] {
+    min-height: 100vh;
+    background-color: var(--hh-bg) !important;
+    background-image:
+        linear-gradient(rgba(2, 8, 18, .54), rgba(2, 8, 18, .54)),
+        url('/static/images/huahai-ocean-bg.png') !important;
+    background-size: cover !important;
+    background-position: center !important;
+    background-attachment: fixed !important;
+    font-family: Inter, "Segoe UI Variable", "Microsoft YaHei", sans-serif !important;
+}
+
+html.theme-light body[data-huaha-surface],
+html.studio-theme-light body[data-huaha-surface] {
+    background-image:
+        linear-gradient(rgba(233, 244, 250, .82), rgba(233, 244, 250, .82)),
+        url('/static/images/huahai-ocean-bg.png') !important;
+}
+
+button,
+input,
+select,
+textarea {
+    font: inherit;
+}
+
+button:focus-visible,
+a:focus-visible,
+input:focus-visible,
+select:focus-visible,
+textarea:focus-visible,
+[tabindex]:focus-visible {
+    outline: 2px solid var(--hh-cyan) !important;
+    outline-offset: 2px !important;
+}
+
+/* Shared cursor illumination. */
+.huahai-cursor-light {
+    --hh-light-size: 140px;
+    position: fixed;
+    left: 0;
+    top: 0;
+    z-index: 9998;
+    width: var(--hh-light-size);
+    height: var(--hh-light-size);
+    border-radius: 50%;
+    pointer-events: none;
+    opacity: 0;
+    transform: translate3d(-200px, -200px, 0);
+    background: radial-gradient(circle, rgba(92, 221, 255, .2) 0, rgba(61, 178, 224, .09) 38%, transparent 72%);
+    mix-blend-mode: screen;
+    transition: opacity .16s ease;
+    will-change: transform, opacity;
+}
+
+body[data-huaha-surface="canvas"] .huahai-cursor-light {
+    --hh-light-size: 96px;
+    background: radial-gradient(circle, rgba(92, 221, 255, .13) 0, rgba(61, 178, 224, .05) 42%, transparent 74%);
+}
+
+body.huahai-pointer-visible .huahai-cursor-light {
+    opacity: 1;
+}
+
+body.huahai-interacting .huahai-cursor-light,
+body.canvas-node-drag .huahai-cursor-light,
+body.canvas-node-resize .huahai-cursor-light,
+body.canvas-selecting .huahai-cursor-light,
+body.canvas-knife .huahai-cursor-light,
+body.smart-node-drag .huahai-cursor-light,
+body.smart-node-resize .huahai-cursor-light,
+body.smart-canvas-interacting .huahai-cursor-light {
+    opacity: 0 !important;
+}
+
+.huahai-ripple {
+    position: fixed;
+    z-index: 9999;
+    width: 18px;
+    height: 18px;
+    border: 1px solid rgba(119, 228, 255, .82);
+    border-radius: 50%;
+    pointer-events: none;
+    transform: translate(-50%, -50%) scale(.35);
+    opacity: .78;
+    box-shadow: 0 0 20px rgba(86, 213, 255, .24);
+    animation: huahai-ripple 520ms cubic-bezier(.2, .72, .25, 1) forwards;
+}
+
+.huahai-ripple.is-second {
+    animation-delay: 70ms;
+    opacity: .56;
+}
+
+.huahai-ripple.is-third {
+    animation-delay: 130ms;
+    opacity: .32;
+}
+
+@keyframes huahai-ripple {
+    to {
+        transform: translate(-50%, -50%) scale(5.2);
+        opacity: 0;
+    }
+}
+
+.huahai-hovered {
+    --hh-local-x: 50%;
+    --hh-local-y: 50%;
+}
+
+.huahai-hovered::after {
+    border-color: rgba(122, 221, 255, .34) !important;
+}
+
+/* Product shell */
+body[data-huaha-page="index"] .app-shell {
+    background: transparent !important;
+}
+
+body[data-huaha-page="index"] .sidebar {
+    width: 98px;
+    min-width: 98px;
+    padding: 24px 14px 18px;
+    border-right: 1px solid var(--hh-line);
+    background: rgba(2, 10, 24, .88) !important;
+    backdrop-filter: blur(26px) saturate(130%);
+    box-shadow: 12px 0 50px rgba(0, 5, 16, .24);
+}
+
+body[data-huaha-page="index"] .sidebar:hover,
+body[data-huaha-page="index"] .sidebar.is-pinned {
+    width: 246px;
+}
+
+body[data-huaha-page="index"] .logo-ring {
+    width: 70px !important;
+    height: 70px !important;
+    min-height: 70px !important;
+    padding: 0 !important;
+    border: 0 !important;
+    border-radius: 14px !important;
+    background: #000 !important;
+    overflow: hidden;
+    box-shadow: none !important;
+    transform: none !important;
+}
+
+body[data-huaha-page="index"] .logo-ring:hover,
+body[data-huaha-page="index"] .sidebar:hover .logo-ring,
+body[data-huaha-page="index"] .sidebar.is-pinned .logo-ring {
+    width: 210px !important;
+    border-radius: 14px !important;
+}
+
+.huahai-shell-logo {
+    width: 70px;
+    height: 70px;
+    flex: 0 0 70px;
+    object-fit: cover;
+}
+
+.huahai-shell-word {
+    width: 0;
+    opacity: 0;
+    overflow: hidden;
+    color: var(--hh-text);
+    font-weight: 800;
+    letter-spacing: .08em;
+    white-space: nowrap;
+    transition: width .25s ease, opacity .2s ease, margin .25s ease;
+}
+
+body[data-huaha-page="index"] .sidebar:hover .huahai-shell-word,
+body[data-huaha-page="index"] .sidebar.is-pinned .huahai-shell-word {
+    width: 116px;
+    margin-left: 12px;
+    opacity: 1;
+}
+
+body[data-huaha-page="index"] .nav-item,
+body[data-huaha-page="index"] .nav-fold-toggle,
+body[data-huaha-page="index"] .side-pill {
+    border: 1px solid transparent;
+    border-radius: 12px;
+    color: var(--hh-muted);
+}
+
+body[data-huaha-page="index"] .nav-item:hover,
+body[data-huaha-page="index"] .nav-fold-toggle:hover,
+body[data-huaha-page="index"] .side-pill:hover {
+    border-color: var(--hh-line);
+    background: rgba(112, 191, 232, .08);
+    color: var(--hh-text);
+}
+
+body[data-huaha-page="index"] .nav-item.active {
+    border-color: rgba(126, 215, 255, .42);
+    background: rgba(83, 140, 185, .2);
+    box-shadow: inset 0 0 28px rgba(100, 210, 255, .08), 0 8px 24px rgba(0, 0, 0, .18);
+    color: var(--hh-text);
+}
+
+body[data-huaha-page="index"] .stage {
+    margin: 10px 10px 10px 0;
+    border: 1px solid var(--hh-line);
+    border-radius: 22px;
+    background: rgba(3, 12, 25, .32) !important;
+    box-shadow: var(--hh-shadow);
+    overflow: hidden;
+}
+
+body[data-huaha-page="index"] iframe {
+    background: transparent !important;
+}
+
+/* Generic glass treatment for tool pages. */
+body[data-huaha-surface="tool"] .page,
+body[data-huaha-surface="tool"] .asset-page,
+body[data-huaha-surface="tool"] .chat-shell,
+body[data-huaha-surface="tool"] > .min-h-screen,
+body[data-huaha-surface="tool"] > .container,
+body[data-huaha-surface="tool"] > main,
+body[data-huaha-page="plugin-center"] .wrap {
+    background: transparent !important;
+}
+
+body[data-huaha-surface="tool"] .panel,
+body[data-huaha-surface="tool"] .card,
+body[data-huaha-surface="tool"] .sidebar,
+body[data-huaha-surface="tool"] .content,
+body[data-huaha-surface="tool"] .settings-sidebar,
+body[data-huaha-surface="tool"] .asset-sidebar,
+body[data-huaha-surface="tool"] .asset-main,
+body[data-huaha-surface="tool"] .chat-rail,
+body[data-huaha-surface="tool"] .composer-body,
+body[data-huaha-surface="tool"] .topbar,
+body[data-huaha-page="plugin-center"] .card,
+body[data-huaha-page="plugin-center"] dialog {
+    border-color: var(--hh-line) !important;
+    background-color: var(--hh-panel) !important;
+    box-shadow: var(--hh-glow) !important;
+    backdrop-filter: blur(20px) saturate(125%);
+}
+
+body[data-huaha-surface="tool"] button.primary,
+body[data-huaha-surface="tool"] .primary,
+body[data-huaha-surface="tool"] .run-btn,
+body[data-huaha-surface="tool"] .generate-btn,
+body[data-huaha-surface="tool"] .save-btn,
+body[data-huaha-page="plugin-center"] button.primary {
+    border-color: rgba(255, 163, 145, .64) !important;
+    background: var(--hh-coral) !important;
+    color: #fff !important;
+    box-shadow: 0 10px 30px rgba(255, 92, 74, .2) !important;
+}
+
+body[data-huaha-surface="tool"] button.primary:hover,
+body[data-huaha-surface="tool"] .primary:hover,
+body[data-huaha-surface="tool"] .run-btn:hover,
+body[data-huaha-surface="tool"] .generate-btn:hover,
+body[data-huaha-surface="tool"] .save-btn:hover,
+body[data-huaha-page="plugin-center"] button.primary:hover {
+    background: var(--hh-coral-strong) !important;
+    transform: translateY(-1px);
+}
+
+/* Project workspace */
+body[data-huaha-page="canvas-list"] .workspace {
+    padding: 0 !important;
+    gap: 0 !important;
+    background: transparent !important;
+}
+
+body[data-huaha-page="canvas-list"] .ws-sidebar {
+    width: 226px !important;
+    flex-basis: 226px !important;
+    border: 0 !important;
+    border-right: 1px solid var(--hh-line) !important;
+    border-radius: 0 !important;
+    background: rgba(3, 12, 27, .88) !important;
+    box-shadow: 12px 0 52px rgba(0, 5, 16, .25) !important;
+    backdrop-filter: blur(26px);
+}
+
+body[data-huaha-page="canvas-list"] .miora-workspace-brand {
+    margin: 6px 4px 20px !important;
+    padding: 0 !important;
+    border: 0 !important;
+    background: transparent !important;
+}
+
+body[data-huaha-page="canvas-list"] .miora-workspace-brand img {
+    width: 128px !important;
+    height: 128px !important;
+    object-fit: cover;
+}
+
+body[data-huaha-page="canvas-list"] .miora-workspace-brand div {
+    display: none;
+}
+
+body[data-huaha-page="canvas-list"] .ws-main {
+    border: 0 !important;
+    border-radius: 0 !important;
+    background: transparent !important;
+    box-shadow: none !important;
+}
+
+body[data-huaha-page="canvas-list"] .ws-topbar {
+    min-height: 92px !important;
+    padding: 0 38px !important;
+    border: 0 !important;
+    background: rgba(4, 13, 28, .2) !important;
+    backdrop-filter: blur(14px);
+}
+
+body[data-huaha-page="canvas-list"] .ws-board {
+    background-color: transparent !important;
+    background-image:
+        radial-gradient(circle at 1px 1px, rgba(116, 192, 231, .12) 1px, transparent 1.2px),
+        linear-gradient(rgba(2, 9, 20, .5), rgba(2, 9, 20, .74)),
+        url('/static/images/huahai-ocean-bg.png') !important;
+    background-size: 32px 32px, cover, cover !important;
+    background-position: center !important;
+}
+
+body[data-huaha-page="canvas-list"] .ws-card {
+    border-color: rgba(150, 215, 245, .32) !important;
+    background: rgba(16, 34, 57, .66) !important;
+    box-shadow: 0 16px 42px rgba(0, 4, 13, .34), inset 0 1px rgba(255, 255, 255, .04) !important;
+    backdrop-filter: blur(18px) saturate(128%);
+    -webkit-box-reflect: below 22px linear-gradient(transparent 0%, rgba(0, 0, 0, .03) 50%, rgba(0, 0, 0, .64) 100%);
+}
+
+body[data-huaha-page="canvas-list"] .ws-card:hover,
+body[data-huaha-page="canvas-list"] .ws-card.selected,
+body[data-huaha-page="canvas-list"] .ws-card:focus-within {
+    border-color: rgba(119, 225, 255, .78) !important;
+    box-shadow: 0 20px 58px rgba(0, 7, 17, .46), 0 0 34px rgba(75, 206, 255, .12) !important;
+}
+
+body[data-huaha-page="canvas-list"] .ws-card-focus-actions {
+    display: none;
+    align-items: center;
+    gap: 6px;
+    margin-top: auto;
+}
+
+body[data-huaha-page="canvas-list"] .ws-card.featured .ws-card-meta,
+body[data-huaha-page="canvas-list"] .ws-card:hover .ws-card-meta,
+body[data-huaha-page="canvas-list"] .ws-card:focus-within .ws-card-meta {
+    display: none;
+}
+
+body[data-huaha-page="canvas-list"] .ws-card.featured .ws-card-focus-actions,
+body[data-huaha-page="canvas-list"] .ws-card:hover .ws-card-focus-actions,
+body[data-huaha-page="canvas-list"] .ws-card:focus-within .ws-card-focus-actions {
+    display: flex;
+}
+
+body[data-huaha-page="canvas-list"] .ws-card-focus-actions button {
+    height: 34px;
+    border: 1px solid var(--hh-line);
+    border-radius: 9px;
+    background: rgba(7, 19, 36, .7);
+    color: var(--hh-muted);
+}
+
+body[data-huaha-page="canvas-list"] .ws-card-continue {
+    flex: 1 1 auto;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 7px;
+    border-color: rgba(255, 163, 145, .58) !important;
+    color: #ffd6cc !important;
+}
+
+body[data-huaha-page="canvas-list"] .ws-card-quick {
+    width: 34px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+}
+
+body[data-huaha-page="canvas-list"] .ws-card-quick span {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip: rect(0 0 0 0);
+}
+
+body[data-huaha-page="canvas-list"] .ws-card-focus-actions svg {
+    width: 14px;
+    height: 14px;
+}
+
+body[data-huaha-page="canvas-list"] .ws-primary-btn {
+    border-color: rgba(255, 163, 145, .6) !important;
+    background: var(--hh-coral) !important;
+    color: #fff !important;
+}
+
+body[data-huaha-page="canvas-list"] .ws-project-row.active {
+    border-color: rgba(132, 218, 255, .26) !important;
+    background: rgba(113, 176, 217, .14) !important;
+}
+
+/* Infinite canvas: no reflection or floor effect. */
+body[data-huaha-page="canvas"],
+body[data-huaha-page="smart-canvas"] {
+    background-image:
+        linear-gradient(rgba(2, 8, 18, .66), rgba(2, 8, 18, .66)),
+        url('/static/images/huahai-ocean-bg.png') !important;
+}
+
+body[data-huaha-page="canvas"] .shell,
+body[data-huaha-page="canvas"] .board,
+body[data-huaha-page="smart-canvas"] .shell {
+    background-color: transparent !important;
+}
+
+body[data-huaha-page="canvas"] .board {
+    background-image:
+        radial-gradient(circle, rgba(117, 188, 225, .13) 1px, transparent 1.35px) !important;
+    background-size: 28px 28px !important;
+}
+
+body[data-huaha-page="smart-canvas"] .shell {
+    background-image:
+        radial-gradient(circle, rgba(117, 188, 225, .12) 1px, transparent 1.35px) !important;
+    background-size: 28px 28px !important;
+}
+
+.huahai-smart-brand {
+    position: absolute;
+    left: 18px;
+    top: 18px;
+    z-index: 64;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    color: var(--hh-text);
+    pointer-events: none;
+}
+
+.huahai-smart-brand img {
+    width: 54px;
+    height: 54px;
+    border-radius: 11px;
+    object-fit: cover;
+}
+
+.huahai-smart-brand strong {
+    font-size: 14px;
+    letter-spacing: .08em;
+}
+
+body[data-huaha-page="smart-canvas"] .smart-back {
+    left: 178px !important;
+    border-color: var(--hh-line) !important;
+    background: var(--hh-panel) !important;
+    color: var(--hh-text) !important;
+}
+
+body[data-huaha-page="smart-canvas"] .smart-title {
+    left: 178px !important;
+    color: var(--hh-muted) !important;
+}
+
+body[data-huaha-page="smart-canvas"] .smart-log-toggle,
+body[data-huaha-page="smart-canvas"] .smart-shortcut-toggle,
+body[data-huaha-page="smart-canvas"] .smart-workflow-toggle,
+body[data-huaha-page="smart-canvas"] .asset-toggle {
+    border-color: var(--hh-line) !important;
+    background: var(--hh-panel) !important;
+    color: var(--hh-text) !important;
+    box-shadow: var(--hh-glow) !important;
+}
+
+body[data-huaha-page="smart-canvas"] .smart-log-toggle:hover,
+body[data-huaha-page="smart-canvas"] .smart-shortcut-toggle:hover,
+body[data-huaha-page="smart-canvas"] .smart-workflow-toggle:hover,
+body[data-huaha-page="smart-canvas"] .asset-toggle:hover {
+    border-color: var(--hh-line-strong) !important;
+    background: var(--hh-panel-strong) !important;
+}
+
+body[data-huaha-page="canvas"] .panel,
+body[data-huaha-page="canvas"] .node,
+body[data-huaha-page="canvas"] .canvas-asset-panel,
+body[data-huaha-page="canvas"] .workflow-transfer-panel,
+body[data-huaha-page="canvas"] .minimap,
+body[data-huaha-page="smart-canvas"] .composer-card,
+body[data-huaha-page="smart-canvas"] .image-node,
+body[data-huaha-page="smart-canvas"] .asset-panel,
+body[data-huaha-page="smart-canvas"] .smart-minimap {
+    border-color: var(--hh-line) !important;
+    background-color: var(--hh-panel) !important;
+    box-shadow: var(--hh-glow) !important;
+    backdrop-filter: blur(18px) saturate(125%);
+}
+
+body[data-huaha-page="canvas"] .node.selected,
+body[data-huaha-page="smart-canvas"] .image-node.selected {
+    outline-color: var(--hh-cyan) !important;
+    box-shadow: 0 0 0 1px rgba(107, 224, 255, .42), 0 16px 46px rgba(0, 7, 17, .44) !important;
+}
+
+body[data-huaha-page="canvas"] .gen-btn,
+body[data-huaha-page="canvas"] .preview-text-btn:not(.secondary),
+body[data-huaha-page="smart-canvas"] .run-btn {
+    border-color: rgba(255, 163, 145, .6) !important;
+    background: var(--hh-coral) !important;
+    color: #fff !important;
+}
+
+body[data-huaha-surface="tool"] #mainGenBtn,
+body[data-huaha-surface="tool"] #genBtn,
+body[data-huaha-surface="tool"] .btn-render {
+    border-color: rgba(255, 163, 145, .64) !important;
+    background: var(--hh-coral) !important;
+    color: #fff !important;
+    box-shadow: 0 12px 34px rgba(255, 92, 74, .2) !important;
+}
+
+body[data-huaha-surface="tool"] .mode-btn.active,
+body[data-huaha-surface="tool"] .engine-btn.active,
+body[data-huaha-surface="tool"] [role="tab"][aria-selected="true"] {
+    border-color: rgba(109, 219, 255, .42) !important;
+    background: var(--hh-cyan-soft) !important;
+    color: var(--hh-text) !important;
+}
+
+body[data-huaha-page="canvas"] .miora-canvas-brand img {
+    width: 58px !important;
+    height: 58px !important;
+    border-radius: 12px;
+    object-fit: cover;
+}
+
+body[data-huaha-page="canvas"] .miora-canvas-brand strong {
+    color: var(--hh-text) !important;
+}
+
+body[data-huaha-page="canvas"] .miora-canvas-brand span {
+    color: var(--hh-muted) !important;
+}
+
+.huahai-canvas-rail {
+    position: absolute;
+    left: 18px;
+    top: 118px;
+    z-index: 32;
+    width: 82px;
+    padding: 10px;
+    display: flex;
+    flex-direction: column;
+    gap: 7px;
+    border: 1px solid var(--hh-line);
+    border-radius: 16px;
+    background: rgba(7, 19, 37, .82);
+    box-shadow: var(--hh-glow);
+    backdrop-filter: blur(20px) saturate(126%);
+}
+
+.huahai-canvas-rail button {
+    min-height: 54px;
+    display: grid;
+    place-items: center;
+    gap: 4px;
+    border: 1px solid transparent;
+    border-radius: 11px;
+    background: transparent;
+    color: var(--hh-muted);
+    font-size: 10px;
+}
+
+.huahai-canvas-rail button i {
+    width: 18px;
+    height: 18px;
+}
+
+.huahai-canvas-rail button:hover,
+.huahai-canvas-rail button.active {
+    border-color: rgba(132, 218, 255, .34);
+    background: rgba(84, 153, 205, .18);
+    color: var(--hh-text);
+}
+
+.huahai-canvas-inspector {
+    position: absolute;
+    right: 18px;
+    top: 118px;
+    bottom: 194px;
+    z-index: 31;
+    width: 252px;
+    display: flex;
+    flex-direction: column;
+    border: 1px solid var(--hh-line);
+    border-radius: 16px;
+    background: rgba(7, 19, 37, .84);
+    box-shadow: var(--hh-glow);
+    backdrop-filter: blur(20px) saturate(126%);
+    transition: width .2s ease, opacity .2s ease;
+}
+
+.huahai-canvas-inspector.collapsed {
+    width: 46px;
+    bottom: auto;
+}
+
+.huahai-canvas-inspector.collapsed header > div,
+.huahai-canvas-inspector.collapsed .huahai-inspector-body {
+    display: none;
+}
+
+.huahai-canvas-inspector header {
+    min-height: 62px;
+    padding: 12px 12px 12px 16px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    border-bottom: 1px solid var(--hh-line);
+}
+
+.huahai-canvas-inspector header small,
+.huahai-canvas-inspector header strong {
+    display: block;
+}
+
+.huahai-canvas-inspector header small {
+    color: var(--hh-muted);
+    font-size: 10px;
+}
+
+.huahai-canvas-inspector header strong {
+    max-width: 180px;
+    margin-top: 3px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    font-size: 13px;
+}
+
+.huahai-canvas-inspector header button {
+    width: 30px;
+    height: 30px;
+    flex: 0 0 30px;
+    display: grid;
+    place-items: center;
+    border: 1px solid var(--hh-line);
+    border-radius: 9px;
+    background: transparent;
+    color: var(--hh-muted);
+}
+
+.huahai-canvas-inspector header button i {
+    width: 15px;
+    height: 15px;
+}
+
+.huahai-inspector-body {
+    min-height: 0;
+    padding: 14px;
+    overflow: auto;
+}
+
+.huahai-inspector-body > p {
+    margin: 8px 0;
+    color: var(--hh-muted);
+    font-size: 12px;
+    line-height: 1.6;
+}
+
+.huahai-inspector-field {
+    display: grid;
+    gap: 6px;
+    margin-bottom: 12px;
+}
+
+.huahai-inspector-field > span {
+    color: var(--hh-muted);
+    font-size: 10px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.huahai-inspector-field input,
+.huahai-inspector-field select,
+.huahai-inspector-field textarea {
+    width: 100%;
+    min-height: 36px;
+    padding: 7px 9px;
+    border: 1px solid var(--hh-line);
+    border-radius: 9px;
+    background: rgba(2, 10, 24, .58);
+    color: var(--hh-text);
+}
+
+.huahai-inspector-field textarea {
+    resize: vertical;
+}
+
+.huahai-run-selected {
+    border-color: rgba(255, 161, 143, .52) !important;
+    background: var(--hh-coral) !important;
+    color: #fff !important;
+}
+
+.huahai-run-selected:disabled {
+    border-color: var(--hh-line) !important;
+    background: rgba(76, 96, 119, .34) !important;
+    color: var(--hh-muted) !important;
+    cursor: not-allowed;
+    box-shadow: none !important;
+}
+
+body[data-huaha-page="canvas"] .canvas-asset-panel.open ~ .huahai-canvas-inspector,
+body[data-huaha-page="canvas"] .workflow-transfer-panel.open ~ .huahai-canvas-inspector {
+    opacity: 0;
+    pointer-events: none;
+}
+
+body[data-huaha-page="canvas"] [class*="reflection"],
+body[data-huaha-page="smart-canvas"] [class*="reflection"],
+body[data-huaha-page="canvas"] [class*="water-floor"],
+body[data-huaha-page="smart-canvas"] [class*="water-floor"] {
+    display: none !important;
+}
+
+/* Home */
+.huahai-home {
+    height: 100vh;
+    min-height: 680px;
+    overflow: auto;
+    padding: 30px 34px 42px;
+    color: var(--hh-text);
+}
+
+.huahai-home-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 20px;
+    margin-bottom: 26px;
+}
+
+.huahai-home-head h1 {
+    margin: 0;
+    font-size: 24px;
+    letter-spacing: .04em;
+}
+
+.huahai-home-head p {
+    margin: 7px 0 0;
+    color: var(--hh-muted);
+    font-size: 13px;
+}
+
+.huahai-service-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 9px;
+    height: 38px;
+    padding: 0 15px;
+    border: 1px solid var(--hh-line);
+    border-radius: 999px;
+    background: var(--hh-panel-soft);
+    backdrop-filter: blur(16px);
+}
+
+.huahai-service-pill i {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: var(--hh-success);
+    box-shadow: 0 0 14px rgba(93, 224, 164, .56);
+}
+
+.huahai-hero-grid {
+    display: grid;
+    grid-template-columns: minmax(0, 1.55fr) minmax(290px, .65fr);
+    gap: 24px;
+    align-items: stretch;
+}
+
+.huahai-glass {
+    position: relative;
+    border: 1px solid var(--hh-line);
+    border-radius: var(--hh-radius-lg);
+    background: var(--hh-panel);
+    box-shadow: var(--hh-glow);
+    backdrop-filter: blur(22px) saturate(128%);
+}
+
+.huahai-create {
+    min-height: 360px;
+    padding: 34px;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    -webkit-box-reflect: none;
+}
+
+.huahai-create::after {
+    content: "";
+    position: absolute;
+    left: 8%;
+    right: 8%;
+    bottom: -30px;
+    height: 30px;
+    border-radius: 50%;
+    pointer-events: none;
+    background: linear-gradient(180deg, rgba(76, 190, 226, .1), transparent 74%);
+    filter: blur(12px);
+    opacity: .65;
+}
+
+.huahai-create h2 {
+    margin: 0 0 18px;
+    font-size: clamp(24px, 2vw, 34px);
+    font-weight: 650;
+}
+
+.huahai-create textarea {
+    width: 100%;
+    min-height: 138px;
+    resize: vertical;
+    padding: 18px;
+    border: 1px solid rgba(150, 215, 245, .28);
+    border-radius: var(--hh-radius);
+    background: rgba(4, 13, 28, .42);
+    color: var(--hh-text);
+    line-height: 1.65;
+}
+
+.huahai-create-actions {
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 10px;
+    margin-top: 16px;
+}
+
+.huahai-select,
+.huahai-btn {
+    height: 42px;
+    border: 1px solid var(--hh-line);
+    border-radius: 11px;
+    background: rgba(7, 19, 36, .7);
+    color: var(--hh-text);
+    padding: 0 14px;
+}
+
+.huahai-btn.primary {
+    display: inline-flex;
+    align-items: center;
+    gap: 9px;
+    border-color: rgba(255, 169, 151, .62);
+    background: var(--hh-coral);
+    color: #fff;
+    font-weight: 750;
+}
+
+.huahai-preview {
+    min-height: 360px;
+    padding: 18px;
+}
+
+.huahai-preview h3,
+.huahai-recent h2 {
+    margin: 0 0 14px;
+    font-size: 15px;
+}
+
+.huahai-preview img {
+    width: 100%;
+    height: 292px;
+    border-radius: 14px;
+    object-fit: cover;
+    display: block;
+}
+
+.huahai-recent {
+    margin-top: 42px;
+}
+
+.huahai-recent-grid {
+    display: grid;
+    grid-template-columns: repeat(5, minmax(150px, 1fr));
+    gap: 14px;
+}
+
+.huahai-recent-card {
+    min-height: 164px;
+    padding: 18px;
+    border: 1px solid var(--hh-line);
+    border-radius: var(--hh-radius);
+    background: var(--hh-panel-soft);
+    color: var(--hh-text);
+    text-align: left;
+    box-shadow: var(--hh-glow);
+    backdrop-filter: blur(18px);
+}
+
+.huahai-recent-card small {
+    color: var(--hh-muted);
+}
+
+.huahai-recent-card strong {
+    display: block;
+    margin: 22px 0 24px;
+    font-size: 17px;
+}
+
+.huahai-home-empty {
+    padding: 28px;
+    color: var(--hh-muted);
+    text-align: center;
+}
+
+@media (max-width: 1100px) {
+    .huahai-hero-grid { grid-template-columns: 1fr; }
+    .huahai-preview { min-height: 300px; }
+    .huahai-preview img { height: 230px; }
+    .huahai-recent { margin-top: 44px; }
+    .huahai-recent-grid { grid-template-columns: repeat(3, minmax(150px, 1fr)); }
+}
+
+@media (max-width: 760px) {
+    .huahai-home { padding: 20px 16px 32px; }
+    .huahai-home-head { align-items: flex-start; flex-direction: column; }
+    .huahai-create { min-height: 320px; padding: 22px; -webkit-box-reflect: none; }
+    .huahai-create-actions { align-items: stretch; flex-direction: column; }
+    .huahai-select, .huahai-btn { width: 100%; }
+    .huahai-recent-grid { grid-template-columns: 1fr; }
+    body[data-huaha-page="canvas-list"] .workspace {
+        flex-direction: column !important;
+    }
+    body[data-huaha-page="canvas-list"] .ws-sidebar {
+        display: none !important;
+    }
+    body[data-huaha-page="canvas-list"] .ws-main {
+        width: 100vw !important;
+        min-width: 0 !important;
+        flex: 1 1 auto !important;
+    }
+    body[data-huaha-page="canvas-list"] .ws-topbar {
+        min-height: 72px !important;
+        padding: 12px 14px !important;
+    }
+    body[data-huaha-page="canvas-list"] .ws-topbar-right {
+        gap: 6px !important;
+    }
+    body[data-huaha-page="canvas-list"] .ws-primary-btn {
+        width: 42px !important;
+        padding: 0 !important;
+        justify-content: center !important;
+    }
+    body[data-huaha-page="canvas-list"] .ws-primary-btn span {
+        display: none !important;
+    }
+    body[data-huaha-page="canvas-list"] .miora-workspace-brand img {
+        width: 58px !important;
+        height: 58px !important;
+    }
+    .huahai-canvas-rail {
+        left: 8px;
+        top: 92px;
+        width: 48px;
+        padding: 5px;
+    }
+    .huahai-canvas-rail button {
+        min-height: 42px;
+    }
+    .huahai-canvas-rail button span {
+        display: none;
+    }
+    .huahai-canvas-inspector {
+        display: none !important;
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .huahai-cursor-light,
+    .huahai-ripple {
+        display: none !important;
+    }
+    *,
+    *::before,
+    *::after {
+        scroll-behavior: auto !important;
+        animation-duration: .01ms !important;
+        animation-iteration-count: 1 !important;
+        transition-duration: .01ms !important;
+    }
+}

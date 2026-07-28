@@ -6,11 +6,11 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 import main
 
 
-class MioraBrandingTests(unittest.TestCase):
-    def test_app_info_exposes_miora_identity(self):
+class HuahaiBrandingTests(unittest.TestCase):
+    def test_app_info_exposes_huahai_identity(self):
         info = main.app_info()
 
-        self.assertEqual(info["brand"], "MIORA Studio")
+        self.assertEqual(info["brand"], "花海画布")
         self.assertEqual(info["author"], "xy2446522127-code")
         self.assertEqual(
             info["repo_url"],
@@ -26,16 +26,59 @@ class MioraBrandingTests(unittest.TestCase):
         for requested in ("github", "modelscope", "ms", "anything"):
             self.assertEqual(main.normalize_update_source(requested), "github")
 
-    def test_core_pages_load_shared_miora_theme(self):
+    def test_all_product_pages_load_shared_huahai_theme(self):
         root = Path(__file__).resolve().parents[1]
         for relative in (
             "static/index.html",
+            "static/home.html",
             "static/canvas-list.html",
             "static/canvas.html",
+            "static/smart-canvas.html",
+            "static/zimage.html",
+            "static/enhance.html",
+            "static/klein.html",
+            "static/angle.html",
+            "static/online.html",
+            "static/gpt-chat.html",
+            "static/asset-manager.html",
+            "static/api-settings.html",
+            "static/comfyui-settings.html",
+            "static/plugin-center.html",
         ):
             page = (root / relative).read_text(encoding="utf-8")
-            self.assertIn("/static/css/miora.css", page)
-            self.assertIn("MIORA", page)
+            self.assertIn("/static/js/theme.js", page, relative)
+            self.assertNotIn("MIORA Studio", page, relative)
+
+        theme = (root / "static/js/theme.js").read_text(encoding="utf-8")
+        self.assertIn("/static/css/huahai.css", theme)
+        self.assertIn("/static/js/huahai-interactions.js", theme)
+
+    def test_home_is_the_default_studio_page(self):
+        root = Path(__file__).resolve().parents[1]
+        index = (root / "static/index.html").read_text(encoding="utf-8")
+        self.assertIn("const DEFAULT_PAGE_ID = 'home'", index)
+        self.assertIn('id="frame-home"', index)
+
+    def test_canvas_interactions_disable_reflections(self):
+        root = Path(__file__).resolve().parents[1]
+        css = (root / "static/css/huahai.css").read_text(encoding="utf-8")
+        self.assertIn('body[data-huaha-page="canvas"] [class*="reflection"]', css)
+        self.assertIn('body[data-huaha-page="smart-canvas"] [class*="reflection"]', css)
+        script = (root / "static/js/huahai-interactions.js").read_text(encoding="utf-8")
+        self.assertIn("canvasBlank", script)
+        self.assertIn("requestAnimationFrame", script)
+        self.assertIn("state?.moved", script)
+        self.assertIn("dragging()", script)
+        self.assertIn("for(let i=0;i<count;i++)", script)
+        self.assertIn("page === 'canvas-list' && target.closest('.ws-card') ? 3 : 2", script)
+        self.assertIn("@media (prefers-reduced-motion: reduce)", css)
+
+    def test_project_cards_expose_focus_actions(self):
+        root = Path(__file__).resolve().parents[1]
+        script = (root / "static/js/canvas-list.js").read_text(encoding="utf-8")
+        self.assertIn("ws-card-focus-actions", script)
+        self.assertIn("duplicateCanvas", script)
+        self.assertIn("requestAnimationFrame(resetView)", script)
 
 
 if __name__ == "__main__":

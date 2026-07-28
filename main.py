@@ -170,8 +170,8 @@ class ConnectionManager:
 
 manager = ConnectionManager()
 GLOBAL_LOOP = None
-APP_VERSION = "2026.07.28.1"
-BRAND_NAME = "MIORA Studio"
+APP_VERSION = "2026.07.28.2"
+BRAND_NAME = "花海画布"
 BRAND_AUTHOR = "xy2446522127-code"
 UPSTREAM_REPO_URL = "https://github.com/hero8152/Infinite-Canvas"
 GITHUB_REPO_URL = "https://github.com/xy2446522127-code/miora-studio"
@@ -1799,8 +1799,8 @@ def connectivity_probe(name: str, url: str, timeout: float = 5.0) -> Dict[str, A
 
 def update_connectivity_targets() -> List[Tuple[str, str, str, bool]]:
     return [
-        ("MIORA GitHub 更新列表", GITHUB_TREE_URL, "github", True),
-        ("MIORA GitHub 版本文件", GITHUB_VERSION_URL, "github", True),
+        ("花海画布 GitHub 更新列表", GITHUB_TREE_URL, "github", True),
+        ("花海画布 GitHub 版本文件", GITHUB_VERSION_URL, "github", True),
         ("GitHub 主页", "https://github.com/", "github", False),
         ("Google 连通性", "https://www.google.com/generate_204", "reference", False),
     ]
@@ -1881,11 +1881,11 @@ def version_gt(a: str, b: str) -> bool:
 
 @app.get("/api/check-update")
 def check_update():
-    """仅检测 MIORA Studio 自有 GitHub 仓库，避免上游自动覆盖二开文件。"""
+    """仅检测花海画布自有 GitHub 仓库，避免上游自动覆盖二开文件。"""
     current = current_app_version()
     github = fetch_remote_version(GITHUB_VERSION_URL, timeout=5.0)
     github["source"] = "github"
-    modelscope = {"version": "", "ok": False, "error": "disabled for MIORA Studio", "url": "", "source": "modelscope"}
+    modelscope = {"version": "", "ok": False, "error": "disabled for 花海画布", "url": "", "source": "modelscope"}
     best: Dict[str, Any] = (
         {"source": "github", "version": github["version"]}
         if github["ok"] and github["version"]
@@ -2161,7 +2161,7 @@ def staged_update_file_list(staging_root: str) -> Tuple[List[str], List[str], Li
     static_files = sorted(set(static_files))
     return root_files, static_files, root_files + static_files
 
-UPDATE_SOURCE_LABELS = {"github": "MIORA GitHub"}
+UPDATE_SOURCE_LABELS = {"github": "花海画布 GitHub"}
 
 def normalize_update_source(value: str) -> str:
     return "github"
@@ -2181,7 +2181,7 @@ def update_from_github(req: UpdateRequest = UpdateRequest()):
         raise HTTPException(status_code=409, detail="正在更新中，请稍后再试")
     staging_root = ""
     requested_source = normalize_update_source(req.source)
-    # MIORA Studio 只允许从本项目仓库更新，禁止上游源覆盖二开文件。
+    # 花海画布只允许从本项目仓库更新，禁止上游源覆盖二开文件。
     source_order = ["github"]
     try:
         backup_root = os.path.join(DATA_DIR, "update_backups", time.strftime("%Y%m%d-%H%M%S"))
@@ -18914,6 +18914,6 @@ if __name__ == "__main__":
     # 默认 20s ping/20s 超时会把这些连接每隔一会儿就踢掉造成"频繁断连"。
     # 客户端有自己的应用层心跳 + 断线重连兜底，这里禁用协议 ping 更稳。
     server_port = int(os.getenv("PORT", "3000"))
-    print(f"MIORA Studio: http://0.0.0.0:{server_port}")
+    print(f"花海画布: http://0.0.0.0:{server_port}")
     uvicorn.run(app, host="0.0.0.0", port=server_port,
                 ws_ping_interval=None, ws_ping_timeout=None)

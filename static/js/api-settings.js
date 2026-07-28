@@ -3900,7 +3900,7 @@ window.addEventListener('studio-lang-change', () => {
     else renderEditor();
 });
 window.onload = () => {
-    if(window.StudioTheme) window.StudioTheme.apply();
+    if(window.StudioTheme) window.StudioTheme.apply(window.StudioTheme.get());
     if(window.StudioI18n) window.StudioI18n.apply();
     syncRecommendView();
     loadProviders();
