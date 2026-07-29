@@ -31,6 +31,20 @@
         </header>
 
         <section class="huahai-hero-grid" aria-label="快捷创作">
+            <div class="huahai-inspiration-strip" aria-label="创作灵感">
+                <button type="button" data-prompt="海面上的花海与晨雾">
+                    <img src="/static/images/huahai-home-preview.png" alt="">
+                    <span>潮汐花海</span>
+                </button>
+                <button type="button" data-prompt="深海蓝调的未来城市">
+                    <img src="/static/images/huahai-home-preview.png" alt="">
+                    <span>深海蓝调</span>
+                </button>
+                <button type="button" data-prompt="月光照亮安静的海岸">
+                    <img src="/static/images/huahai-home-preview.png" alt="">
+                    <span>月映海岸</span>
+                </button>
+            </div>
             <article class="huahai-glass huahai-create">
                 <h2>今天想创作什么？</h2>
                 <textarea id="homePrompt" maxlength="2000" placeholder="描述你想创作的画面…"></textarea>
@@ -64,5 +78,15 @@
         </section>
     </main>
     <script src="/static/js/home.js?v=2026.07.28.2.1785253455"></script>
+    <script>
+        document.querySelectorAll('.huahai-inspiration-strip [data-prompt]').forEach(function(card){
+            card.addEventListener('click', function(){
+                var prompt = document.getElementById('homePrompt');
+                prompt.value = card.dataset.prompt || '';
+                prompt.focus();
+                prompt.dispatchEvent(new Event('input', {bubbles:true}));
+            });
+        });
+    </script>
 </body>
 </html>

@@ -210,6 +210,13 @@ body[data-huaha-page="index"] .sidebar.is-pinned .logo-ring {
     object-fit: cover;
 }
 
+.huahai-shell-logo,
+.miora-workspace-brand img,
+.miora-canvas-brand img,
+.huahai-smart-brand img {
+    mix-blend-mode: screen;
+}
+
 .huahai-shell-word {
     width: 0;
     opacity: 0;
@@ -1036,6 +1043,382 @@ body[data-huaha-page="smart-canvas"] [class*="water-floor"] {
     }
 }
 
+/* Unified control language used by every non-canvas product screen. */
+body[data-huaha-surface="tool"],
+body[data-huaha-surface="ambient"] {
+    --hh-control-height: 40px;
+    --hh-control-radius: 10px;
+    --hh-control-line: rgba(139, 204, 238, .24);
+    --hh-control-bg: rgba(13, 29, 50, .74);
+    --hh-control-hover: rgba(26, 51, 79, .88);
+}
+
+body[data-huaha-surface="tool"] :is(
+    #mainGenBtn,
+    #genBtn,
+    .btn-render,
+    .glass-btn,
+    .generate-btn,
+    .run-btn,
+    .save-btn,
+    .primary,
+    .ws-primary-btn
+),
+body[data-huaha-surface="ambient"] :is(
+    .huahai-btn.primary,
+    .ws-primary-btn,
+    .ws-card-continue
+) {
+    min-height: var(--hh-control-height) !important;
+    border: 1px solid rgba(255, 183, 166, .7) !important;
+    border-radius: var(--hh-control-radius) !important;
+    background: linear-gradient(135deg, #ff826e, #f36d5b) !important;
+    color: #fff !important;
+    font-size: 12px !important;
+    font-weight: 750 !important;
+    letter-spacing: .04em !important;
+    box-shadow:
+        inset 0 1px rgba(255, 255, 255, .22),
+        0 10px 28px rgba(244, 101, 82, .2) !important;
+    transition:
+        transform .16s ease,
+        border-color .16s ease,
+        background-color .16s ease,
+        box-shadow .16s ease !important;
+}
+
+body[data-huaha-surface="tool"] :is(
+    #mainGenBtn,
+    #genBtn,
+    .btn-render,
+    .glass-btn,
+    .generate-btn,
+    .run-btn,
+    .save-btn,
+    .primary,
+    .ws-primary-btn
+):hover:not(:disabled),
+body[data-huaha-surface="ambient"] :is(
+    .huahai-btn.primary,
+    .ws-primary-btn,
+    .ws-card-continue
+):hover:not(:disabled) {
+    transform: translateY(-1px) !important;
+    border-color: rgba(255, 217, 205, .92) !important;
+    background: linear-gradient(135deg, #ff907d, #fa725f) !important;
+    box-shadow:
+        inset 0 1px rgba(255, 255, 255, .28),
+        0 0 0 3px rgba(255, 126, 105, .1),
+        0 14px 34px rgba(244, 101, 82, .28) !important;
+}
+
+body[data-huaha-surface="tool"] :is(
+    #mainGenBtn,
+    #genBtn,
+    .btn-render,
+    .glass-btn,
+    .generate-btn,
+    .run-btn,
+    .save-btn,
+    .primary,
+    .ws-primary-btn
+):active:not(:disabled),
+body[data-huaha-surface="ambient"] :is(
+    .huahai-btn.primary,
+    .ws-primary-btn,
+    .ws-card-continue
+):active:not(:disabled) {
+    transform: translateY(0) scale(.985) !important;
+    box-shadow: inset 0 2px 8px rgba(75, 20, 13, .2) !important;
+}
+
+body[data-huaha-surface="tool"] :is(
+    .asset-btn,
+    .action-btn:not(.danger-btn):not(.save-btn),
+    .mode-btn,
+    .engine-btn,
+    .size-btn,
+    .huahai-btn:not(.primary)
+),
+body[data-huaha-surface="ambient"] :is(
+    .huahai-btn:not(.primary),
+    .ws-paste-btn,
+    .ws-mini-btn
+) {
+    min-height: 34px !important;
+    border: 1px solid var(--hh-control-line) !important;
+    border-radius: var(--hh-control-radius) !important;
+    background: var(--hh-control-bg) !important;
+    color: var(--hh-muted) !important;
+    box-shadow: inset 0 1px rgba(255, 255, 255, .035) !important;
+    transition:
+        transform .16s ease,
+        color .16s ease,
+        border-color .16s ease,
+        background-color .16s ease,
+        box-shadow .16s ease !important;
+}
+
+body[data-huaha-surface="tool"] :is(
+    .asset-btn,
+    .action-btn:not(.danger-btn):not(.save-btn),
+    .mode-btn,
+    .engine-btn,
+    .size-btn,
+    .huahai-btn:not(.primary)
+):hover:not(:disabled),
+body[data-huaha-surface="ambient"] :is(
+    .huahai-btn:not(.primary),
+    .ws-paste-btn,
+    .ws-mini-btn
+):hover:not(:disabled) {
+    transform: translateY(-1px);
+    border-color: rgba(115, 218, 255, .52) !important;
+    background: var(--hh-control-hover) !important;
+    color: var(--hh-text) !important;
+    box-shadow: 0 0 0 3px rgba(83, 204, 255, .07), 0 10px 24px rgba(0, 4, 14, .2) !important;
+}
+
+body[data-huaha-surface="tool"] :is(
+    .ws-icon-btn,
+    .tool-btn,
+    .icon-btn,
+    button[aria-label]:not(.primary):not(.save-btn):not(.danger-btn)
+),
+body[data-huaha-surface="ambient"] :is(
+    .ws-icon-btn,
+    .tool-btn,
+    .icon-btn,
+    button[aria-label]:not(.primary):not(.ws-primary-btn)
+) {
+    border-color: var(--hh-control-line) !important;
+    background: rgba(9, 22, 40, .7) !important;
+    color: var(--hh-muted) !important;
+    box-shadow: inset 0 1px rgba(255, 255, 255, .035) !important;
+}
+
+body[data-huaha-surface="tool"] :is(
+    .ws-icon-btn,
+    .tool-btn,
+    .icon-btn,
+    button[aria-label]:not(.primary):not(.save-btn):not(.danger-btn)
+):hover:not(:disabled),
+body[data-huaha-surface="ambient"] :is(
+    .ws-icon-btn,
+    .tool-btn,
+    .icon-btn,
+    button[aria-label]:not(.primary):not(.ws-primary-btn)
+):hover:not(:disabled) {
+    border-color: rgba(115, 218, 255, .52) !important;
+    background: rgba(24, 48, 75, .9) !important;
+    color: var(--hh-text) !important;
+    box-shadow: 0 0 18px rgba(66, 205, 255, .12) !important;
+}
+
+body[data-huaha-surface] button:disabled,
+body[data-huaha-surface] .disabled {
+    opacity: .42 !important;
+    cursor: not-allowed !important;
+    filter: saturate(.55);
+    box-shadow: none !important;
+    transform: none !important;
+}
+
+body[data-huaha-surface] button svg,
+body[data-huaha-surface] button i {
+    width: 15px;
+    height: 15px;
+    stroke-width: 1.9;
+}
+
+/* Home composition from the selected tidal-glass reference. */
+body[data-huaha-page="home"] .huahai-home {
+    max-width: 1320px;
+    margin: 0 auto;
+    padding: 26px 30px 44px;
+}
+
+body[data-huaha-page="home"] .huahai-hero-grid {
+    position: relative;
+    min-height: 500px;
+    display: grid;
+    grid-template-columns: minmax(210px, 1fr) minmax(390px, 440px) minmax(280px, 330px);
+    gap: 18px;
+    align-items: start;
+}
+
+body[data-huaha-page="home"] .huahai-inspiration-strip {
+    position: absolute;
+    z-index: 0;
+    left: 0;
+    right: 350px;
+    top: 82px;
+    display: flex;
+    justify-content: space-between;
+    gap: 14px;
+    pointer-events: none;
+}
+
+body[data-huaha-page="home"] .huahai-inspiration-strip button {
+    position: relative;
+    width: 185px;
+    height: 250px;
+    padding: 0;
+    overflow: hidden;
+    border: 1px solid var(--hh-line);
+    border-radius: 16px;
+    background: var(--hh-panel);
+    color: var(--hh-text);
+    box-shadow: var(--hh-glow);
+    pointer-events: auto;
+    -webkit-box-reflect: below 18px linear-gradient(transparent 0%, rgba(0, 0, 0, .08) 48%, rgba(0, 0, 0, .82) 100%);
+}
+
+body[data-huaha-page="home"] .huahai-inspiration-strip button:nth-child(2) {
+    transform: translateY(44px);
+}
+
+body[data-huaha-page="home"] .huahai-inspiration-strip img {
+    width: 100%;
+    height: 100%;
+    display: block;
+    object-fit: cover;
+    opacity: .64;
+}
+
+body[data-huaha-page="home"] .huahai-inspiration-strip button:nth-child(1) img {
+    object-position: 16% center;
+}
+
+body[data-huaha-page="home"] .huahai-inspiration-strip button:nth-child(2) img {
+    object-position: 50% center;
+}
+
+body[data-huaha-page="home"] .huahai-inspiration-strip button:nth-child(3) img {
+    object-position: 84% center;
+}
+
+body[data-huaha-page="home"] .huahai-inspiration-strip span {
+    position: absolute;
+    left: 14px;
+    bottom: 12px;
+    padding: 6px 9px;
+    border: 1px solid rgba(157, 221, 247, .22);
+    border-radius: 8px;
+    background: rgba(3, 12, 25, .58);
+    backdrop-filter: blur(12px);
+    font-size: 11px;
+}
+
+body[data-huaha-page="home"] .huahai-create {
+    z-index: 2;
+    grid-column: 2;
+    grid-row: 1;
+    min-height: 330px;
+    margin-top: 54px;
+    padding: 24px;
+    border-color: rgba(126, 218, 255, .6);
+    -webkit-box-reflect: below 18px linear-gradient(transparent 0%, rgba(0, 0, 0, .16) 36%, rgba(0, 0, 0, .76) 100%);
+}
+
+body[data-huaha-page="home"] .huahai-create h2 {
+    font-size: 23px;
+}
+
+body[data-huaha-page="home"] .huahai-preview {
+    z-index: 2;
+    grid-column: 3;
+    grid-row: 1;
+    min-height: 370px;
+    margin-top: 0;
+}
+
+body[data-huaha-page="home"] .huahai-preview img {
+    height: 310px;
+}
+
+body[data-huaha-page="home"] .huahai-recent {
+    margin-top: -44px;
+}
+
+body[data-huaha-page="home"] .huahai-recent-card {
+    min-height: 150px;
+    background:
+        radial-gradient(ellipse at 50% 100%, rgba(72, 208, 255, .11), transparent 55%),
+        var(--hh-panel-soft);
+}
+
+/* Project manager: one project sidebar and a cinematic horizontal canvas deck. */
+body[data-active-page="canvas"]:not(.canvas-creation-active) .sidebar {
+    display: none !important;
+}
+
+body[data-active-page="canvas"]:not(.canvas-creation-active) .stage {
+    margin: 0 !important;
+}
+
+body[data-huaha-page="canvas-list"] .miora-workspace-brand {
+    cursor: pointer;
+}
+
+body[data-huaha-page="canvas-list"] .ws-card {
+    width: 190px !important;
+    height: 300px !important;
+    padding: 18px !important;
+    background:
+        radial-gradient(ellipse at 50% 61%, transparent 0 14%, rgba(97, 219, 255, .16) 15% 16%, transparent 18% 24%, rgba(97, 219, 255, .11) 25% 26%, transparent 28% 35%, rgba(97, 219, 255, .07) 36% 37%, transparent 39%),
+        linear-gradient(160deg, rgba(24, 49, 77, .78), rgba(10, 25, 45, .68)) !important;
+}
+
+body[data-huaha-page="canvas-list"] .ws-card.featured {
+    width: 286px !important;
+    height: 390px !important;
+    transform: translateY(-42px);
+    border-color: rgba(126, 228, 255, .74) !important;
+}
+
+body[data-huaha-page="canvas-list"] .ws-card.featured:hover {
+    transform: translateY(-45px);
+}
+
+body[data-huaha-page="canvas-list"] .ws-card-title {
+    margin-top: 12px;
+    font-size: 18px !important;
+}
+
+body[data-huaha-page="canvas-list"] .ws-card-meta {
+    background: transparent !important;
+    border: 0 !important;
+    padding: 0 !important;
+}
+
+@media (max-width: 1050px) {
+    body[data-huaha-page="home"] .huahai-hero-grid {
+        grid-template-columns: 1fr 1fr;
+    }
+    body[data-huaha-page="home"] .huahai-inspiration-strip {
+        display: none;
+    }
+    body[data-huaha-page="home"] .huahai-create,
+    body[data-huaha-page="home"] .huahai-preview {
+        grid-row: 1;
+        margin-top: 0;
+    }
+    body[data-huaha-page="home"] .huahai-create {
+        grid-column: 1;
+    }
+    body[data-huaha-page="home"] .huahai-preview {
+        grid-column: 2;
+    }
+    body[data-huaha-page="home"] .huahai-recent {
+        margin-top: 24px;
+    }
+    body[data-huaha-page="home"] .huahai-create,
+    body[data-huaha-page="home"] .huahai-inspiration-strip button {
+        -webkit-box-reflect: none;
+    }
+}
+
 @media (prefers-reduced-motion: reduce) {
     .huahai-cursor-light,
     .huahai-ripple {
@@ -1048,5 +1431,1832 @@ body[data-huaha-page="smart-canvas"] [class*="water-floor"] {
         animation-duration: .01ms !important;
         animation-iteration-count: 1 !important;
         transition-duration: .01ms !important;
+    }
+}
+
+/* Focus mode for the real infinite-canvas editor.
+   The product navigation becomes an invisible 12px reveal rail and returns on hover. */
+body[data-huaha-page="index"].canvas-creation-active .sidebar {
+    position: absolute !important;
+    inset: 0 auto 0 0;
+    width: 12px !important;
+    min-width: 12px !important;
+    padding: 0 !important;
+    opacity: 0;
+    overflow: hidden;
+    transform: translateX(0);
+    pointer-events: auto;
+    transition:
+        width .22s ease,
+        min-width .22s ease,
+        padding .22s ease,
+        opacity .16s ease !important;
+}
+
+body[data-huaha-page="index"].canvas-creation-active .sidebar:hover,
+body[data-huaha-page="index"].canvas-creation-active .sidebar:focus-within {
+    width: 246px !important;
+    min-width: 246px !important;
+    padding: 24px 14px 18px !important;
+    opacity: 1 !important;
+}
+
+body[data-huaha-page="index"].canvas-creation-active.studio-scale-host .sidebar {
+    height: 100vh !important;
+    max-height: 100vh !important;
+    zoom: 1 !important;
+}
+
+body[data-huaha-page="index"].canvas-creation-active .stage {
+    margin-left: 0 !important;
+}
+
+.sidebar-zoom-lock-toast {
+    position: fixed;
+    left: 24px;
+    bottom: 24px;
+    z-index: 300;
+    max-width: min(320px, calc(100vw - 48px));
+    padding: 10px 14px;
+    border: 1px solid rgba(112, 215, 255, .38);
+    border-radius: 12px;
+    background: rgba(5, 18, 35, .9);
+    box-shadow: 0 16px 44px rgba(0, 5, 18, .34);
+    color: var(--hh-text);
+    font-size: 12px;
+    font-weight: 750;
+    opacity: 0;
+    pointer-events: none;
+    transform: translateY(8px);
+    transition: opacity .16s ease, transform .16s ease;
+}
+
+.sidebar-zoom-lock-toast.visible {
+    opacity: 1;
+    transform: translateY(0);
+}
+
+/* Canvas viewport zoom is distinct from browser/UI zoom. */
+.huahai-canvas-zoom {
+    position: absolute;
+    left: 18px;
+    bottom: 22px;
+    z-index: 35;
+    min-height: 42px;
+    padding: 6px;
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    border: 1px solid var(--hh-line);
+    border-radius: 13px;
+    background: rgba(7, 19, 37, .88);
+    box-shadow: var(--hh-glow);
+    backdrop-filter: blur(20px) saturate(126%);
+}
+
+.huahai-canvas-zoom > span {
+    padding: 0 7px 0 5px;
+    color: var(--hh-muted);
+    font-size: 10px;
+    font-weight: 750;
+    white-space: nowrap;
+}
+
+.huahai-canvas-zoom button {
+    height: 30px;
+    min-width: 30px;
+    padding: 0 8px;
+    display: inline-grid;
+    place-items: center;
+    border: 1px solid var(--hh-line);
+    border-radius: 8px;
+    background: rgba(23, 43, 68, .68);
+    color: var(--hh-text);
+    font: 750 11px/1 'Space Grotesk', sans-serif;
+}
+
+.huahai-canvas-zoom button:hover,
+.huahai-canvas-zoom button:focus-visible {
+    border-color: var(--hh-line-strong);
+    background: rgba(66, 127, 170, .25);
+}
+
+.huahai-canvas-zoom button i,
+.huahai-canvas-zoom button svg {
+    width: 14px;
+    height: 14px;
+}
+
+.huahai-canvas-zoom .canvas-zoom-percent {
+    min-width: 58px;
+    color: #effbff;
+}
+
+.huahai-canvas-zoom small {
+    padding: 0 7px 0 4px;
+    color: var(--hh-muted);
+    font-size: 9px;
+    white-space: nowrap;
+}
+
+@media (max-width: 920px) {
+    .huahai-canvas-zoom > span,
+    .huahai-canvas-zoom small {
+        display: none;
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    body[data-huaha-page="index"].canvas-creation-active .sidebar,
+    .sidebar-zoom-lock-toast {
+        transition: none !important;
+    }
+}
+
+/* Tidal Glass — faithful infinite-canvas composition.
+   The selected concept is the visual source of truth for this editor shell. */
+body[data-huaha-page="canvas"] {
+    background: #000 !important;
+}
+
+body[data-huaha-page="canvas"] .shell {
+    width: calc(100vw - 16px);
+    height: calc(100vh - 16px);
+    margin: 8px;
+    border: 1px solid rgba(104, 181, 222, .18);
+    border-radius: 10px;
+    background: #061224 !important;
+    box-shadow: inset 0 0 90px rgba(0, 0, 0, .26);
+}
+
+body[data-huaha-page="canvas"] .shell::after {
+    content: "";
+    position: absolute;
+    z-index: 28;
+    top: 0;
+    bottom: 0;
+    left: 152px;
+    width: 1px;
+    background: rgba(135, 193, 225, .16);
+    pointer-events: none;
+}
+
+body[data-huaha-page="canvas"] .board {
+    border-radius: 10px;
+    background-color: #071426 !important;
+    background-image: radial-gradient(circle, rgba(117, 188, 225, .15) 1px, transparent 1.25px) !important;
+    background-size: 28px 28px !important;
+    box-shadow: inset 0 0 120px rgba(0, 0, 0, .24);
+}
+
+body[data-huaha-page="canvas"] .topbar {
+    inset: 0;
+    display: block;
+    pointer-events: none;
+}
+
+body[data-huaha-page="canvas"] .canvas-nav {
+    position: absolute;
+    inset: 0 auto auto 0;
+    width: 410px;
+    max-width: none;
+    height: 104px;
+    padding: 0;
+    border: 0 !important;
+    border-radius: 0;
+    background: transparent !important;
+    box-shadow: none !important;
+    backdrop-filter: none;
+}
+
+body[data-huaha-page="canvas"] .miora-canvas-brand {
+    position: absolute;
+    inset: 10px auto auto 21px;
+    min-width: 0;
+    padding: 0;
+    display: block;
+    pointer-events: auto;
+    cursor: pointer;
+}
+
+body[data-huaha-page="canvas"] .miora-canvas-brand img {
+    width: 110px !important;
+    height: 88px !important;
+    border-radius: 0;
+    object-fit: fill;
+}
+
+body[data-huaha-page="canvas"] .miora-canvas-brand > div {
+    position: absolute;
+    left: 152px;
+    top: 10px;
+    width: 190px;
+    display: block !important;
+}
+
+body[data-huaha-page="canvas"] .miora-canvas-brand strong {
+    font-family: "Microsoft YaHei", Inter, sans-serif;
+    font-size: 21px;
+    font-weight: 760;
+    letter-spacing: .02em;
+    white-space: nowrap;
+}
+
+body[data-huaha-page="canvas"] .miora-canvas-brand span,
+body[data-huaha-page="canvas"] .canvas-nav > .tool-btn,
+body[data-huaha-page="canvas"] .canvas-nav-meta,
+body[data-huaha-page="canvas"] .canvas-nav > p {
+    display: none !important;
+}
+
+body[data-huaha-page="canvas"] #quickToolbar {
+    position: absolute;
+    top: 12px;
+    left: calc(50% + 86px);
+    width: 594px;
+    height: 61px;
+    max-width: calc(100vw - 500px);
+    margin: 0;
+    padding: 6px 7px;
+    display: flex;
+    align-items: center;
+    overflow: visible;
+    border-radius: 14px;
+    transform: translateX(-50%);
+}
+
+body[data-huaha-page="canvas"] #quickToolbar .toolbar-toggle,
+body[data-huaha-page="canvas"] #quickToolbar .toolbar-items {
+    display: none !important;
+}
+
+body[data-huaha-page="canvas"] #quickToolbar .toolbar-fixed {
+    width: 100%;
+    height: 100%;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+body[data-huaha-page="canvas"] #quickToolbar .tool-btn {
+    height: 43px;
+    min-width: 92px;
+    padding: 0 15px;
+    border-color: transparent;
+    border-radius: 9px;
+    background: transparent;
+    color: #aebccb;
+    font-size: 14px;
+    font-weight: 700;
+}
+
+body[data-huaha-page="canvas"] #quickToolbar .tool-btn i,
+body[data-huaha-page="canvas"] #quickToolbar .tool-btn svg {
+    width: 19px;
+    height: 19px;
+}
+
+body[data-huaha-page="canvas"] #workflowTransferToggle {
+    border-color: rgba(255, 126, 105, .7) !important;
+    color: #ff8876 !important;
+}
+
+body[data-huaha-page="canvas"] #quickToolbar .huahai-top-history {
+    min-width: 42px;
+    width: 42px;
+    padding: 0;
+    color: #788b9f;
+}
+
+body[data-huaha-page="canvas"] #quickToolbar .huahai-top-history:disabled {
+    opacity: .45;
+}
+
+body[data-huaha-page="canvas"] .huahai-toolbar-divider {
+    width: 1px;
+    height: 34px;
+    margin: 0 4px;
+    background: rgba(129, 183, 214, .16);
+}
+
+body[data-huaha-page="canvas"] #quickToolbar .huahai-run-selected {
+    min-width: 111px;
+    margin-left: auto;
+    border-color: rgba(255, 162, 143, .72) !important;
+    background: #f86b57 !important;
+    color: #fff !important;
+    box-shadow: 0 10px 28px rgba(234, 84, 62, .2) !important;
+}
+
+body[data-huaha-page="canvas"] #quickToolbar .huahai-run-selected:disabled {
+    opacity: .56;
+}
+
+body[data-huaha-page="canvas"] .huahai-canvas-rail {
+    left: 11px;
+    top: 126px;
+    width: 130px;
+    padding: 5px 7px;
+    gap: 0;
+    border-radius: 9px;
+    background: rgba(4, 18, 35, .78);
+}
+
+body[data-huaha-page="canvas"] .huahai-canvas-rail button {
+    width: 100%;
+    min-height: 47px;
+    padding: 0 15px;
+    display: flex;
+    align-items: center;
+    justify-content: flex-start;
+    gap: 14px;
+    border-radius: 7px;
+    color: #aebdcd;
+    font-size: 13px;
+    font-weight: 700;
+}
+
+body[data-huaha-page="canvas"] .huahai-canvas-rail button i,
+body[data-huaha-page="canvas"] .huahai-canvas-rail button svg {
+    width: 20px;
+    height: 20px;
+}
+
+body[data-huaha-page="canvas"] .huahai-canvas-rail button:hover,
+body[data-huaha-page="canvas"] .huahai-canvas-rail button.active {
+    border-color: rgba(117, 203, 255, .54);
+    background: rgba(53, 111, 174, .34);
+    color: #f2f8fc;
+}
+
+body[data-huaha-page="canvas"] .huahai-canvas-history {
+    position: absolute;
+    z-index: 34;
+    left: 11px;
+    bottom: 28px;
+    width: 130px;
+    display: grid;
+    border: 1px solid var(--hh-line);
+    border-radius: 9px;
+    overflow: hidden;
+    background: rgba(4, 18, 35, .8);
+    box-shadow: var(--hh-glow);
+    backdrop-filter: blur(18px) saturate(126%);
+}
+
+body[data-huaha-page="canvas"] .huahai-canvas-history button {
+    height: 47px;
+    padding: 0 17px;
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    border: 0;
+    border-bottom: 1px solid rgba(135, 193, 225, .14);
+    background: transparent;
+    color: #b2c0cf;
+    font-size: 13px;
+    font-weight: 700;
+}
+
+body[data-huaha-page="canvas"] .huahai-canvas-history button:last-child {
+    border-bottom: 0;
+}
+
+body[data-huaha-page="canvas"] .huahai-canvas-history button:disabled {
+    color: #526277;
+}
+
+body[data-huaha-page="canvas"] .huahai-canvas-history button.danger {
+    color: #ff625b;
+}
+
+body[data-huaha-page="canvas"] .huahai-canvas-history i,
+body[data-huaha-page="canvas"] .huahai-canvas-history svg {
+    width: 18px;
+    height: 18px;
+}
+
+body[data-huaha-page="canvas"] .huahai-canvas-inspector {
+    top: 67px;
+    right: 11px;
+    bottom: 214px;
+    width: 198px;
+    border-radius: 10px;
+    background: rgba(4, 18, 35, .82);
+}
+
+body[data-huaha-page="canvas"] .huahai-canvas-inspector.collapsed {
+    width: 44px;
+}
+
+body[data-huaha-page="canvas"] .huahai-canvas-inspector header {
+    min-height: 54px;
+    padding: 0 11px 0 14px;
+}
+
+body[data-huaha-page="canvas"] .huahai-canvas-inspector header > strong {
+    font-size: 14px;
+    font-weight: 760;
+}
+
+body[data-huaha-page="canvas"] .huahai-canvas-inspector header button {
+    width: 28px;
+    height: 28px;
+    flex-basis: 28px;
+    border-color: transparent;
+}
+
+body[data-huaha-page="canvas"] .huahai-inspector-body {
+    padding: 12px 13px 16px;
+}
+
+body[data-huaha-page="canvas"] .huahai-inspector-node {
+    display: grid;
+    gap: 9px;
+    margin-bottom: 18px;
+}
+
+body[data-huaha-page="canvas"] .huahai-inspector-node > span,
+body[data-huaha-page="canvas"] .huahai-inspector-field > span {
+    color: #a8b8c7;
+    font-size: 11px;
+}
+
+body[data-huaha-page="canvas"] .huahai-inspector-node > div {
+    height: 34px;
+    padding: 0 10px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    border: 1px solid var(--hh-line);
+    border-radius: 7px;
+    background: rgba(3, 14, 28, .52);
+}
+
+body[data-huaha-page="canvas"] .huahai-inspector-node strong {
+    max-width: 135px;
+    overflow: hidden;
+    color: #eef6fa;
+    font-size: 12px;
+    font-weight: 720;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+body[data-huaha-page="canvas"] .huahai-inspector-node i,
+body[data-huaha-page="canvas"] .huahai-inspector-node svg {
+    width: 14px;
+    height: 14px;
+    color: #8fa1b3;
+}
+
+body[data-huaha-page="canvas"] .huahai-inspector-fields > p {
+    color: var(--hh-muted);
+    font-size: 11px;
+    line-height: 1.65;
+}
+
+body[data-huaha-page="canvas"] .huahai-inspector-field {
+    gap: 7px;
+    margin-bottom: 14px;
+}
+
+body[data-huaha-page="canvas"] .huahai-inspector-field input,
+body[data-huaha-page="canvas"] .huahai-inspector-field select,
+body[data-huaha-page="canvas"] .huahai-inspector-field textarea {
+    min-height: 34px;
+    border-radius: 7px;
+}
+
+body[data-huaha-page="canvas"] .minimap {
+    right: 11px;
+    bottom: 8px;
+    width: 239px;
+    height: 190px;
+    padding: 10px;
+    border-radius: 10px;
+    background: rgba(4, 18, 35, .82) !important;
+}
+
+body[data-huaha-page="canvas"] .minimap-content {
+    height: 132px;
+    border: 1px solid rgba(129, 189, 222, .12);
+    border-radius: 5px;
+    background: rgba(20, 42, 65, .44);
+}
+
+body[data-huaha-page="canvas"] .minimap-viewport {
+    border-color: #7ae9ff !important;
+    border-radius: 0;
+    box-shadow: 0 0 0 1px rgba(117, 231, 255, .22);
+}
+
+body[data-huaha-page="canvas"] .minimap-arrange-btn {
+    right: 252px;
+    bottom: 198px;
+    background: rgba(4, 18, 35, .82);
+    color: var(--hh-muted);
+}
+
+body[data-huaha-page="canvas"] .huahai-canvas-zoom {
+    left: 168px;
+    bottom: 8px;
+    width: 218px;
+    min-height: 64px;
+    padding: 7px;
+    gap: 6px;
+    border-radius: 10px;
+    background: rgba(4, 18, 35, .82);
+}
+
+body[data-huaha-page="canvas"] .huahai-canvas-zoom button {
+    height: 48px;
+    min-width: 38px;
+    border-radius: 7px;
+    background: rgba(17, 40, 64, .7);
+}
+
+body[data-huaha-page="canvas"] .huahai-canvas-zoom .canvas-zoom-percent {
+    min-width: 57px;
+    font-size: 14px;
+}
+
+body[data-huaha-page="canvas"] .huahai-canvas-zoom [data-hh-zoom-fit] {
+    margin-left: 4px;
+}
+
+body[data-huaha-page="canvas"] .node {
+    border-color: rgba(128, 194, 230, .32) !important;
+    border-radius: 14px;
+    background: rgba(11, 28, 48, .88) !important;
+    box-shadow: 0 16px 42px rgba(0, 5, 16, .34), inset 0 1px 0 rgba(198, 233, 250, .04) !important;
+    backdrop-filter: blur(18px) saturate(125%);
+}
+
+body[data-huaha-page="canvas"] .node::before {
+    border-radius: 14px;
+    background: rgba(11, 28, 48, .86);
+}
+
+body[data-huaha-page="canvas"] .node.selected {
+    outline: 1px solid rgba(104, 228, 255, .72) !important;
+    outline-offset: 0;
+    border-color: rgba(112, 221, 255, .72) !important;
+}
+
+body[data-huaha-page="canvas"] .node-head {
+    height: 43px;
+    flex-basis: 43px;
+    padding: 0 14px;
+    border-bottom: 0;
+    border-radius: 14px 14px 0 0;
+}
+
+body[data-huaha-page="canvas"] .node-title {
+    color: #eef6fb;
+    font-size: 13px;
+    font-weight: 760;
+    letter-spacing: 0;
+    text-transform: none;
+}
+
+body[data-huaha-page="canvas"] .node-head button {
+    color: #a7b8c8 !important;
+}
+
+body[data-huaha-page="canvas"] .huahai-node-menu {
+    position: absolute;
+    z-index: 70;
+    width: 142px;
+    padding: 6px;
+    display: grid;
+    gap: 3px;
+    border: 1px solid var(--hh-line);
+    border-radius: 9px;
+    background: rgba(4, 18, 35, .94);
+    box-shadow: 0 18px 45px rgba(0, 4, 13, .46);
+    backdrop-filter: blur(20px) saturate(126%);
+}
+
+body[data-huaha-page="canvas"] .huahai-node-menu[hidden] {
+    display: none;
+}
+
+body[data-huaha-page="canvas"] .huahai-node-menu button {
+    height: 34px;
+    padding: 0 9px;
+    display: flex;
+    align-items: center;
+    gap: 9px;
+    border: 0;
+    border-radius: 6px;
+    background: transparent;
+    color: #c3d0dc;
+    font-size: 11px;
+}
+
+body[data-huaha-page="canvas"] .huahai-node-menu button:hover {
+    background: rgba(67, 126, 166, .22);
+}
+
+body[data-huaha-page="canvas"] .huahai-node-menu button.danger {
+    color: #ff766d;
+}
+
+body[data-huaha-page="canvas"] .huahai-node-menu i,
+body[data-huaha-page="canvas"] .huahai-node-menu svg {
+    width: 14px;
+    height: 14px;
+}
+
+body[data-huaha-page="canvas"] .node-body {
+    padding: 0 14px 14px;
+}
+
+body[data-huaha-page="canvas"] .prompt-node {
+    width: 218px !important;
+    min-width: 218px;
+    min-height: 247px;
+}
+
+body[data-huaha-page="canvas"] .prompt-node textarea {
+    height: 137px;
+    min-height: 137px;
+    padding: 12px;
+    border-color: rgba(128, 194, 230, .23);
+    border-radius: 9px;
+    background: rgba(3, 14, 28, .48);
+    color: #d8e5ee;
+    font-size: 11px;
+    line-height: 1.6;
+}
+
+body[data-huaha-page="canvas"] .prompt-template-btn {
+    border-radius: 7px;
+    background: rgba(83, 126, 155, .18);
+}
+
+body[data-huaha-page="canvas"] .generator-node {
+    width: 228px !important;
+    min-width: 228px;
+    min-height: 423px;
+}
+
+body[data-huaha-page="canvas"] .generator-node .node-body {
+    padding-bottom: 13px;
+}
+
+body[data-huaha-page="canvas"] .generator-node .generator-body {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    padding-top: 8px;
+}
+
+body[data-huaha-page="canvas"] .generator-node .generator-body > .text-\[10px\],
+body[data-huaha-page="canvas"] .generator-node .input-list,
+body[data-huaha-page="canvas"] .generator-node .provider-field,
+body[data-huaha-page="canvas"] .generator-node .resolution-field,
+body[data-huaha-page="canvas"] .generator-node .gen-count-row,
+body[data-huaha-page="canvas"] .generator-node .custom-ratio-row,
+body[data-huaha-page="canvas"] .generator-node .custom-size-row,
+body[data-huaha-page="canvas"] .generator-node .cascade-run-btn,
+body[data-huaha-page="canvas"] .generator-node .retry-bar {
+    display: none !important;
+}
+
+body[data-huaha-page="canvas"] .generator-node .gen-settings {
+    display: contents;
+    margin: 0 0 10px;
+    padding: 0;
+    border: 0;
+    border-radius: 0;
+    background: transparent;
+    box-shadow: none;
+}
+
+body[data-huaha-page="canvas"] .generator-node .gen-settings-row {
+    display: contents;
+}
+
+body[data-huaha-page="canvas"] .generator-node .gen-settings-row:first-child {
+    order: 1;
+}
+
+body[data-huaha-page="canvas"] .generator-node .prompt-list {
+    order: 2;
+    min-height: 118px;
+    margin: 0 !important;
+    padding: 25px 0 0;
+    position: relative;
+    overflow: hidden;
+    border: 0;
+    border-radius: 0;
+    background: transparent;
+    color: #dbe8f0;
+    font-size: 10px;
+    line-height: 1.55;
+}
+
+body[data-huaha-page="canvas"] .generator-node .prompt-list::before {
+    content: "提示词";
+    position: absolute;
+    top: 3px;
+    left: 0;
+    color: #a8b8c7;
+    font-size: 10px;
+    font-weight: 650;
+}
+
+body[data-huaha-page="canvas"] .generator-node .prompt-list .input-item,
+body[data-huaha-page="canvas"] .generator-node .prompt-list [class*="prompt"] {
+    margin: 0 !important;
+    padding: 0 !important;
+    border: 0 !important;
+    border-radius: 0 !important;
+    background: transparent !important;
+    color: inherit !important;
+    box-shadow: none !important;
+}
+
+body[data-huaha-page="canvas"] .generator-node .prompt-list > .text-\[10px\] {
+    display: none !important;
+}
+
+body[data-huaha-page="canvas"] .generator-node .prompt-list > .text-\[11px\] {
+    height: 93px;
+    margin: 0 !important;
+    padding: 9px !important;
+    overflow: hidden;
+    border: 1px solid rgba(128, 194, 230, .23) !important;
+    border-radius: 8px !important;
+    background: rgba(3, 14, 28, .5) !important;
+    color: #dbe8f0 !important;
+    line-height: 1.55;
+    -webkit-line-clamp: 4;
+}
+
+body[data-huaha-page="canvas"] .generator-node .api-size-row {
+    order: 3;
+}
+
+body[data-huaha-page="canvas"] .generator-node .gen-run-row {
+    order: 4;
+}
+
+body[data-huaha-page="canvas"] .generator-node .hh-generator-field {
+    width: 100%;
+    display: grid;
+    gap: 4px;
+}
+
+body[data-huaha-page="canvas"] .generator-node .hh-generator-field > span {
+    color: #a8b8c7;
+    font-size: 10px;
+    font-weight: 650;
+}
+
+body[data-huaha-page="canvas"] .generator-node .model-field {
+    order: 1;
+}
+
+body[data-huaha-page="canvas"] .generator-node .ratio-field {
+    order: 3;
+}
+
+body[data-huaha-page="canvas"] .generator-node .quality-field {
+    order: 4;
+}
+
+body[data-huaha-page="canvas"] .generator-node .select-lite,
+body[data-huaha-page="canvas"] .generator-node .setting-input {
+    width: 100%;
+    max-width: none;
+    height: 34px;
+    border-color: rgba(128, 194, 230, .23);
+    border-radius: 7px;
+    background: rgba(3, 14, 28, .5);
+    color: #e7f0f6;
+}
+
+body[data-huaha-page="canvas"] .generator-node .gen-btn {
+    height: 39px;
+    border-radius: 8px;
+    background: #f86b57 !important;
+    font-size: 13px;
+}
+
+body[data-huaha-page="canvas"] .output-node {
+    width: 245px !important;
+    min-width: 245px;
+    min-height: 280px;
+}
+
+body[data-huaha-page="canvas"] .output-node .output-grid {
+    grid-template-columns: 1fr;
+}
+
+body[data-huaha-page="canvas"] .output-node .output-img-wrap {
+    width: 100%;
+    max-width: none;
+    height: 200px;
+    aspect-ratio: auto;
+}
+
+body[data-huaha-page="canvas"] .output-node .node-body {
+    padding: 17px 12px 12px;
+}
+
+body[data-huaha-page="canvas"] .output-node .output-grid img,
+body[data-huaha-page="canvas"] .output-node .output-grid video {
+    border-radius: 8px;
+    object-fit: cover;
+}
+
+body[data-huaha-page="canvas"] .port {
+    width: 18px;
+    height: 18px;
+    border: 3px solid #dff8ff;
+    background: #1a3852;
+    box-shadow: 0 0 0 7px rgba(75, 210, 255, .14);
+}
+
+body[data-huaha-page="canvas"] .link {
+    stroke: #65ddff;
+    stroke-width: 2;
+    filter: drop-shadow(0 0 5px rgba(101, 221, 255, .58));
+}
+
+body[data-huaha-page="canvas"] .link-delete.visible:not(.hover) {
+    opacity: 0 !important;
+    pointer-events: none !important;
+}
+
+body[data-huaha-page="canvas"] .link-delete.hover {
+    opacity: 1 !important;
+    pointer-events: auto !important;
+}
+
+body[data-huaha-page="canvas"][data-huahai-canvas-tool="pan"] .board,
+body[data-huaha-page="canvas"][data-huahai-canvas-tool="pan"] .node {
+    cursor: grab !important;
+}
+
+body[data-huaha-page="canvas"][data-huahai-canvas-tool="zoom"] .board {
+    cursor: zoom-in !important;
+}
+
+@media (max-width: 1080px) {
+    body[data-huaha-page="canvas"] .miora-canvas-brand > div {
+        display: none !important;
+    }
+    body[data-huaha-page="canvas"] .shell::after {
+        left: 112px;
+    }
+    body[data-huaha-page="canvas"] .huahai-canvas-rail,
+    body[data-huaha-page="canvas"] .huahai-canvas-history {
+        width: 92px;
+    }
+    body[data-huaha-page="canvas"] .huahai-canvas-rail button {
+        justify-content: center;
+        padding: 0;
+    }
+    body[data-huaha-page="canvas"] .huahai-canvas-rail button span,
+    body[data-huaha-page="canvas"] .huahai-canvas-history button span {
+        display: none;
+    }
+    body[data-huaha-page="canvas"] .huahai-canvas-zoom {
+        left: 126px;
+    }
+    body[data-huaha-page="canvas"] #quickToolbar {
+        left: 126px;
+        width: calc(100vw - 390px);
+        max-width: none;
+        transform: none;
+    }
+}
+
+/* -------------------------------------------------------------------------- */
+/* Tidal Glass full-product layouts — one system for the selected 14 screens. */
+/* -------------------------------------------------------------------------- */
+
+body[data-huaha-page="index"]:not(.canvas-creation-active) .sidebar {
+    width: 160px !important;
+    min-width: 160px !important;
+    padding: 16px 12px 12px !important;
+    align-items: stretch !important;
+    transition: none !important;
+}
+
+body[data-huaha-page="index"]:not(.canvas-creation-active) .sidebar:hover,
+body[data-huaha-page="index"]:not(.canvas-creation-active) .sidebar.is-pinned {
+    width: 160px !important;
+}
+
+body[data-huaha-page="index"]:not(.canvas-creation-active) .logo-ring,
+body[data-huaha-page="index"]:not(.canvas-creation-active) .sidebar:hover .logo-ring,
+body[data-huaha-page="index"]:not(.canvas-creation-active) .sidebar.is-pinned .logo-ring {
+    width: 136px !important;
+    height: 78px !important;
+    min-height: 78px !important;
+    margin: 0 0 16px !important;
+    border-radius: 0 !important;
+    justify-content: flex-start !important;
+    background: transparent !important;
+    overflow: visible !important;
+}
+
+body[data-huaha-page="index"]:not(.canvas-creation-active) .huahai-shell-logo {
+    width: 136px;
+    height: 78px;
+    flex-basis: 136px;
+    object-fit: contain;
+    mix-blend-mode: screen;
+}
+
+body[data-huaha-page="index"]:not(.canvas-creation-active) .huahai-shell-word,
+body[data-huaha-page="index"]:not(.canvas-creation-active) .sidebar:hover .huahai-shell-word,
+body[data-huaha-page="index"]:not(.canvas-creation-active) .sidebar.is-pinned .huahai-shell-word {
+    display: none !important;
+}
+
+body[data-huaha-page="index"]:not(.canvas-creation-active) .sidebar nav {
+    width: 100%;
+    min-height: 0;
+    overflow: hidden auto;
+    padding-right: 2px;
+}
+
+body[data-huaha-page="index"]:not(.canvas-creation-active) .nav-item,
+body[data-huaha-page="index"]:not(.canvas-creation-active) .nav-fold-toggle,
+body[data-huaha-page="index"]:not(.canvas-creation-active) .side-pill {
+    width: 100% !important;
+    height: 38px !important;
+    min-height: 38px !important;
+    margin: 2px 0 !important;
+    padding: 0 12px !important;
+    gap: 11px !important;
+    justify-content: flex-start !important;
+    transition: color .16s ease, background-color .16s ease, border-color .16s ease !important;
+}
+
+body[data-huaha-page="index"]:not(.canvas-creation-active) .nav-item svg,
+body[data-huaha-page="index"]:not(.canvas-creation-active) .nav-fold-toggle svg,
+body[data-huaha-page="index"]:not(.canvas-creation-active) .side-pill svg {
+    width: 16px !important;
+    height: 16px !important;
+    flex: 0 0 16px;
+}
+
+body[data-huaha-page="index"]:not(.canvas-creation-active) .nav-text,
+body[data-huaha-page="index"]:not(.canvas-creation-active) .side-pill-text {
+    display: block !important;
+    width: auto !important;
+    max-width: 96px !important;
+    opacity: 1 !important;
+    font-size: 12px !important;
+    white-space: nowrap;
+}
+
+body[data-huaha-page="index"]:not(.canvas-creation-active) .nav-fold-group {
+    width: 100% !important;
+}
+
+body[data-huaha-page="index"]:not(.canvas-creation-active) .side-actions {
+    width: 100%;
+    margin-top: 8px;
+}
+
+body[data-huaha-page="index"]:not(.canvas-creation-active) .settings-fold-toggle,
+body[data-huaha-page="index"]:not(.canvas-creation-active) #github-entry-btn,
+body[data-huaha-page="index"]:not(.canvas-creation-active) #update-now-btn,
+body[data-huaha-page="index"]:not(.canvas-creation-active) #project-version-badge,
+body[data-huaha-page="index"]:not(.canvas-creation-active) .author-box {
+    display: none !important;
+}
+
+body[data-huaha-page="index"]:not(.canvas-creation-active) .stage {
+    margin: 0 !important;
+    border: 0 !important;
+    border-radius: 0 !important;
+    box-shadow: none !important;
+}
+
+.huahai-page-mast {
+    position: relative;
+    z-index: 5;
+    width: min(1180px, calc(100% - 64px));
+    margin: 24px auto 0;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 20px;
+    min-height: 38px;
+}
+
+.huahai-page-crumb {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    color: var(--hh-muted);
+    font-size: 12px;
+}
+
+.huahai-page-crumb strong {
+    color: var(--hh-text);
+    font-size: 15px;
+    letter-spacing: .04em;
+}
+
+.huahai-page-crumb svg {
+    width: 13px;
+    height: 13px;
+}
+
+.huahai-page-mast > p {
+    margin: 0;
+    color: var(--hh-muted);
+    font-size: 10px;
+    letter-spacing: .08em;
+}
+
+.huahai-page-tide {
+    position: fixed;
+    z-index: 0;
+    left: 4%;
+    right: 4%;
+    bottom: -9vh;
+    height: 34vh;
+    pointer-events: none;
+    opacity: .42;
+    background:
+        radial-gradient(ellipse at 50% 0%, rgba(60, 214, 255, .14), transparent 58%),
+        repeating-radial-gradient(ellipse at 50% -24%, transparent 0 16px, rgba(95, 220, 255, .055) 18px 19px, transparent 21px 34px);
+    filter: blur(.2px);
+    mask-image: linear-gradient(to bottom, transparent, #000 32%, #000);
+}
+
+body[data-huaha-page="zimage"],
+body[data-huaha-page="enhance"],
+body[data-huaha-page="klein"],
+body[data-huaha-page="angle"],
+body[data-huaha-page="online"] {
+    overflow: auto !important;
+}
+
+body[data-huaha-page="enhance"] > .container-box > header,
+body[data-huaha-page="klein"] > .container-box > header,
+body[data-huaha-page="angle"] > .container-box > header,
+body[data-huaha-page="online"] > .container-box > header {
+    display: none !important;
+}
+
+/* Image generation */
+body[data-huaha-page="zimage"] {
+    padding: 0 28px 120px !important;
+}
+
+body[data-huaha-page="zimage"] .huahai-page-mast {
+    width: min(1180px, 100%);
+}
+
+body[data-huaha-page="zimage"] > header:not(.huahai-page-mast) {
+    display: block !important;
+    width: min(1180px, 100%);
+    margin: 22px auto 0;
+    padding: 0 !important;
+}
+
+body[data-huaha-page="zimage"] > header:not(.huahai-page-mast) .layout-container {
+    width: 340px !important;
+    max-width: none !important;
+    margin: 0 !important;
+}
+
+body[data-huaha-page="zimage"] .console-card {
+    min-height: 620px;
+    padding: 18px !important;
+    border: 1px solid var(--hh-line-strong) !important;
+    border-radius: 18px !important;
+    background: var(--hh-panel) !important;
+    box-shadow: var(--hh-glow) !important;
+    backdrop-filter: blur(24px) saturate(130%);
+}
+
+body[data-huaha-page="zimage"] .console-card > div:first-child {
+    padding: 0 !important;
+    background: transparent !important;
+}
+
+body[data-huaha-page="zimage"] #prompt {
+    min-height: 180px;
+    margin-top: 12px;
+    padding: 16px !important;
+    border: 1px solid var(--hh-line) !important;
+    border-radius: 13px;
+    background: rgba(6, 16, 31, .48) !important;
+    color: var(--hh-text) !important;
+    font-size: 14px !important;
+}
+
+body[data-huaha-page="zimage"] .console-card > .flex:last-child {
+    display: grid !important;
+    grid-template-columns: 1fr !important;
+    align-content: start;
+    padding: 20px 0 0 !important;
+}
+
+body[data-huaha-page="zimage"] .console-card > .flex:last-child > .flex {
+    display: grid !important;
+    gap: 22px !important;
+}
+
+body[data-huaha-page="zimage"] .console-card .h-8.w-px {
+    display: none;
+}
+
+body[data-huaha-page="zimage"] #mainGenBtn {
+    width: 100% !important;
+    margin-top: 10px;
+}
+
+body[data-huaha-page="zimage"] > main {
+    position: absolute;
+    z-index: 2;
+    top: 84px;
+    left: min(410px, 36vw);
+    right: 32px;
+    min-height: 620px;
+    padding: 0 !important;
+}
+
+body[data-huaha-page="zimage"] > main .layout-container {
+    width: 100% !important;
+    max-width: none !important;
+}
+
+body[data-huaha-page="zimage"] #masonry {
+    position: relative;
+    min-height: 620px;
+    border: 1px solid var(--hh-line);
+    border-radius: 18px;
+    background: rgba(12, 27, 47, .6);
+    box-shadow: var(--hh-glow);
+    padding: 18px;
+}
+
+body[data-huaha-page="zimage"] #masonry:empty::before {
+    content: "图像预览\A生成结果会在这里呈现";
+    white-space: pre;
+    position: absolute;
+    inset: 0;
+    display: grid;
+    place-content: center;
+    text-align: center;
+    color: var(--hh-muted);
+    line-height: 2;
+    font-size: 12px;
+}
+
+/* Enhancement / fast creation / camera / online */
+body[data-huaha-page="enhance"] .container-box,
+body[data-huaha-page="klein"] .container-box,
+body[data-huaha-page="angle"] .container-box,
+body[data-huaha-page="online"] .container-box {
+    width: min(1180px, calc(100% - 64px)) !important;
+    max-width: none !important;
+    margin: 18px auto 0 !important;
+    padding: 0 0 120px !important;
+}
+
+body[data-huaha-page="enhance"] main {
+    display: grid !important;
+    grid-template-columns: 270px minmax(0, 1fr) !important;
+    gap: 18px !important;
+}
+
+body[data-huaha-page="enhance"] main > div:first-child {
+    grid-column: 1;
+    grid-row: 1;
+    padding: 16px;
+    border: 1px solid var(--hh-line);
+    border-radius: 18px;
+    background: var(--hh-panel);
+    backdrop-filter: blur(22px);
+}
+
+body[data-huaha-page="enhance"] main > div:last-child {
+    grid-column: 2 !important;
+    grid-row: 1 !important;
+}
+
+body[data-huaha-page="enhance"] #dropzone {
+    aspect-ratio: 4 / 3 !important;
+    border: 1px solid var(--hh-line-strong) !important;
+    background: rgba(10, 23, 41, .58) !important;
+}
+
+body[data-huaha-page="enhance"] #resultBox {
+    height: 650px !important;
+    border: 1px solid var(--hh-line-strong) !important;
+    border-radius: 18px !important;
+    background: rgba(11, 25, 44, .62) !important;
+    box-shadow: var(--hh-glow);
+}
+
+body[data-huaha-page="enhance"] .container-box > section,
+body[data-huaha-page="klein"] .container-box > section {
+    margin-top: 22px !important;
+}
+
+body[data-huaha-page="klein"] main {
+    display: grid !important;
+    grid-template-columns: 360px minmax(0, 1fr) !important;
+    gap: 20px !important;
+}
+
+body[data-huaha-page="klein"] main > div:first-child,
+body[data-huaha-page="online"] main > div:first-child {
+    grid-column: 1 !important;
+    grid-row: 1 !important;
+    padding: 18px;
+    border: 1px solid var(--hh-line-strong);
+    border-radius: 18px;
+    background: var(--hh-panel);
+    backdrop-filter: blur(22px);
+}
+
+body[data-huaha-page="klein"] main > div:last-child,
+body[data-huaha-page="online"] main > div:last-child {
+    position: relative;
+    grid-column: 2 !important;
+    grid-row: 1 !important;
+}
+
+body[data-huaha-page="klein"] #promptInput,
+body[data-huaha-page="online"] #promptInput {
+    min-height: 126px;
+    background: rgba(8, 20, 36, .58) !important;
+    color: var(--hh-text) !important;
+    border: 1px solid var(--hh-line) !important;
+}
+
+body[data-huaha-page="klein"] #resultBox {
+    min-height: 620px !important;
+    border: 1px solid var(--hh-line);
+    border-radius: 18px;
+    background: rgba(12, 27, 47, .62);
+}
+
+body[data-huaha-page="angle"] main {
+    display: grid !important;
+    grid-template-columns: 260px minmax(0, 1fr) 190px !important;
+    grid-template-rows: 620px auto !important;
+    gap: 18px !important;
+}
+
+body[data-huaha-page="angle"] main > section:first-child {
+    grid-column: 1;
+    grid-row: 1;
+}
+
+body[data-huaha-page="angle"] #cameraControl {
+    grid-column: 2;
+    grid-row: 1;
+    height: 620px;
+    padding: 14px;
+    border: 1px solid var(--hh-line-strong);
+    border-radius: 18px;
+    background: var(--hh-panel);
+}
+
+body[data-huaha-page="angle"] #resultBox {
+    grid-column: 3;
+    grid-row: 1;
+    height: 620px !important;
+    min-height: 620px !important;
+    border: 1px solid var(--hh-line);
+    border-radius: 18px;
+    background: rgba(12, 27, 47, .62);
+}
+
+body[data-huaha-page="angle"] main > section:last-child {
+    grid-column: 1 / -1;
+    grid-row: 2;
+}
+
+body[data-huaha-page="online"] main {
+    display: grid !important;
+    grid-template-columns: 340px minmax(0, 1fr) !important;
+    gap: 20px !important;
+}
+
+body[data-huaha-page="online"] #resultBox,
+body[data-huaha-page="online"] main > div:last-child {
+    min-height: 620px !important;
+    border-color: var(--hh-line) !important;
+    border-radius: 18px !important;
+    background: rgba(12, 27, 47, .62) !important;
+}
+
+body[data-huaha-page="online"] main > div:last-child::before {
+    content: "生成队列";
+    position: absolute;
+    z-index: 2;
+    left: 18px;
+    top: 16px;
+    color: var(--hh-text);
+    font-size: 13px;
+    font-weight: 750;
+}
+
+/* Settings, libraries, plugins and chat. */
+body[data-huaha-page="api-settings"] .layout,
+body[data-huaha-page="comfyui-settings"] .layout {
+    width: min(1180px, calc(100% - 64px)) !important;
+    max-width: none !important;
+    margin: 18px auto 100px !important;
+    gap: 14px !important;
+}
+
+body[data-huaha-page="api-settings"] .sidebar,
+body[data-huaha-page="comfyui-settings"] .sidebar,
+body[data-huaha-page="api-settings"] .content,
+body[data-huaha-page="comfyui-settings"] .content {
+    border: 1px solid var(--hh-line) !important;
+    border-radius: 18px !important;
+    background: var(--hh-panel) !important;
+}
+
+body[data-huaha-page="asset-manager"] .asset-manager-shell,
+body[data-huaha-page="asset-manager"] .asset-manager-root {
+    width: min(1180px, calc(100% - 48px)) !important;
+    margin-left: auto !important;
+    margin-right: auto !important;
+}
+
+body[data-huaha-page="plugin-center"] .wrap {
+    width: min(1180px, calc(100% - 64px)) !important;
+    max-width: none !important;
+    margin: 12px auto 120px !important;
+    padding: 0 !important;
+}
+
+body[data-huaha-page="plugin-center"] .grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+    max-width: 760px;
+}
+
+body[data-huaha-page="plugin-center"] .card {
+    min-height: 180px;
+    border-radius: 18px !important;
+}
+
+body[data-huaha-page="gpt-chat"] .chat-main {
+    width: calc(100% - 540px) !important;
+    height: calc(100vh - 104px) !important;
+    margin: 14px 250px 0 250px !important;
+    border: 1px solid var(--hh-line);
+    border-radius: 18px;
+    background: rgba(4, 13, 27, .52) !important;
+    overflow: hidden;
+}
+
+body[data-huaha-page="gpt-chat"] #historyPopover {
+    display: flex !important;
+    position: fixed !important;
+    inset: 82px auto 22px 20px !important;
+    width: 210px !important;
+    max-height: none !important;
+    transform: none !important;
+    opacity: 1 !important;
+    visibility: visible !important;
+    border: 0 !important;
+    padding: 14px !important;
+    border: 1px solid var(--hh-line) !important;
+    border-radius: 16px !important;
+    background: var(--hh-panel) !important;
+    box-shadow: var(--hh-glow) !important;
+}
+
+body[data-huaha-page="gpt-chat"] .chat-header,
+body[data-huaha-page="gpt-chat"] #messages,
+body[data-huaha-page="gpt-chat"] .composer-wrap {
+    margin-left: 0 !important;
+}
+
+.huahai-chat-context,
+.huahai-api-diagnostics,
+.huahai-plugin-detail {
+    position: fixed;
+    z-index: 8;
+    border: 1px solid var(--hh-line);
+    border-radius: 16px;
+    background: var(--hh-panel);
+    box-shadow: var(--hh-glow);
+    backdrop-filter: blur(22px) saturate(125%);
+    color: var(--hh-text);
+}
+
+.huahai-chat-context {
+    top: 82px;
+    right: 20px;
+    bottom: 22px;
+    width: 210px;
+    padding: 15px;
+}
+
+.huahai-chat-context header,
+.huahai-api-diagnostics header,
+.huahai-plugin-detail header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    padding-bottom: 13px;
+    border-bottom: 1px solid var(--hh-line);
+}
+
+.huahai-chat-context header strong,
+.huahai-api-diagnostics header strong,
+.huahai-plugin-detail header strong {
+    font-size: 13px;
+}
+
+.huahai-chat-context header span,
+.huahai-api-diagnostics header span,
+.huahai-plugin-detail header span {
+    color: var(--hh-muted);
+    font-size: 9px;
+}
+
+.huahai-chat-context section {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-top: 14px;
+    padding: 11px;
+    border: 1px solid var(--hh-line);
+    border-radius: 11px;
+    background: rgba(8, 21, 39, .54);
+}
+
+.huahai-chat-context section > svg {
+    width: 28px;
+    height: 28px;
+    color: var(--hh-cyan);
+}
+
+.huahai-chat-context section div {
+    display: grid;
+    gap: 3px;
+}
+
+.huahai-chat-context section strong {
+    font-size: 11px;
+}
+
+.huahai-chat-context section span,
+.huahai-context-empty {
+    color: var(--hh-muted);
+    font-size: 9px;
+    line-height: 1.6;
+}
+
+.huahai-context-empty {
+    margin-top: 18px;
+    padding: 18px 10px;
+    text-align: center;
+    border: 1px dashed var(--hh-line);
+    border-radius: 11px;
+}
+
+.huahai-api-diagnostics {
+    top: 98px;
+    right: 32px;
+    width: 230px;
+    padding: 15px;
+}
+
+.huahai-api-diagnostics dl {
+    display: grid;
+    gap: 10px;
+    margin: 14px 0;
+}
+
+.huahai-api-diagnostics dl > div {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 9px 10px;
+    border-radius: 9px;
+    background: rgba(7, 19, 35, .54);
+}
+
+.huahai-api-diagnostics dt {
+    color: var(--hh-muted);
+    font-size: 9px;
+}
+
+.huahai-api-diagnostics dd {
+    margin: 0;
+    color: var(--hh-text);
+    font-size: 9px;
+}
+
+.huahai-api-diagnostics button {
+    width: 100%;
+    min-height: 36px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+}
+
+body[data-huaha-page="api-settings"] .layout {
+    padding-right: 252px !important;
+}
+
+.huahai-plugin-detail {
+    top: 112px;
+    right: max(32px, calc((100vw - 1180px) / 2));
+    width: 300px;
+    min-height: 430px;
+    padding: 18px;
+}
+
+.huahai-plugin-detail-icon {
+    width: 72px;
+    height: 72px;
+    display: grid;
+    place-content: center;
+    margin: 28px auto 18px;
+    border: 1px solid var(--hh-line-strong);
+    border-radius: 18px;
+    background: rgba(12, 31, 52, .72);
+    color: var(--hh-cyan);
+}
+
+.huahai-plugin-detail-icon svg {
+    width: 34px;
+    height: 34px;
+}
+
+.huahai-plugin-detail h2,
+.huahai-plugin-detail p {
+    text-align: center;
+}
+
+.huahai-plugin-detail h2 {
+    margin: 0;
+    font-size: 17px;
+}
+
+.huahai-plugin-detail p {
+    color: var(--hh-muted);
+    font-size: 10px;
+    line-height: 1.7;
+}
+
+body[data-huaha-page="plugin-center"] .wrap {
+    padding-right: 330px !important;
+}
+
+.huahai-smart-rail {
+    position: fixed;
+    z-index: 30;
+    left: 18px;
+    top: 146px;
+    width: 104px;
+    display: grid;
+    gap: 4px;
+    padding: 9px;
+    border: 1px solid var(--hh-line);
+    border-radius: 15px;
+    background: var(--hh-panel);
+    box-shadow: var(--hh-glow);
+    backdrop-filter: blur(22px);
+}
+
+.huahai-smart-rail button {
+    min-height: 42px;
+    display: flex;
+    align-items: center;
+    gap: 9px;
+    padding: 0 10px;
+    border: 1px solid transparent;
+    border-radius: 9px;
+    background: transparent;
+    color: var(--hh-muted);
+    font-size: 10px;
+}
+
+.huahai-smart-rail button:hover,
+.huahai-smart-rail button.active {
+    border-color: rgba(116, 218, 255, .4);
+    background: rgba(74, 143, 190, .17);
+    color: var(--hh-text);
+}
+
+.huahai-smart-rail svg {
+    width: 16px;
+    height: 16px;
+}
+
+.huahai-smart-inspector {
+    position: fixed;
+    z-index: 30;
+    top: 96px;
+    right: 18px;
+    bottom: 88px;
+    width: 238px;
+    padding: 15px;
+    border: 1px solid var(--hh-line);
+    border-radius: 16px;
+    background: var(--hh-panel);
+    box-shadow: var(--hh-glow);
+    backdrop-filter: blur(22px);
+}
+
+.huahai-smart-inspector header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding-bottom: 13px;
+    border-bottom: 1px solid var(--hh-line);
+}
+
+.huahai-smart-inspector header strong {
+    font-size: 13px;
+}
+
+.huahai-smart-inspector header span {
+    color: var(--hh-muted);
+    font-size: 9px;
+}
+
+.huahai-smart-inspector section {
+    margin-top: 15px;
+    padding: 12px;
+    border: 1px solid var(--hh-line);
+    border-radius: 12px;
+    background: rgba(7, 19, 35, .48);
+}
+
+.huahai-smart-layout-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+}
+
+.huahai-smart-layout-grid button {
+    height: 68px;
+    display: grid;
+    place-content: center;
+    border: 1px solid var(--hh-line);
+    border-radius: 9px;
+    background: rgba(16, 35, 57, .62);
+    color: var(--hh-muted);
+}
+
+.huahai-smart-layout-grid button:hover {
+    border-color: var(--hh-line-strong);
+    color: var(--hh-cyan);
+}
+
+.huahai-smart-layout-grid svg {
+    width: 26px;
+    height: 26px;
+}
+
+.huahai-smart-inspector section > strong {
+    font-size: 11px;
+}
+
+.huahai-smart-inspector section > p {
+    color: var(--hh-muted);
+    font-size: 9px;
+    line-height: 1.6;
+}
+
+.huahai-smart-inspector [data-smart-arrange] {
+    width: 100%;
+    min-height: 36px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 7px;
+    border: 1px solid rgba(255, 183, 166, .66);
+    border-radius: 9px;
+    background: var(--hh-coral);
+    color: #fff;
+    font-size: 10px;
+    font-weight: 700;
+}
+
+@media (max-width: 1050px) {
+    .huahai-chat-context,
+    .huahai-api-diagnostics,
+    .huahai-plugin-detail {
+        display: none;
+    }
+    body[data-huaha-page="gpt-chat"] .chat-main {
+        width: calc(100% - 278px) !important;
+        margin-right: 20px !important;
+    }
+    body[data-huaha-page="api-settings"] .layout,
+    body[data-huaha-page="plugin-center"] .wrap {
+        padding-right: 0 !important;
+    }
+}
+
+@media (max-width: 820px) {
+    body[data-huaha-page="gpt-chat"] #historyPopover,
+    .huahai-smart-inspector {
+        display: none !important;
+    }
+    body[data-huaha-page="gpt-chat"] .chat-main {
+        width: calc(100% - 28px) !important;
+        margin: 10px 14px 0 !important;
+    }
+    .huahai-smart-rail {
+        top: auto;
+        right: 14px;
+        bottom: 14px;
+        left: 14px;
+        width: auto;
+        grid-template-columns: repeat(6, 1fr);
+    }
+    .huahai-smart-rail button {
+        justify-content: center;
+        padding: 0;
+    }
+    .huahai-smart-rail button span {
+        display: none;
+    }
+}
+
+@media (max-width: 1200px) {
+    body[data-huaha-page="home"] .huahai-create,
+    body[data-huaha-page="home"] .huahai-inspiration-strip button {
+        -webkit-box-reflect: none !important;
+    }
+}
+
+html.studio-ui-scaled body[data-huaha-page="home"] .huahai-create,
+html.studio-ui-scaled body[data-huaha-page="home"] .huahai-inspiration-strip button {
+    -webkit-box-reflect: below 0 linear-gradient(transparent, transparent) !important;
+}
+
+@media (max-width: 1050px) {
+    .huahai-page-mast,
+    body[data-huaha-page="enhance"] .container-box,
+    body[data-huaha-page="klein"] .container-box,
+    body[data-huaha-page="angle"] .container-box,
+    body[data-huaha-page="online"] .container-box,
+    body[data-huaha-page="api-settings"] .layout,
+    body[data-huaha-page="comfyui-settings"] .layout {
+        width: calc(100% - 32px) !important;
+    }
+    body[data-huaha-page="angle"] main {
+        grid-template-columns: 230px minmax(0, 1fr) !important;
+    }
+    body[data-huaha-page="angle"] #resultBox {
+        display: none !important;
+    }
+}
+
+@media (max-width: 760px) {
+    body[data-huaha-page="index"]:not(.canvas-creation-active) .sidebar {
+        width: 68px !important;
+        min-width: 68px !important;
+        padding-inline: 8px !important;
+    }
+    body[data-huaha-page="index"]:not(.canvas-creation-active) .logo-ring,
+    body[data-huaha-page="index"]:not(.canvas-creation-active) .sidebar:hover .logo-ring {
+        width: 52px !important;
+        height: 52px !important;
+        min-height: 52px !important;
+    }
+    body[data-huaha-page="index"]:not(.canvas-creation-active) .huahai-shell-logo {
+        width: 52px;
+        height: 52px;
+        flex-basis: 52px;
+    }
+    body[data-huaha-page="index"]:not(.canvas-creation-active) .huahai-shell-word,
+    body[data-huaha-page="index"]:not(.canvas-creation-active) .nav-text,
+    body[data-huaha-page="index"]:not(.canvas-creation-active) .side-pill-text {
+        display: none !important;
+    }
+    body[data-huaha-page="enhance"] main,
+    body[data-huaha-page="klein"] main,
+    body[data-huaha-page="online"] main {
+        grid-template-columns: 1fr !important;
+    }
+    body[data-huaha-page="zimage"] > main {
+        position: relative;
+        inset: auto;
+        margin-top: 16px;
     }
 }

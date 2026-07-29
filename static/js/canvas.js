@@ -1186,6 +1186,16 @@ function canvasWheelZoomFactor(event, pageSize){
 }
 function applyViewport(){
     world.style.transform = `translate(${viewport.x}px, ${viewport.y}px) scale(${viewport.scale})`;
+    const percent = viewportScalePercent();
+    const zoomLabel = document.getElementById('huahaiCanvasZoomPercent');
+    if(zoomLabel) {
+        zoomLabel.textContent = `${percent}%`;
+        zoomLabel.title = `画布缩放 ${percent}% · 点击重置到 100%`;
+        zoomLabel.setAttribute('aria-label', `当前画布缩放 ${percent}%，点击重置到 100%`);
+    }
+    window.dispatchEvent(new CustomEvent('canvas-viewport-change', {
+        detail:{ scale:viewport.scale, percent }
+    }));
     scheduleMinimapRender();
 }
 function estimatedNodeRect(n){
@@ -1283,8 +1293,68 @@ function centerViewportOnWorldPoint(point){
 }
 function safeViewportScale(value){
     const n = Number(value);
-    return Number.isFinite(n) && n > 0 ? n : 1;
+    return Number.isFinite(n) && n > 0 ? Math.max(.12, Math.min(8, n)) : 1;
 }
+function viewportScalePercent(){
+    return Math.round(safeViewportScale(viewport.scale) * 100);
+}
+function setCanvasViewportScale(value, anchorClientX=null, anchorClientY=null){
+    const nextScale = safeViewportScale(value);
+    const rect = board.getBoundingClientRect();
+    const clientX = Number.isFinite(anchorClientX) ? anchorClientX : rect.left + rect.width / 2;
+    const clientY = Number.isFinite(anchorClientY) ? anchorClientY : rect.top + rect.height / 2;
+    const before = screenToWorld(clientX, clientY);
+    viewport.scale = nextScale;
+    viewport.x = clientX - rect.left - before.x * viewport.scale;
+    viewport.y = clientY - rect.top - before.y * viewport.scale;
+    applyViewport();
+    renderLinks();
+    renderSelectionHub();
+    scheduleViewportSave();
+}
+window.huahaiCanvasZoomBy = delta => setCanvasViewportScale(viewport.scale + Number(delta || 0));
+window.huahaiCanvasResetZoom = () => setCanvasViewportScale(1);
+window.huahaiCanvasZoomPercent = viewportScalePercent;
+window.huahaiCanvasZoomAt = (delta, clientX, clientY) => setCanvasViewportScale(
+    viewport.scale + Number(delta || 0),
+    Number(clientX),
+    Number(clientY)
+);
+window.huahaiCanvasScreenToWorld = (clientX, clientY) => screenToWorld(Number(clientX), Number(clientY));
+window.huahaiCanvasSetTool = tool => {
+    document.body.dataset.huahaiCanvasTool = String(tool || 'select');
+};
+window.huahaiCanvasSelectOnly = nodeId => {
+    if(!nodes.some(node => node.id === nodeId)) return;
+    selected.clear();
+    selected.add(nodeId);
+    refreshSelectionVisuals();
+};
+window.huahaiCanvasDuplicateSelected = () => {
+    const originals = [...selected].map(id => nodes.find(node => node.id === id)).filter(Boolean);
+    if(!originals.length) return;
+    pushUndo();
+    const idMap = new Map();
+    const copies = originals.map(node => {
+        const copy = cloneNode(node, 28, 28);
+        idMap.set(node.id, copy.id);
+        return copy;
+    });
+    const copiedConnections = connections
+        .filter(connection => idMap.has(connection.from) && idMap.has(connection.to))
+        .map(connection => ({
+            ...connection,
+            id:uid('c'),
+            from:idMap.get(connection.from),
+            to:idMap.get(connection.to)
+        }));
+    nodes.push(...copies);
+    connections.push(...copiedConnections);
+    selected.clear();
+    copies.forEach(node => selected.add(node.id));
+    render();
+    scheduleSave();
+};
 function fitAllNodesViewport(){
     const rect = board.getBoundingClientRect();
     if(!nodes.length){
@@ -1316,6 +1386,7 @@ function fitAllNodesViewport(){
     renderSelectionHub();
     scheduleViewportSave();
 }
+window.huahaiCanvasFitAll = fitAllNodesViewport;
 function enterZoomPreview(){
     if(zoomPreviewState || !canvas) return;
     zoomPreviewState = {...viewport};
@@ -6093,7 +6164,19 @@ function renderNode(node){
         if(node.type === 'output') openOutputNodeMenu(node.id, e.clientX, e.clientY);
         else openGeneratorNodeMenu(node.id, e.clientX, e.clientY);
     };
-    const title = node.type === 'image' ? 'Image' : node.type === 'prompt' ? 'Prompt' : node.type === 'loop' ? tr('canvas.loopNode') : node.type === 'promptGroup' ? 'Prompts' : node.type === 'group' ? 'Group' : node.type === 'output' ? 'Output' : node.type === 'llm' ? 'LLM' : node.type === 'comfy' ? 'ComfyUI' : node.type === 'ltxDirector' ? tr('canvas.ltxDirector') : node.type === 'rh' ? 'RunningHub' : node.type === 'msgen' ? tr('canvas.modelscopeGenerate') : node.type === 'video' ? tr('canvas.videoGenerateNode') : tr('canvas.apiGenerate');
+    const title = node.type === 'image' ? '图像'
+        : node.type === 'prompt' ? '提示词'
+        : node.type === 'loop' ? tr('canvas.loopNode')
+        : node.type === 'promptGroup' ? '提示词组'
+        : node.type === 'group' ? '图像组'
+        : node.type === 'output' ? '输出预览'
+        : node.type === 'llm' ? 'LLM'
+        : node.type === 'comfy' ? 'ComfyUI'
+        : node.type === 'ltxDirector' ? tr('canvas.ltxDirector')
+        : node.type === 'rh' ? 'RunningHub'
+        : node.type === 'msgen' ? tr('canvas.modelscopeGenerate')
+        : node.type === 'video' ? tr('canvas.videoGenerateNode')
+        : '图像生成';
     const displayTitle = node.type === 'image' && node.url ? nodeTitleForMedia(node) : title;
     // 失败徽章只在一键运行模式中显示，单节点失败已通过 alert 提示
     const showStatus = ['generator','msgen','comfy','ltxDirector','llm','video','rh'].includes(node.type) && node.runStatus
@@ -6102,7 +6185,7 @@ function renderNode(node){
         const label = { queued:'排队中', running:'运行中', done:'完成', failed:'失败' }[node.runStatus] || '';
         return `<span class="node-run-status ${node.runStatus}"><span class="dot"></span>${escapeHtml(label)}${node._cascadeIdx?' '+node._cascadeIdx:''}</span>`;
     })() : '';
-    el.innerHTML = `<div class="node-head"><span class="node-title">${displayTitle}</span><div style="display:flex;align-items:center;gap:8px">${statusHtml}<button onclick="deleteNodeFromButton('${node.id}', event)" class="text-gray-300 hover:text-red-500"><i data-lucide="x" class="w-4 h-4"></i></button></div></div>`;
+    el.innerHTML = `<div class="node-head"><span class="node-title">${displayTitle}</span><div style="display:flex;align-items:center;gap:8px">${statusHtml}<button type="button" class="huahai-node-more text-gray-300" data-node-id="${escapeAttr(node.id)}" title="更多操作" aria-label="更多操作"><i data-lucide="more-horizontal" class="w-4 h-4"></i></button></div></div>`;
     const body = document.createElement('div');
     body.className = 'node-body';
     if(node.type === 'image') {
@@ -8236,36 +8319,51 @@ function renderGeneratorBody(node){
         <div class="input-list"></div>
         <div class="gen-settings">
             <div class="gen-settings-row">
-                <select class="select-lite provider-select">${providerOptions(node.apiProvider)}</select>
-                <select class="select-lite model-select">${imageModelOptions(node.model, node.apiProvider)}</select>
+                <label class="hh-generator-field provider-field">
+                    <span>平台</span>
+                    <select class="select-lite provider-select">${providerOptions(node.apiProvider)}</select>
+                </label>
+                <label class="hh-generator-field model-field">
+                    <span>模型</span>
+                    <select class="select-lite model-select">${imageModelOptions(node.model, node.apiProvider)}</select>
+                </label>
             </div>
             <div class="gen-settings-row api-size-row">
-                <select class="select-lite resolution compact-select" data-field="resolution">
-                    <option value="auto">自动</option>
-                    <option value="1k">1K</option>
-                    <option value="2k">2K</option>
-                    <option value="4k">4K</option>
-                    <option value="custom">${tr('canvas.custom')}</option>
-                </select>
-                <select class="select-lite ratio compact-select" data-field="ratio">
-                    <option value="square">1:1</option>
-                    <option value="portrait">2:3</option>
-                    <option value="landscape">3:2</option>
-                    <option value="portrait43">3:4</option>
-                    <option value="landscape43">4:3</option>
-                    <option value="story">9:16</option>
-                    <option value="wide">16:9</option>
-                    <option value="ultrawide">21:9</option>
-                    <option value="ultratall">9:21</option>
-                    <option value="source">${tr('canvas.adaptiveRatio')}</option>
-                    <option value="custom">${tr('canvas.custom')}</option>
-                </select>
-                <select class="select-lite quality-select">
-                    <option value="auto">Q auto</option>
-                    <option value="low">Q low</option>
-                    <option value="medium">Q med</option>
-                    <option value="high">Q high</option>
-                </select>
+                <label class="hh-generator-field resolution-field">
+                    <span>分辨率</span>
+                    <select class="select-lite resolution compact-select" data-field="resolution">
+                        <option value="auto">自动</option>
+                        <option value="1k">1K</option>
+                        <option value="2k">2K</option>
+                        <option value="4k">4K</option>
+                        <option value="custom">${tr('canvas.custom')}</option>
+                    </select>
+                </label>
+                <label class="hh-generator-field ratio-field">
+                    <span>比例</span>
+                    <select class="select-lite ratio compact-select" data-field="ratio">
+                        <option value="square">1:1</option>
+                        <option value="portrait">2:3</option>
+                        <option value="landscape">3:2</option>
+                        <option value="portrait43">3:4</option>
+                        <option value="landscape43">4:3</option>
+                        <option value="story">9:16</option>
+                        <option value="wide">16:9</option>
+                        <option value="ultrawide">21:9</option>
+                        <option value="ultratall">9:21</option>
+                        <option value="source">${tr('canvas.adaptiveRatio')}</option>
+                        <option value="custom">${tr('canvas.custom')}</option>
+                    </select>
+                </label>
+                <label class="hh-generator-field quality-field">
+                    <span>质量</span>
+                    <select class="select-lite quality-select">
+                        <option value="auto">自动</option>
+                        <option value="low">低</option>
+                        <option value="medium">标准</option>
+                        <option value="high">高质量</option>
+                    </select>
+                </label>
                 <div class="gen-count-row">
                     <div class="gen-stepper">
                         <button class="gen-step-btn" data-step="-1" type="button" title="${tr('canvas.decrease')}" aria-label="${tr('canvas.decreaseCount')}"><i data-lucide="chevron-left" class="w-3.5 h-3.5"></i></button>
@@ -14621,6 +14719,7 @@ function startBoardPan(e, opts={}){
     };
     return true;
 }
+window.huahaiCanvasStartPan = startBoardPan;
 
 board.onmousedown = e => {
     if(!canvas) return;
@@ -14677,15 +14776,9 @@ board.addEventListener('mousedown', e => {
 board.onwheel = e => {
     if(!canvas) return;
     e.preventDefault();
-    const before = screenToWorld(e.clientX, e.clientY);
-    viewport.scale = safeViewportScale(viewport.scale * canvasWheelZoomFactor(e, board.clientHeight || window.innerHeight || 800));
-    const rect = board.getBoundingClientRect();
-    viewport.x = e.clientX - rect.left - before.x * viewport.scale;
-    viewport.y = e.clientY - rect.top - before.y * viewport.scale;
-    applyViewport();
-    renderLinks();
-    renderSelectionHub();
-    scheduleViewportSave();
+    e.stopPropagation();
+    const nextScale = viewport.scale * canvasWheelZoomFactor(e, board.clientHeight || window.innerHeight || 800);
+    setCanvasViewportScale(nextScale, e.clientX, e.clientY);
 };
 board.addEventListener('dragover', e => {
     if(e.target.closest?.('.image-node')){

@@ -63,6 +63,7 @@ const boardResetViewBtn = document.getElementById('boardResetView');
 const pasteCanvasBtn = document.getElementById('pasteCanvasBtn');
 const emptyCreateCanvasBtn = document.getElementById('emptyCreateCanvasBtn');
 const statusEl = document.getElementById('boardStatus');
+const workspaceBrand = document.querySelector('.miora-workspace-brand');
 
 /* ===== State ===== */
 let projects = [];
@@ -1076,6 +1077,26 @@ trashEntryBtn.addEventListener('click', () => {
     else openTrashView();
 });
 trashCloseBtn.addEventListener('click', closeTrashView);
+if(workspaceBrand){
+    workspaceBrand.setAttribute('role', 'button');
+    workspaceBrand.setAttribute('tabindex', '0');
+    workspaceBrand.setAttribute('aria-label', '返回花海画布首页');
+    const openHome = () => {
+        if(window.parent && window.parent !== window && typeof window.parent.switchUI === 'function'){
+            const home = window.parent.document.querySelector('.nav-item[onclick*="home"]');
+            window.parent.switchUI(home, 'home');
+        }else{
+            window.location.href = '/';
+        }
+    };
+    workspaceBrand.addEventListener('click', openHome);
+    workspaceBrand.addEventListener('keydown', event => {
+        if(event.key === 'Enter' || event.key === ' '){
+            event.preventDefault();
+            openHome();
+        }
+    });
+}
 
 // close card menu when clicking outside
 document.addEventListener('mousedown', e => {

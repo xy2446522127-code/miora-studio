@@ -1,0 +1,15 @@
+{
+  "home": {
+    "pointerVisible": true,
+    "rippleCount": 2,
+    "sidebarWidth": 12,
+    "sidebarZoomPrevented": true
+  },
+  "canvas": {
+    "blankRippleCount": 0,
+    "before": "100%",
+    "after": "110%",
+    "zoomPercentVisible": true,
+    "reflectionCount": 0
+  }
+}

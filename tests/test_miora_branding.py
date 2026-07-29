@@ -80,6 +80,31 @@ class HuahaiBrandingTests(unittest.TestCase):
         self.assertIn("duplicateCanvas", script)
         self.assertIn("requestAnimationFrame(resetView)", script)
 
+    def test_canvas_creation_focus_mode_and_zoom_feedback(self):
+        root = Path(__file__).resolve().parents[1]
+        index = (root / "static/index.html").read_text(encoding="utf-8")
+        canvas = (root / "static/js/canvas.js").read_text(encoding="utf-8")
+        inspector = (root / "static/js/canvas-inspector.js").read_text(encoding="utf-8")
+        css = (root / "static/css/huahai.css").read_text(encoding="utf-8")
+
+        self.assertIn("studio-canvas-creation-mode", index)
+        self.assertIn("blockSidebarBrowserZoom", index)
+        self.assertIn("canvas-creation-active", css)
+        self.assertIn("sidebar:focus-within", css)
+        self.assertIn("zoom: 1 !important", css)
+        self.assertIn("huahaiCanvasZoomPercent", canvas)
+        self.assertIn("setCanvasViewportScale", canvas)
+        self.assertIn("Ctrl + 滚轮", inspector)
+
+    def test_buttons_use_one_shared_control_system(self):
+        root = Path(__file__).resolve().parents[1]
+        css = (root / "static/css/huahai.css").read_text(encoding="utf-8")
+        self.assertIn("--hh-control-height", css)
+        self.assertIn("--hh-control-radius", css)
+        self.assertIn("--hh-control-line", css)
+        self.assertIn("#mainGenBtn", css)
+        self.assertIn(".ws-card-continue", css)
+
 
 if __name__ == "__main__":
     unittest.main()

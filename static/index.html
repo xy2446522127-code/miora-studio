@@ -1694,17 +1694,17 @@
 
         <main class="stage">
             <iframe id="frame-home" data-src="/static/home.html?v=2026.07.28.2.1785256327" class="active" scrolling="yes"></iframe>
-            <iframe id="frame-zimage" data-src="/static/zimage.html?v=2026.07.28.2.1785254286" scrolling="yes"></iframe>
+            <iframe id="frame-zimage" data-src="/static/zimage.html?v=2026.07.28.2.1785256327" scrolling="yes"></iframe>
             <iframe id="frame-enhance" data-src="/static/enhance.html?v=2026.07.28.2.1785256327" scrolling="yes"></iframe>
-            <iframe id="frame-klein" data-src="/static/klein.html?v=2026.07.28.2.1785254286" scrolling="yes"></iframe>
+            <iframe id="frame-klein" data-src="/static/klein.html?v=2026.07.28.2.1785256327" scrolling="yes"></iframe>
             <iframe id="frame-angle" data-src="/static/angle.html?v=2026.07.28.2.1785256327" scrolling="yes"></iframe>
-            <iframe id="frame-online" data-src="/static/online.html?v=2026.07.28.2.1785254286" scrolling="yes"></iframe>
+            <iframe id="frame-online" data-src="/static/online.html?v=2026.07.28.2.1785256327" scrolling="yes"></iframe>
             <iframe id="frame-gpt-chat" data-src="/static/gpt-chat.html?v=2026.07.28.2.1785256327" scrolling="yes"></iframe>
             <iframe id="frame-asset-manager" data-src="/static/asset-manager.html?v=2026.07.28.2.1785256327" scrolling="yes"></iframe>
             <iframe id="frame-api-settings" data-src="/static/api-settings.html?v=2026.07.28.2.1785256327" scrolling="yes"></iframe>
             <iframe id="frame-comfyui-settings" data-src="/static/comfyui-settings.html?v=2026.07.28.2.1785256327" scrolling="yes"></iframe>
             <iframe id="frame-canvas" data-src="/static/canvas-list.html?v=2026.07.28.2.1785256327" scrolling="yes"></iframe>
-            <iframe id="frame-plugin-center" data-src="/static/plugin-center.html?v=2026.07.28.2.1785254286" scrolling="yes"></iframe>
+            <iframe id="frame-plugin-center" data-src="/static/plugin-center.html?v=2026.07.28.2.1785316733" scrolling="yes"></iframe>
 
         </main>
     </div>
@@ -1815,6 +1815,9 @@
         const PAGE_IDS = ['home','zimage','enhance','klein','angle','online','gpt-chat','canvas','asset-manager','api-settings','comfyui-settings','plugin-center'];
         const LOCAL_PAGE_IDS = ['zimage','enhance','klein','angle'];
         const PROJECT_URL = 'https://github.com/xy2446522127-code/miora-studio';
+        let canvasCreationMode = false;
+        let sidebarPointerInside = false;
+        let sidebarZoomLockTimer = 0;
         let appInfo = { version:'', repo_url:PROJECT_URL, upstream_repo_url:'https://github.com/hero8152/Infinite-Canvas', version_url:'https://raw.githubusercontent.com/xy2446522127-code/miora-studio/main/VERSION' };
         let updateConnectivityResult = null;
         let projectUpdateRunning = false;
@@ -1902,9 +1905,49 @@
             } catch(e) {}
         }
 
+        function setCanvasCreationMode(active) {
+            canvasCreationMode = Boolean(active);
+            document.body.classList.toggle('canvas-creation-active', canvasCreationMode);
+            const sidebar = document.getElementById('studioSidebar');
+            if(sidebar) sidebar.setAttribute('aria-label', canvasCreationMode ? '移动到左侧边缘显示主导航' : '主导航');
+        }
+
+        function syncCanvasCreationModeFromFrame(frame) {
+            let active = false;
+            try {
+                const pathname = new URL(frame?.contentWindow?.location?.href || '', location.href).pathname;
+                active = frame?.id === 'frame-canvas' && pathname.endsWith('/static/canvas.html');
+            } catch(e) {}
+            setCanvasCreationMode(active);
+        }
+
+        function showSidebarZoomLock() {
+            let toast = document.getElementById('sidebarZoomLockToast');
+            if(!toast) {
+                toast = document.createElement('div');
+                toast.id = 'sidebarZoomLockToast';
+                toast.className = 'sidebar-zoom-lock-toast';
+                toast.setAttribute('role', 'status');
+                toast.setAttribute('aria-live', 'polite');
+                document.body.appendChild(toast);
+            }
+            toast.textContent = '导航区域固定 100% · 请在画布内缩放';
+            toast.classList.add('visible');
+            window.clearTimeout(sidebarZoomLockTimer);
+            sidebarZoomLockTimer = window.setTimeout(() => toast.classList.remove('visible'), 1300);
+        }
+
+        function blockSidebarBrowserZoom(event) {
+            if(!canvasCreationMode || !(event.ctrlKey || event.metaKey)) return;
+            event.preventDefault();
+            event.stopPropagation();
+            showSidebarZoomLock();
+        }
+
         function switchUI(el, id, options = {}) {
             resetStudioRootScroll();
             if(!PAGE_IDS.includes(id)) id = DEFAULT_PAGE_ID;
+            document.body.dataset.activePage = id;
             document.querySelectorAll('.nav-item,.side-pill').forEach(n => n.classList.remove('active'));
             if(el) el.classList.add('active');
             document.querySelectorAll('iframe').forEach(f => f.classList.remove('active'));
@@ -1916,6 +1959,8 @@
             syncThemeToFrame(target);
             syncLanguageToFrame(target);
             syncScaleToFrame(target);
+            if(id !== 'canvas') setCanvasCreationMode(false);
+            else window.setTimeout(() => syncCanvasCreationModeFromFrame(target), 0);
             if(LOCAL_PAGE_IDS.includes(id)) {
                 setLocalNavCollapsed(false, { skipRemember:true });
             } else {
@@ -1959,6 +2004,12 @@
 
         window.addEventListener('message', event => {
             if (event.origin && event.origin !== location.origin) return;
+            if(event.data?.type === 'studio-canvas-creation-mode') {
+                const frame = document.getElementById('frame-canvas');
+                if(event.source === frame?.contentWindow && frame.classList.contains('active')) {
+                    setCanvasCreationMode(Boolean(event.data.active));
+                }
+            }
             forwardStudioApiChange(event.data);
         });
 
@@ -2137,9 +2188,36 @@
             broadcastLanguage();
             const sidebar = document.getElementById('studioSidebar');
             if(sidebar) {
-                sidebar.addEventListener('mouseenter', () => pauseScaleInFrames());
-                sidebar.addEventListener('mouseleave', () => pauseScaleInFrames());
+                let keyboardTemporaryPin = false;
+                sidebar.addEventListener('mouseenter', () => {
+                    sidebarPointerInside = true;
+                    pauseScaleInFrames();
+                });
+                sidebar.addEventListener('mouseleave', () => {
+                    sidebarPointerInside = false;
+                    pauseScaleInFrames();
+                });
+                sidebar.addEventListener('wheel', blockSidebarBrowserZoom, { capture:true, passive:false });
+                sidebar.addEventListener('focusin', () => {
+                    if(!canvasCreationMode || sidebar.classList.contains('is-pinned')) return;
+                    keyboardTemporaryPin = true;
+                    sidebar.classList.add('is-pinned');
+                });
+                sidebar.addEventListener('focusout', () => {
+                    window.setTimeout(() => {
+                        if(!keyboardTemporaryPin || sidebar.contains(document.activeElement)) return;
+                        keyboardTemporaryPin = false;
+                        sidebar.classList.remove('is-pinned');
+                    }, 0);
+                });
             }
+            window.addEventListener('keydown', event => {
+                if(!canvasCreationMode || !sidebarPointerInside || !(event.ctrlKey || event.metaKey)) return;
+                if(!['+','-','=','_'].includes(event.key)) return;
+                event.preventDefault();
+                event.stopPropagation();
+                showSidebarZoomLock();
+            }, true);
             checkForUpdates();
         });
 
@@ -2149,6 +2227,7 @@
                 syncThemeToFrame(f);
                 syncLanguageToFrame(f);
                 syncScaleToFrame(f);
+                if(f.id === 'frame-canvas') syncCanvasCreationModeFromFrame(f);
             });
         });
 
