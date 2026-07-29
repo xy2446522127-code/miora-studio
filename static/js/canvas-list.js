@@ -377,6 +377,57 @@ function autoLayoutNulls(items){
     });
 }
 
+function projectDeckStorageKey(projectId){
+    return `huahai_project_deck_v2_${String(projectId || 'default')}`;
+}
+
+function projectDeckSignature(items){
+    return items.map(item => String(item.id)).sort().join('|');
+}
+
+function arrangeProjectDeck(items, featuredId, { force = false } = {}){
+    if(!items.length) return false;
+    const storageKey = projectDeckStorageKey(currentProjectId);
+    const signature = projectDeckSignature(items);
+    if(!force && localStorage.getItem(storageKey) === signature) return false;
+
+    const featured = items.find(item => item.id === featuredId) || null;
+    const others = items
+        .filter(item => item.id !== featuredId)
+        .slice()
+        .sort((a, b) => Number(a.created_at || 0) - Number(b.created_at || 0));
+    const ordered = others.slice();
+    if(featured) ordered.splice(Math.ceil(ordered.length / 2), 0, featured);
+
+    let cursorX = 48;
+    const deckY = 172;
+    ordered.forEach(item => {
+        const nextX = Math.round(cursorX);
+        const nextY = deckY;
+        if(Number(item.board_x) !== nextX || Number(item.board_y) !== nextY){
+            item.board_x = nextX;
+            item.board_y = nextY;
+            persistMeta(item.id, { board_x: nextX, board_y: nextY });
+        }
+        cursorX += (item.id === featuredId ? 286 : 190) + 36;
+    });
+    localStorage.setItem(storageKey, signature);
+    return true;
+}
+
+function arrangeCurrentProjectDeck(){
+    const items = canvasesInProject(currentProjectId);
+    const featuredId = items.reduce((latest, item) => (
+        !latest || Number(item.updated_at || item.created_at || 0) > Number(latest.updated_at || latest.created_at || 0)
+            ? item
+            : latest
+    ), null)?.id;
+    arrangeProjectDeck(items, featuredId, { force: true });
+    renderBoard();
+    requestAnimationFrame(resetView);
+    setStatus(L('画布已整齐排列','Canvases arranged'));
+}
+
 function renderBoard(){
     updateBoardHeader();
     const items = canvasesInProject(currentProjectId);
@@ -386,6 +437,7 @@ function renderBoard(){
             ? item
             : latest
     ), null)?.id;
+    arrangeProjectDeck(items, featuredId);
     boardWorld.innerHTML = '';
     items.forEach(c => {
         const card = buildCard(c);
@@ -1061,7 +1113,7 @@ emptyCreateCanvasBtn?.addEventListener('click', e => {
     openCreateCard(boardCenterWorld());
 });
 boardRefreshBtn.addEventListener('click', loadAll);
-boardResetViewBtn.addEventListener('click', resetView);
+boardResetViewBtn.addEventListener('click', arrangeCurrentProjectDeck);
 pasteCanvasBtn?.addEventListener('click', pasteCanvas);
 
 newProjectBtn.addEventListener('click', openNewProject);

@@ -105,6 +105,60 @@ class HuahaiBrandingTests(unittest.TestCase):
         self.assertIn("#mainGenBtn", css)
         self.assertIn(".ws-card-continue", css)
 
+    def test_canvas_node_creation_actions_remain_available(self):
+        root = Path(__file__).resolve().parents[1]
+        inspector = (root / "static/js/canvas-inspector.js").read_text(encoding="utf-8")
+        for action, function_name in (
+            ("prompt", "addPromptNode"),
+            ("image", "addImageNode"),
+            ("generator", "addGeneratorNode"),
+            ("output", "addOutputNode"),
+        ):
+            self.assertIn(f'data-hh-action="{action}"', inspector)
+            self.assertIn(function_name, inspector)
+
+    def test_smart_canvas_uses_native_functional_controls(self):
+        root = Path(__file__).resolve().parents[1]
+        page = (root / "static/smart-canvas.html").read_text(encoding="utf-8")
+        interactions = (root / "static/js/huahai-interactions.js").read_text(encoding="utf-8")
+        css = (root / "static/css/huahai.css").read_text(encoding="utf-8")
+
+        for control_id in (
+            "createMenu",
+            "runBtn",
+            "smartWorkflowToggle",
+            "smartShortcutToggle",
+            "smartLogToggle",
+            "assetToggle",
+            "imageEditModal",
+        ):
+            self.assertIn(f'id="{control_id}"', page)
+        self.assertNotIn("installSmartCanvasChrome", interactions)
+        self.assertNotIn(".huahai-smart-rail", css)
+        self.assertNotIn(".huahai-smart-inspector", css)
+
+    def test_project_manager_can_restore_ordered_deck(self):
+        root = Path(__file__).resolve().parents[1]
+        script = (root / "static/js/canvas-list.js").read_text(encoding="utf-8")
+        page = (root / "static/canvas-list.html").read_text(encoding="utf-8")
+
+        self.assertIn("arrangeProjectDeck", script)
+        self.assertIn("arrangeCurrentProjectDeck", script)
+        self.assertIn("boardResetViewBtn.addEventListener('click', arrangeCurrentProjectDeck)", script)
+        self.assertIn("整理并重置视图", page)
+
+    def test_api_settings_has_no_bilibili_contact_promotion(self):
+        root = Path(__file__).resolve().parents[1]
+        files = (
+            root / "static/js/api-settings.js",
+            root / "static/js/i18n/api-settings.js",
+            root / "static/css/api-settings.css",
+        )
+        combined = "\n".join(path.read_text(encoding="utf-8") for path in files)
+        self.assertNotIn("B站私信", combined)
+        self.assertNotIn("space.bilibili.com", combined)
+        self.assertNotIn("recommend-seedance-private", combined)
+
 
 if __name__ == "__main__":
     unittest.main()

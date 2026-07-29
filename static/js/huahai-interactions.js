@@ -137,48 +137,6 @@
         window.lucide?.createIcons?.();
     }
 
-    function installSmartCanvasChrome(page){
-        if(page !== 'smart-canvas' || document.querySelector('.huahai-smart-rail')) return;
-        const rail = document.createElement('aside');
-        rail.className = 'huahai-smart-rail';
-        rail.setAttribute('aria-label', '智能画布工具');
-        rail.innerHTML = `
-            <button type="button" class="active" data-smart-tool="select"><i data-lucide="mouse-pointer-2"></i><span>选择</span></button>
-            <button type="button" data-smart-tool="text"><i data-lucide="type"></i><span>文本</span></button>
-            <button type="button" data-smart-tool="image"><i data-lucide="image"></i><span>图片</span></button>
-            <button type="button" data-smart-tool="shape"><i data-lucide="shapes"></i><span>形状</span></button>
-            <button type="button" data-smart-tool="connect"><i data-lucide="git-branch"></i><span>连接</span></button>
-            <button type="button" data-smart-tool="upload"><i data-lucide="upload"></i><span>上传</span></button>
-        `;
-        const inspector = document.createElement('aside');
-        inspector.className = 'huahai-smart-inspector';
-        inspector.innerHTML = `
-            <header><strong>智能建议</strong><span>布局</span></header>
-            <section>
-                <div class="huahai-smart-layout-grid">
-                    <button type="button" aria-label="焦点布局"><i data-lucide="panel-top"></i></button>
-                    <button type="button" aria-label="双栏布局"><i data-lucide="columns-2"></i></button>
-                    <button type="button" aria-label="画廊布局"><i data-lucide="gallery-horizontal"></i></button>
-                    <button type="button" aria-label="故事板布局"><i data-lucide="layout-grid"></i></button>
-                </div>
-            </section>
-            <section><strong>自动整理</strong><p>根据内容关系调整节点层级与间距。</p><button type="button" data-smart-arrange><i data-lucide="sparkles"></i>应用建议</button></section>
-        `;
-        document.body.append(rail, inspector);
-        rail.addEventListener('click', event => {
-            const button = event.target.closest('[data-smart-tool]');
-            if(!button) return;
-            rail.querySelectorAll('button').forEach(item => item.classList.toggle('active', item === button));
-            const tool = button.dataset.smartTool;
-            if(tool === 'upload') document.getElementById('fileInput')?.click();
-            if(tool === 'text') document.getElementById('promptInput')?.focus();
-        });
-        inspector.querySelector('[data-smart-arrange]')?.addEventListener('click', () => {
-            document.querySelector('.minimap-arrange-btn,[data-action="arrange"],[title*="整理"]')?.click();
-        });
-        window.lucide?.createIcons?.();
-    }
-
     function dragging(){
         return DRAG_CLASSES.some(name => document.body.classList.contains(name))
             || !!document.querySelector('.panning,.dragging,.resizing,.port-dragging,.connection-erasing');
@@ -199,7 +157,6 @@
         body.dataset.huahaPage = page;
         body.dataset.huahaSurface = CANVAS_PAGES.has(page) ? 'canvas' : (AMBIENT_PAGES.has(page) ? 'ambient' : (page === 'index' ? 'shell' : 'tool'));
         installPageChrome(page);
-        installSmartCanvasChrome(page);
 
         const light = document.createElement('div');
         light.className = 'huahai-cursor-light';

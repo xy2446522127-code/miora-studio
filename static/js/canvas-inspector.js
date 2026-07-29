@@ -30,10 +30,10 @@
         rail.setAttribute('aria-label','画布工具');
         rail.innerHTML = `
             <button type="button" class="active" data-hh-tool="select" title="选择">${icon('mouse-pointer-2')}<span>选择</span></button>
-            <button type="button" data-hh-tool="connect" title="连接">${icon('git-branch')}<span>连接</span></button>
-            <button type="button" data-hh-tool="pan" title="平移">${icon('hand')}<span>平移</span></button>
-            <button type="button" data-hh-tool="zoom" title="缩放">${icon('search')}<span>缩放</span></button>
-            <button type="button" data-hh-tool="note" title="注释">${icon('message-square-more')}<span>注释</span></button>
+            <button type="button" data-hh-action="prompt" title="新建提示词节点">${icon('text-cursor-input')}<span>提示词</span></button>
+            <button type="button" data-hh-action="image" title="新建图片节点">${icon('image-plus')}<span>图片</span></button>
+            <button type="button" data-hh-action="generator" title="新建图像生成节点">${icon('wand-sparkles')}<span>生成</span></button>
+            <button type="button" data-hh-action="output" title="新建输出节点">${icon('circle-dot')}<span>输出</span></button>
         `;
         shell.appendChild(rail);
 
@@ -114,22 +114,10 @@
             toolbar.append(divider, topUndo, topRedo, run);
         }
 
-        let activeTool = 'select';
-        const setTool = tool => {
-            activeTool = tool;
-            rail.querySelectorAll('[data-hh-tool]').forEach(button => {
-                button.classList.toggle('active', button.dataset.hhTool === tool);
-            });
-            document.body.dataset.huahaiCanvasTool = tool;
-            window.huahaiCanvasSetTool?.(tool);
-        };
-        rail.querySelectorAll('[data-hh-tool]').forEach(button => {
-            button.addEventListener('click', () => setTool(button.dataset.hhTool || 'select'));
-        });
-        board.addEventListener('mousedown', event => {
-            if(activeTool !== 'pan' || event.button !== 0 || event.target.closest('button,input,textarea,select,.minimap')) return;
-            if(window.huahaiCanvasStartPan?.(event)) event.stopImmediatePropagation();
-        }, true);
+        rail.querySelector('[data-hh-action="prompt"]').addEventListener('click', () => window.addPromptNode?.());
+        rail.querySelector('[data-hh-action="image"]').addEventListener('click', () => window.addImageNode?.());
+        rail.querySelector('[data-hh-action="generator"]').addEventListener('click', () => window.addGeneratorNode?.());
+        rail.querySelector('[data-hh-action="output"]').addEventListener('click', () => window.addOutputNode?.());
         board.addEventListener('click', event => {
             const more = event.target.closest('.huahai-node-more');
             if(more){
@@ -143,17 +131,6 @@
                 nodeMenu.hidden = false;
                 window.lucide?.createIcons();
                 return;
-            }
-            if(activeTool === 'zoom' && !event.target.closest('.node,button,input,textarea,select,.minimap')){
-                event.preventDefault();
-                event.stopImmediatePropagation();
-                window.huahaiCanvasZoomAt?.(.12, event.clientX, event.clientY);
-            }
-            if(activeTool === 'note' && !event.target.closest('.node,button,input,textarea,select,.minimap')){
-                event.preventDefault();
-                event.stopImmediatePropagation();
-                window.addPromptNode?.(window.huahaiCanvasScreenToWorld?.(event.clientX, event.clientY));
-                setTool('select');
             }
         }, true);
         nodeMenu.querySelector('[data-hh-node-action="duplicate"]').addEventListener('click', event => {
@@ -196,7 +173,7 @@
         window.addEventListener('canvas-viewport-change', refreshZoom);
         requestAnimationFrame(refreshZoom);
         window.lucide?.createIcons();
-        return {inspector, run, zoom, history, nodeMenu, setTool};
+        return {inspector, run, zoom, history, nodeMenu};
     }
 
     const chrome = buildChrome();

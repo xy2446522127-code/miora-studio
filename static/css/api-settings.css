@@ -81,13 +81,6 @@ html.studio-theme-dark body .api-link-btn:hover { background:#ffffff; border-col
 .recommend-group-allround { color:#2563eb; }
 .recommend-group-value { color:#d97706; }
 .recommend-group-free { color:#0e9f6e; }
-.recommend-seedance-private-note { margin-top:8px; display:flex; align-items:center; gap:9px; border-color:var(--line) !important; background:var(--soft) !important; color:var(--muted) !important; font-weight:850 !important; }
-.recommend-seedance-private-icon { width:28px; height:28px; border-radius:9px; display:inline-flex; align-items:center; justify-content:center; flex:0 0 auto; background:var(--panel); color:var(--text); border:1px solid var(--line); }
-.recommend-seedance-private-icon svg { stroke:currentColor; }
-.recommend-seedance-private-text { min-width:0; flex:1; line-height:1.45; }
-.recommend-seedance-private-link { height:30px; padding:0 10px; border-radius:8px; border:1px solid var(--line-strong); display:inline-flex; align-items:center; justify-content:center; gap:5px; flex:0 0 auto; background:var(--panel); color:var(--text) !important; text-decoration:none; font-size:11.5px; font-weight:950; }
-.recommend-seedance-private-link svg { stroke:currentColor; }
-.recommend-seedance-private-link:hover { border-color:var(--text); transform:translateY(-1px); }
 body.studio-theme-dark .recommend-group-stable,
 html.studio-theme-dark body .recommend-group-stable { color:#6ee7b7; }
 body.studio-theme-dark .recommend-group-cheap,
@@ -98,12 +91,6 @@ body.studio-theme-dark .recommend-group-value,
 html.studio-theme-dark body .recommend-group-value { color:#fbbf24; }
 body.studio-theme-dark .recommend-group-free,
 html.studio-theme-dark body .recommend-group-free { color:#6ee7b7; }
-body.studio-theme-dark .recommend-seedance-private-note,
-html.studio-theme-dark body .recommend-seedance-private-note { border-color:var(--line-strong) !important; background:rgba(255,255,255,.035) !important; color:var(--muted) !important; }
-body.studio-theme-dark .recommend-seedance-private-icon,
-html.studio-theme-dark body .recommend-seedance-private-icon { background:var(--panel); color:var(--text); border-color:var(--line-strong); }
-body.studio-theme-dark .recommend-seedance-private-icon svg,
-html.studio-theme-dark body .recommend-seedance-private-icon svg { stroke:currentColor; }
 .recommend-card { min-width:0; border:1px solid var(--line); border-radius:16px; background:var(--panel); padding:16px; display:flex; flex-direction:column; gap:12px; box-shadow:0 10px 24px rgba(15,23,42,.06); }
 .recommend-card:hover { border-color:var(--line-strong); box-shadow:0 14px 30px rgba(15,23,42,.1); }
 .recommend-name { display:flex; align-items:center; justify-content:space-between; gap:10px; color:var(--text); font-size:16px; font-weight:950; letter-spacing:.02em; }
