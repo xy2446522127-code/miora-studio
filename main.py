@@ -175,9 +175,9 @@ BRAND_NAME = "花海画布"
 BRAND_AUTHOR = "xy2446522127-code"
 UPSTREAM_REPO_URL = "https://github.com/hero8152/Infinite-Canvas"
 GITHUB_REPO_URL = "https://github.com/xy2446522127-code/miora-studio"
-GITHUB_VERSION_URL = "https://raw.githubusercontent.com/xy2446522127-code/miora-studio/main/VERSION"
 GITHUB_TREE_URL = "https://api.github.com/repos/xy2446522127-code/miora-studio/git/trees/main?recursive=1"
-GITHUB_RAW_ROOT = "https://raw.githubusercontent.com/xy2446522127-code/miora-studio/main"
+GITHUB_RAW_ROOT = "https://raw.githubusercontent.com/xy2446522127-code/miora-studio/refs/heads/main"
+GITHUB_VERSION_URL = GITHUB_RAW_ROOT + "/VERSION"
 GITHUB_ARCHIVE_URL = "https://codeload.github.com/xy2446522127-code/miora-studio/zip/refs/heads/main"
 GITHUB_UPDATE_NOTES_URL = GITHUB_RAW_ROOT + "/static/update-notes.json"
 MODELSCOPE_REPO_URL = "https://modelscope.ai/studios/daniel8152/Infinite-Canvas"
@@ -1545,6 +1545,12 @@ def read_local_update_notes(version: str = "") -> Dict[str, Any]:
         pass
     return {"version": version or current_app_version(), "updated_at": "", "items": []}
 
+def updater_request_headers(url: str) -> Dict[str, str]:
+    return {
+        "User-Agent": "Infinite-Canvas-Updater",
+        "Cache-Control": "no-cache",
+    }
+
 def fetch_remote_update_notes(url: str, version: str = "", timeout: float = 5.0) -> Dict[str, Any]:
     info: Dict[str, Any] = {"ok": False, "error": "", "url": url, "version": version, "items": []}
     if not url:
@@ -1553,7 +1559,7 @@ def fetch_remote_update_notes(url: str, version: str = "", timeout: float = 5.0)
     try:
         resp = requests.get(
             f"{url}{'&' if '?' in url else '?'}t={int(time.time())}",
-            headers={"User-Agent": "Infinite-Canvas-Updater"},
+            headers=updater_request_headers(url),
             timeout=timeout,
             proxies=urllib.request.getproxies() or None,
         )
@@ -1809,7 +1815,7 @@ def connectivity_probe(name: str, url: str, timeout: float = 5.0) -> Dict[str, A
     try:
         response = requests.get(
             url,
-            headers={"User-Agent": "Infinite-Canvas-Updater"},
+            headers=updater_request_headers(url),
             timeout=timeout,
             stream=True,
             proxies=urllib.request.getproxies() or None,
@@ -1880,7 +1886,7 @@ def fetch_remote_version(url: str, timeout: float = 5.0) -> Dict[str, Any]:
     try:
         resp = requests.get(
             f"{url}{'&' if '?' in url else '?'}t={int(time.time())}",
-            headers={"User-Agent": "Infinite-Canvas-Updater"},
+            headers=updater_request_headers(url),
             timeout=timeout,
             proxies=urllib.request.getproxies() or None,
         )

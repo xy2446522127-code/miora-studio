@@ -27,6 +27,15 @@ def release_archive() -> bytes:
 
 
 class UpdateArchiveFallbackTests(unittest.TestCase):
+    def test_github_version_and_notes_use_uncached_branch_refs(self):
+        raw_branch = "raw.githubusercontent.com/xy2446522127-code/miora-studio/refs/heads/main"
+        self.assertIn(raw_branch, main.GITHUB_VERSION_URL)
+        self.assertIn(raw_branch, main.GITHUB_UPDATE_NOTES_URL)
+        self.assertEqual(
+            main.updater_request_headers(main.GITHUB_VERSION_URL).get("Cache-Control"),
+            "no-cache",
+        )
+
     def test_archive_fallback_updates_product_files_without_local_secrets(self):
         with tempfile.TemporaryDirectory() as folder:
             staging = Path(folder) / "staging"
