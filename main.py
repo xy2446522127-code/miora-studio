@@ -170,7 +170,7 @@ class ConnectionManager:
 
 manager = ConnectionManager()
 GLOBAL_LOOP = None
-APP_VERSION = "2026.07.31.1"
+APP_VERSION = "2026.07.31.2"
 BRAND_NAME = "花海画布"
 BRAND_AUTHOR = "xy2446522127-code"
 UPSTREAM_REPO_URL = "https://github.com/hero8152/Infinite-Canvas"
@@ -6393,18 +6393,31 @@ async def generate_jimeng_video(payload: CanvasVideoRequest, provider):
 IMAGE_TASK_SUCCESS_STATUSES = {"SUCCESS", "SUCCESSFUL", "SUCCEED", "SUCCEEDED", "COMPLETED", "COMPLETE", "DONE", "FINISHED", "OK", "READY"}
 IMAGE_TASK_FAILED_STATUSES = {"FAILURE", "FAILED", "FAIL", "ERROR", "ERRORED", "CANCELED", "CANCELLED", "TIMEOUT", "REJECTED", "EXPIRED"}
 
-def image_task_url_for_provider(provider, task_id):
+def image_task_urls_for_provider(provider, task_id):
     base_url = (provider.get("base_url") if provider else AI_BASE_URL).rstrip("/")
     image_mode = normalize_image_request_mode((provider or {}).get("image_request_mode"))
+    suffixes = []
     # 异步生图（openai-video-proxy）模式优先于 apimart 协议判断：
     # 提交走 /v1/videos，轮询必须走 /v1/videos/{id}；否则 protocol=apimart 的平台会错走 /v1/tasks/{id}
     if image_mode == "openai-video-proxy":
-        return f"{base_url}/videos/{task_id}" if base_url.endswith("/v1") else f"{base_url}/v1/videos/{task_id}"
-    if image_mode == "openai-async-image":
-        return f"{base_url}/tasks/{task_id}" if base_url.endswith("/v1") else f"{base_url}/v1/tasks/{task_id}"
-    if is_apimart_provider(provider):
-        return f"{base_url}/tasks/{task_id}" if base_url.endswith("/v1") else f"{base_url}/v1/tasks/{task_id}"
-    return f"{base_url}/images/tasks/{task_id}" if base_url.endswith("/v1") else f"{base_url}/v1/images/tasks/{task_id}"
+        suffixes = [f"/videos/{task_id}", f"/images/generations/{task_id}", f"/tasks/{task_id}"]
+    elif image_mode == "openai-async-image" or is_apimart_provider(provider):
+        suffixes = [f"/tasks/{task_id}", f"/images/generations/{task_id}", f"/images/tasks/{task_id}"]
+    else:
+        # OpenAI 兼容聚合站常见三种异步轮询约定。先保持旧路径，再在 404/405 时依次兼容
+        # /images/generations/{id} 与 /tasks/{id}；这些都是只读 GET，不会重复提交或扣费。
+        suffixes = [
+            f"/images/tasks/{task_id}",
+            f"/images/{task_id}",
+            f"/images/generations/{task_id}",
+            f"/tasks/{task_id}",
+            f"/videos/{task_id}",
+        ]
+    prefix = "" if base_url.endswith("/v1") else "/v1"
+    return list(dict.fromkeys(f"{base_url}{prefix}{suffix}" for suffix in suffixes))
+
+def image_task_url_for_provider(provider, task_id):
+    return image_task_urls_for_provider(provider, task_id)[0]
 
 def image_task_data(payload):
     if isinstance(payload, dict) and isinstance(payload.get("data"), dict):
@@ -6442,16 +6455,25 @@ async def httpx_request_with_transient_retries(client, method, url, attempts=2, 
     raise httpx.HTTPError(f"请求失败：{method} {url}")
 
 async def fetch_image_task_payload(client, task_id, provider=None):
-    task_url = image_task_url_for_provider(provider, task_id)
-    response = await httpx_request_with_transient_retries(
-        client,
-        "GET",
-        task_url,
-        attempts=3,
-        headers=api_headers(provider=provider),
-    )
-    response.raise_for_status()
-    return response.json()
+    last_response = None
+    for task_url in image_task_urls_for_provider(provider, task_id):
+        response = await httpx_request_with_transient_retries(
+            client,
+            "GET",
+            task_url,
+            attempts=3,
+            headers=api_headers(provider=provider),
+        )
+        last_response = response
+        if response.status_code not in {404, 405}:
+            response.raise_for_status()
+            return response.json()
+        error_text = str(response.text or "").lower()
+        if not any(marker in error_text for marker in ("invalid url", "not found", "unknown endpoint", "method not allowed")):
+            response.raise_for_status()
+    if last_response is not None:
+        last_response.raise_for_status()
+    raise HTTPException(status_code=502, detail="上游未提供可用的图片任务查询接口")
 
 async def wait_for_image_task(client, task_id, provider=None):
     is_apimart = is_apimart_provider(provider)
@@ -14274,6 +14296,7 @@ def video_output_urls(raw):
     data = raw.get("data")
     detail = raw.get("detail")
     content = raw.get("content")
+    metadata = raw.get("metadata")
     if isinstance(data, dict):
         candidates.append(data)
     elif isinstance(data, list):
@@ -14292,6 +14315,8 @@ def video_output_urls(raw):
         for item in content:
             if isinstance(item, dict):
                 candidates.append(item)
+    if isinstance(metadata, dict):
+        candidates.append(metadata)
     for node in list(candidates):
         result = node.get("result") if isinstance(node, dict) else None
         results = node.get("results") if isinstance(node, dict) else None
@@ -14333,11 +14358,38 @@ def video_api_root(provider):
         base_url = base_url.rsplit("/", 1)[0]
     return base_url
 
+def is_hellobabygo_provider(provider) -> bool:
+    base_url = str((provider or {}).get("base_url") or "").strip()
+    host = str(urllib.parse.urlparse(base_url).hostname or "").strip().lower()
+    return host == "api.hellobabygo.com"
+
+def hellobabygo_video_seconds(model, requested):
+    model_name = str(model or "").strip().lower()
+    try:
+        value = int(requested)
+    except Exception:
+        value = 0
+    if model_name == "sora-2":
+        return min((4, 8, 12), key=lambda item: abs(item - (value or 4)))
+    if model_name in {"sora-2-pro", "sora-2-2-dyy"}:
+        return 12
+    if model_name in {"firefly-veo31-fast", "firefly-veo31-ref", "veo_3_1-fast"}:
+        return 8
+    if model_name == "omni_flash":
+        return 10
+    if model_name == "grok-imagine-video-1.5-fast-16s":
+        return 16
+    if model_name.startswith("grok-imagine"):
+        return min((10, 15), key=lambda item: abs(item - (value or 15)))
+    return max(1, value or 5)
+
 def looks_like_html_response(text: str) -> bool:
     sample = str(text or "").lstrip()[:200].lower()
     return sample.startswith("<!doctype html") or sample.startswith("<html") or "<head" in sample
 
 def video_submit_url_candidates(provider, base_url):
+    if is_hellobabygo_provider(provider):
+        return [f"{base_url}/v1/videos"]
     if is_grok_provider(provider, "grok-imagine-video"):
         return [f"{base_url}/v1/videos"]
     if is_agnes_provider(provider):
@@ -14356,6 +14408,9 @@ def video_submit_url_candidates(provider, base_url):
     return [f"{base_url}/v1/videos/generations", f"{base_url}/v2/videos/generations"]
 
 def video_task_url_candidates(provider, base_url, task_id, submit_url=""):
+    if is_hellobabygo_provider(provider):
+        quoted_id = urllib.parse.quote(str(task_id), safe="")
+        return [f"{base_url}/v1/videos/{quoted_id}"]
     if is_grok_provider(provider, "grok-imagine-video"):
         quoted_id = urllib.parse.quote(str(task_id), safe="")
         return [f"{base_url}/v1/videos/{quoted_id}"]
@@ -14744,13 +14799,13 @@ async def generate_lingjing_openai_video(client, payload, provider, base_url, re
     local_urls = [await save_remote_video_to_output(url) for url in urls]
     return {"videos": local_urls, "task_id": task_id, "raw": result}
 
-async def download_grok_video_content(client, provider, base_url, task_id):
+async def download_grok_video_content(client, provider, base_url, task_id, prefix="grok_video_"):
     quoted_id = urllib.parse.quote(str(task_id), safe="")
     response = await client.get(f"{base_url}/v1/videos/{quoted_id}/content", headers=api_headers(provider=provider))
     response.raise_for_status()
     content_type = (response.headers.get("content-type") or "").lower()
     ext = ".webm" if "webm" in content_type else ".mov" if "quicktime" in content_type or "mov" in content_type else ".mp4"
-    return await save_video_bytes_to_output(response.content, prefix="grok_video_", ext=ext)
+    return await save_video_bytes_to_output(response.content, prefix=prefix, ext=ext)
 
 def grok_reference_values(ref):
     values = []
@@ -15528,6 +15583,7 @@ async def canvas_video(payload: CanvasVideoRequest):
     is_yuli = is_yuli_provider(provider)
     is_lingjing = is_lingjing_provider(provider)
     is_agnes = is_agnes_provider(provider, payload.model)
+    is_hellobabygo = is_hellobabygo_provider(provider)
     volc_is_proxy = bool(is_volcengine and urllib.parse.urlparse(base_url).path.rstrip("/"))
     submit_urls = video_submit_url_candidates(provider, base_url)
     submit_url = submit_urls[0]
@@ -15807,6 +15863,24 @@ async def canvas_video(payload: CanvasVideoRequest):
                         )
                     if payload.seed is not None:
                         body["seed"] = payload.seed
+                elif is_hellobabygo:
+                    model = selected_model(payload.model, (provider.get("video_models") or ["sora-2"])[0])
+                    body = {
+                        "model": model,
+                        "prompt": str(payload.prompt or "").strip(),
+                        "seconds": hellobabygo_video_seconds(model, payload.duration),
+                        "size": str(payload.aspect_ratio or payload.size or "16:9").strip() or "16:9",
+                    }
+                    image_limit = 1 if "grok-imagine-video-1.5" in model.lower() else 3
+                    image_payload = []
+                    for ref in payload.images[:image_limit]:
+                        if not ref.url:
+                            continue
+                        image_payload.append(
+                            await openai_video_proxy_public_reference_url(ref.dict())
+                        )
+                    if image_payload:
+                        body["images"] = image_payload
                 elif is_yuli:
                     # 玉玉API（yuli.host）视频走自有 veo 统一格式：POST /v1/video/create。
                     # 字段：model / prompt / images[]（http(s) URL）/ enhance_prompt /
@@ -15925,6 +15999,17 @@ async def canvas_video(payload: CanvasVideoRequest):
             if task_id and not video_output_urls(raw):
                 result = await wait_for_video_task(client, provider, task_id, submit_url)
             urls = video_output_urls(result)
+            if not urls and task_id and is_hellobabygo:
+                local_urls = [
+                    await download_grok_video_content(
+                        client,
+                        provider,
+                        base_url,
+                        task_id,
+                        prefix="video_",
+                    )
+                ]
+                return {"videos": local_urls, "task_id": task_id, "raw": result}
             if not urls:
                 raise HTTPException(status_code=502, detail=f"视频生成成功但没有返回视频：{result}")
             local_urls = [await save_remote_video_to_output(url) for url in urls]
