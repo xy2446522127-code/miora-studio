@@ -12,10 +12,12 @@ class HuahaiBrandingTests(unittest.TestCase):
 
         self.assertEqual(info["brand"], "花海画布")
         self.assertEqual(info["author"], "xy2446522127-code")
+        self.assertEqual(info["developer"], "xy2446522127-code")
         self.assertEqual(
             info["repo_url"],
             "https://github.com/xy2446522127-code/miora-studio",
         )
+        self.assertEqual(info["project_repo_url"], info["repo_url"])
         self.assertEqual(
             info["upstream_repo_url"],
             "https://github.com/hero8152/Infinite-Canvas",

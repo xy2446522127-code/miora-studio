@@ -1771,8 +1771,10 @@ def app_info():
     return {
         "brand": BRAND_NAME,
         "author": BRAND_AUTHOR,
+        "developer": BRAND_AUTHOR,
         "version": version,
         "repo_url": GITHUB_REPO_URL,
+        "project_repo_url": GITHUB_REPO_URL,
         "upstream_repo_url": UPSTREAM_REPO_URL,
         "version_url": GITHUB_VERSION_URL,
         "tree_url": GITHUB_TREE_URL,
