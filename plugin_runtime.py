@@ -21,6 +21,35 @@ class PluginRuntime:
     def __init__(self, plugins_dir: str, local_data_dir: str):
         self.plugins_dir = Path(plugins_dir)
         self.local_data_dir = Path(local_data_dir)
+        self.project_root = self.plugins_dir.resolve().parent
+
+    def _external_entries(self, manifest: Dict[str, Any]) -> List[Path]:
+        patterns = manifest.get("externalEntryGlobs")
+        if not isinstance(patterns, list):
+            return []
+        result: List[Path] = []
+        seen = set()
+        for raw_pattern in patterns:
+            pattern = str(raw_pattern or "").strip().replace("\\", "/")
+            if not pattern or Path(pattern).is_absolute() or ".." in Path(pattern).parts:
+                continue
+            try:
+                candidates = self.project_root.glob(pattern)
+            except (OSError, ValueError):
+                continue
+            for candidate in candidates:
+                try:
+                    resolved = candidate.resolve()
+                    inside_project = os.path.commonpath(
+                        [str(self.project_root), str(resolved)]
+                    ) == str(self.project_root)
+                except (OSError, ValueError):
+                    inside_project = False
+                marker = os.path.normcase(str(resolved))
+                if inside_project and resolved.is_file() and marker not in seen:
+                    seen.add(marker)
+                    result.append(resolved)
+        return sorted(result, key=lambda item: str(item).lower())
 
     def _manifest(self, path: Path) -> Dict[str, Any] | None:
         try:
@@ -35,7 +64,13 @@ class PluginRuntime:
         raw["id"] = plugin_id
         raw["enabled"] = bool(raw.get("enabled", True))
         entry = str(raw.get("entry") or "").strip()
-        raw["runtime_ready"] = bool(entry and (path.parent / entry).is_file())
+        entry_ready = bool(entry and (path.parent / entry).is_file())
+        external_patterns = raw.get("externalEntryGlobs")
+        external_entries = self._external_entries(raw) if isinstance(external_patterns, list) else []
+        external_ready = bool(external_entries) if external_patterns else True
+        raw["runtime_ready"] = bool(entry_ready and external_ready)
+        raw["external_ready"] = external_ready
+        raw["installation_required"] = bool(external_patterns and not external_ready)
         raw["source"] = "local-folder"
         return raw
 
@@ -51,6 +86,30 @@ class PluginRuntime:
 
     def plugin(self, plugin_id: str) -> Dict[str, Any] | None:
         return next((item for item in self.plugins() if item["id"] == plugin_id), None)
+
+    def entry_path(self, plugin_id: str) -> Path | None:
+        manifest = self.plugin(plugin_id)
+        if not manifest:
+            return None
+        entry = str(manifest.get("entry") or "").strip()
+        if not entry:
+            return None
+        plugin_root = (self.plugins_dir / plugin_id).resolve()
+        candidate = (plugin_root / entry).resolve()
+        try:
+            inside_plugin = os.path.commonpath(
+                [str(plugin_root), str(candidate)]
+            ) == str(plugin_root)
+        except ValueError:
+            inside_plugin = False
+        return candidate if inside_plugin and candidate.is_file() else None
+
+    def external_entry_path(self, plugin_id: str) -> Path | None:
+        manifest = self.plugin(plugin_id)
+        if not manifest:
+            return None
+        entries = self._external_entries(manifest)
+        return entries[0] if entries else None
 
     def _state_file(self, plugin_id: str, name: str) -> Path:
         if not PLUGIN_ID.fullmatch(plugin_id):

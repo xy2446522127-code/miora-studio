@@ -4,20 +4,67 @@
   <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
   <link rel="icon" href="/static/images/huahai-logo.png" type="image/png">
   <title>花海画布 · 插件中心</title>
-  <script src="/static/js/theme.js?v=2026.07.28.2.1785326828"></script>
+  <script src="/static/js/theme.js?v=2026.07.30.1.1785431602"></script>
   <style>
-    :root{color-scheme:dark;--bg:#0c111b;--panel:#131b2a;--line:#29354a;--text:#edf2fb;--muted:#9cabc2;--brand:#8aa5ff;--ok:#69d7a1;--warn:#ffd183}*{box-sizing:border-box}body{margin:0;background:radial-gradient(circle at 15% 0,#1a2c51,transparent 35%),var(--bg);color:var(--text);font:14px system-ui,"Microsoft YaHei",sans-serif}.wrap{max-width:1180px;margin:auto;padding:32px 20px}.top{display:flex;justify-content:space-between;align-items:center;gap:16px}.top h1{margin:0;font-size:28px}.top p{color:var(--muted)}button,input{font:inherit}button{cursor:pointer;border:1px solid var(--line);color:var(--text);background:#1b2740;border-radius:10px;padding:9px 13px}button.primary{background:#e8eeff;color:#14203a;border:0;font-weight:800}.hint{margin:24px 0;padding:14px 16px;color:var(--muted);background:#101827;border:1px solid var(--line);border-radius:12px}.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(340px,1fr));gap:16px}.card{background:linear-gradient(145deg,#162137,#101827);border:1px solid var(--line);border-radius:16px;padding:18px}.card h2{margin:0 0 6px;font-size:18px}.meta{color:var(--muted);font-size:12px}.tags{display:flex;gap:6px;flex-wrap:wrap;margin:14px 0}.tag{background:#22304b;padding:4px 7px;border-radius:99px;font-size:12px;color:#ced9f5}.row{display:flex;gap:8px;align-items:center;justify-content:space-between}.status{color:var(--ok);font-weight:700}.accounts{margin-top:14px;border-top:1px solid var(--line);padding-top:12px}.account{display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid #202c41;color:var(--muted)}dialog{background:#131b2a;color:var(--text);border:1px solid var(--line);border-radius:16px;width:min(460px,92vw);padding:22px}dialog::backdrop{background:#0009}label{display:grid;gap:6px;margin:12px 0;color:var(--muted)}input{background:#0d1421;border:1px solid var(--line);border-radius:9px;padding:9px;color:var(--text)}.actions{display:flex;justify-content:end;gap:8px;margin-top:18px}.empty{color:var(--muted);padding:42px;text-align:center;border:1px dashed var(--line);border-radius:16px}
+    :root{color-scheme:dark;--bg:#0c111b;--panel:#131b2a;--line:#29354a;--text:#edf2fb;--muted:#9cabc2;--brand:#8aa5ff;--ok:#69d7a1;--warn:#ffd183}*{box-sizing:border-box}body{margin:0;background:radial-gradient(circle at 15% 0,#1a2c51,transparent 35%),var(--bg);color:var(--text);font:14px system-ui,"Microsoft YaHei",sans-serif}.wrap{max-width:1180px;margin:auto;padding:32px 20px}.top{display:flex;justify-content:space-between;align-items:center;gap:16px}.top h1{margin:0;font-size:28px}.top p{color:var(--muted)}.top-actions{display:flex;gap:8px;flex-wrap:wrap;justify-content:flex-end}button,input{font:inherit}button{cursor:pointer;border:1px solid var(--line);color:var(--text);background:#1b2740;border-radius:10px;padding:9px 13px}button.primary{background:#e8eeff;color:#14203a;border:0;font-weight:800}.hint{margin:24px 0;padding:14px 16px;color:var(--muted);background:#101827;border:1px solid var(--line);border-radius:12px}.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(340px,1fr));gap:16px}.card{background:linear-gradient(145deg,#162137,#101827);border:1px solid var(--line);border-radius:16px;padding:18px}.card h2{margin:0 0 6px;font-size:18px}.meta{color:var(--muted);font-size:12px}.tags{display:flex;gap:6px;flex-wrap:wrap;margin:14px 0}.tag{background:#22304b;padding:4px 7px;border-radius:99px;font-size:12px;color:#ced9f5}.row{display:flex;gap:8px;align-items:center;justify-content:space-between}.status{color:var(--ok);font-weight:700}.status.warn{color:var(--warn)}.install-note{margin-top:12px;padding:10px 12px;border:1px solid #745f2b;background:#2c2515;color:#ffe1a0;border-radius:10px;font-size:12px;line-height:1.6}.accounts{margin-top:14px;border-top:1px solid var(--line);padding-top:12px}.account{display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid #202c41;color:var(--muted)}dialog{background:#131b2a;color:var(--text);border:1px solid var(--line);border-radius:16px;width:min(460px,92vw);padding:22px}dialog::backdrop{background:#0009}label{display:grid;gap:6px;margin:12px 0;color:var(--muted)}input{background:#0d1421;border:1px solid var(--line);border-radius:9px;padding:9px;color:var(--text)}.actions{display:flex;justify-content:end;gap:8px;margin-top:18px}.empty{color:var(--muted);padding:42px;text-align:center;border:1px dashed var(--line);border-radius:16px}
   </style>
 </head>
 <body><main class="wrap">
-  <div class="top"><div><h1>插件中心</h1><p>本机扫描 <code>plugins/&lt;插件 ID&gt;/plugin.json</code>；账号、积分和任务数据仅保存在本机。</p></div><div><button onclick="location.href='/static/canvas.html?v=2026.07.28.2.1785353066'">返回画布</button> <button class="primary" onclick="loadPlugins()">刷新插件</button></div></div>
+  <div class="top"><div><h1>插件中心</h1><p>本机扫描 <code>plugins/&lt;插件 ID&gt;/plugin.json</code>；账号、积分和任务数据仅保存在本机。</p></div><div class="top-actions"><button onclick="location.href='/static/canvas.html?v=2026.07.30.1.1785431702'">返回画布</button><button id="openPluginFolderBtn">打开插件文件夹</button><button class="primary" onclick="loadPlugins()">刷新插件</button></div></div>
   <div class="hint">插件源码可以开源共享；浏览器配置文件、Cookie、邮箱、积分和下载成品不会上传 GitHub。视频任务要由插件的独立后台进程执行。</div>
   <section id="plugins" class="grid"><div class="empty">正在扫描插件…</div></section>
-</main><dialog id="accountDialog"><form id="accountForm" method="dialog"><h2 id="dialogTitle">添加账号</h2><input id="pluginId" type="hidden"><label>账号名称<input id="label" required placeholder="例如：Miora 账号 01"></label><label>比特浏览器配置文件 ID<input id="profile" placeholder="例如：b7036527…"></label><label>当前积分<input id="credits" type="number" min="0" step="0.01" value="0"></label><div class="actions"><button value="cancel">取消</button><button class="primary" value="default">保存到本机</button></div></form></dialog>
+</main><dialog id="accountDialog"><form id="accountForm" method="dialog"><h2 id="dialogTitle">添加账号</h2><input id="pluginId" type="hidden"><label>账号名称<input id="label" required placeholder="例如：花海账号 01"></label><label>比特浏览器配置文件 ID<input id="profile" placeholder="例如：b7036527…"></label><label>当前积分<input id="credits" type="number" min="0" step="0.01" value="0"></label><div class="actions"><button value="cancel">取消</button><button class="primary" value="default">保存到本机</button></div></form></dialog>
 <script>
 const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 async function api(url,options){const r=await fetch(url,options);const b=await r.json().catch(()=>({}));if(!r.ok)throw new Error(b.detail||'请求失败');return b}
-async function loadPlugins(){const root=document.querySelector('#plugins');root.innerHTML='<div class="empty">正在扫描插件…</div>';try{const {plugins}=await api('/api/plugins');if(!plugins.length){root.innerHTML='<div class="empty">尚未发现插件。将插件文件夹放入 plugins/ 后刷新页面。</div>';return}root.innerHTML='';for(const p of plugins){const {accounts}=await api(`/api/plugins/${encodeURIComponent(p.id)}/accounts`);const card=document.createElement('article');card.className='card';card.innerHTML=`<div class="row"><div><h2>${esc(p.name||p.id)}</h2><div class="meta">${esc(p.id)} · v${esc(p.version||'0.0.0')} · ${esc(p.type||'plugin')}</div></div><span class="status">${p.enabled?'已发现':'已禁用'}</span></div><div class="tags">${(p.capabilities||[]).map(x=>`<span class="tag">${esc(x)}</span>`).join('')}</div><div class="row"><span class="meta">运行入口：${esc(p.entry||'未声明')}</span><button onclick="openAccount('${esc(p.id)}','${esc(p.name||p.id)}')">账号管理</button></div><div class="accounts">${accounts.length?accounts.map(a=>`<div class="account"><span>${esc(a.label)}<br><small>${esc(a.browserProfileId||'未绑定浏览器')}</small></span><strong>${Number(a.creditBalance||0).toFixed(2)} 积分</strong></div>`).join(''):'<div class="meta">尚无本地账号；请添加并在插件后台校验登录状态。</div>'}</div>`;root.append(card)}}catch(e){root.innerHTML=`<div class="empty">扫描失败：${esc(e.message)}</div>`}}
+async function loadPlugins(){
+  const root=document.querySelector('#plugins');
+  root.innerHTML='<div class="empty">正在扫描插件…</div>';
+  try{
+    const {plugins}=await api('/api/plugins');
+    if(!plugins.length){
+      root.innerHTML='<div class="empty">尚未发现插件。将插件文件夹放入 plugins/ 后刷新页面。</div>';
+      return;
+    }
+    root.innerHTML='';
+    for(const p of plugins){
+      const {accounts}=await api(`/api/plugins/${encodeURIComponent(p.id)}/accounts`);
+      const ready=p.runtime_ready!==false;
+      const requiresAccount=p.requiresAccount!==false;
+      const installation=p.installation||{};
+      const displayPluginId=p.id==='miora-video'?'huahai-video':p.id;
+      const statusText=!p.enabled?'已禁用':ready?'可使用':'待安装文件';
+      const statusClass=ready&&p.enabled?'status':'status warn';
+      const accountAction=requiresAccount
+        ? `<button onclick="openAccount('${esc(p.id)}','${esc(p.name||p.id)}')">账号管理</button>`
+        : '<span class="meta">凭据来自 API 设置</span>';
+      const accountContent=requiresAccount
+        ? (accounts.length
+          ? accounts.map(a=>`<div class="account"><span>${esc(a.label)}<br><small>${esc(a.browserProfileId||'未绑定浏览器')}</small></span><strong>${Number(a.creditBalance||0).toFixed(2)} 积分</strong></div>`).join('')
+          : '<div class="meta">尚无本地账号；请添加并在插件后台校验登录状态。</div>')
+        : '<div class="meta">该插件不会另存密钥；运行时读取你在“API 设置”中选择的平台凭据。</div>';
+      const installNote=!ready
+        ? `<div class="install-note">${esc(installation.message||'外部插件文件尚未安装。')}<br>安装完成后点击“刷新插件”。</div>`
+        : '';
+      const card=document.createElement('article');
+      card.className='card';
+      card.innerHTML=`<div class="row"><div><h2>${esc(p.name||p.id)}</h2><div class="meta">${esc(displayPluginId)} · v${esc(p.version||'0.0.0')} · ${esc(p.type||'plugin')}</div></div><span class="${statusClass}">${statusText}</span></div><div class="tags">${(p.capabilities||[]).map(x=>`<span class="tag">${esc(x)}</span>`).join('')}</div><div class="row"><span class="meta">运行入口：${esc(p.entry||'未声明')}</span>${accountAction}</div>${installNote}<div class="accounts">${accountContent}</div>`;
+      root.append(card);
+    }
+  }catch(e){
+    root.innerHTML=`<div class="empty">扫描失败：${esc(e.message)}</div>`;
+  }
+}
+async function openPluginFolder(){
+  try{
+    const result=await api('/api/plugins/open-directory',{method:'POST'});
+    if(!result.opened)throw new Error('没有打开插件目录');
+  }catch(error){
+    alert(error.message);
+  }
+}
 function openAccount(id,name){pluginId.value=id;dialogTitle.textContent=`添加账号 · ${name}`;label.value='';profile.value='';credits.value='0';accountDialog.showModal()}
-accountForm.addEventListener('submit',async e=>{if(e.submitter?.value==='cancel')return;e.preventDefault();try{await api(`/api/plugins/${encodeURIComponent(pluginId.value)}/accounts`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({label:label.value,browserProfileId:profile.value,creditBalance:Number(credits.value||0),status:'unverified'})});accountDialog.close();loadPlugins()}catch(err){alert(err.message)}});loadPlugins();
+accountForm.addEventListener('submit',async e=>{if(e.submitter?.value==='cancel')return;e.preventDefault();try{await api(`/api/plugins/${encodeURIComponent(pluginId.value)}/accounts`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({label:label.value,browserProfileId:profile.value,creditBalance:Number(credits.value||0),status:'unverified'})});accountDialog.close();loadPlugins()}catch(err){alert(err.message)}});
+document.querySelector('#openPluginFolderBtn').addEventListener('click',openPluginFolder);
+loadPlugins();
 </script></body></html>

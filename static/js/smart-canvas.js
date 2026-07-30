@@ -2548,6 +2548,7 @@ function smartVideoProviderPlugins(){
     const required = ['submitTask','pollTask','fetchArtifacts'];
     return (videoPlugins || []).filter(plugin =>
         plugin?.enabled !== false
+        && plugin?.runtime_ready !== false
         && plugin?.type === 'video-provider'
         && required.every(capability => (plugin.capabilities || []).includes(capability))
     );
@@ -2559,7 +2560,8 @@ function smartVideoPluginModels(pluginId){
     const plugin = smartVideoPluginById(pluginId);
     const fromManifest = Array.isArray(plugin?.models) ? plugin.models : [];
     const fromSchema = Array.isArray(plugin?.taskSchema?.properties?.model?.enum) ? plugin.taskSchema.properties.model.enum : [];
-    return [...new Set([...fromManifest, ...fromSchema, 'default'].filter(Boolean))];
+    const models = [...new Set([...fromManifest, ...fromSchema].filter(Boolean))];
+    return models.length ? models : ['default'];
 }
 function smartVideoSourceIsPlugin(sourceSettings=settings){
     return sourceSettings?.videoSource === 'plugin' && Boolean(smartVideoPluginById(sourceSettings.videoPluginId));
@@ -2583,7 +2585,9 @@ function smartVideoProviderChoices(){
             id:plugin.id,
             value:`plugin:${plugin.id}`,
             name:plugin.name || plugin.id,
-            detail:`本地插件 · ${(videoPluginAccounts[plugin.id] || []).length ? `${(videoPluginAccounts[plugin.id] || []).length} 个账号` : '未配置账号'}`
+            detail:plugin.requiresAccount === false
+                ? '本地插件 · 使用 API 设置'
+                : `本地插件 · ${(videoPluginAccounts[plugin.id] || []).length ? `${(videoPluginAccounts[plugin.id] || []).length} 个账号` : '未配置账号'}`
         }))
     ];
 }

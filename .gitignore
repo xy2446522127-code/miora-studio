@@ -1,16 +1,37 @@
 # Local account, session, and generated-media data. Never commit these files.
+API/.env
 data/local/
 data/accounts.json
 data/tasks.json
 data/canvases/
 data/projects.json
 data/prompt_libraries.json
+data/api_providers.json
+data/asset_library.json
+data/media_previews/
+data/*.log
 /启动花海画布.lnk
 data/*.db
 data/*.sqlite
 data/*.sqlite3
+/assets/
+/history.json
 output/
 downloads/
+/online-demo/
+/online-demo-site.tgz
+
+# Local visual-QA artifacts. Curated release screenshots are tracked separately.
+/docs/ui-preview/actual-2026-07-31/report.json
+/docs/ui-preview/audit-*/
+/docs/ui-preview/batch-link-project-qa/
+/docs/ui-preview/function-recovery-*/
+/docs/ui-preview/implementation-app/
+/docs/ui-preview/implementation-current/
+/docs/ui-preview/qa-current/
+/docs/ui-preview/results-rail-qa/
+/docs/ui-preview/tidal-glass-full-set/00-contact-sheet.png
+/docs/design-reference/batch-link-and-project-order-2026-07-30/02-smart-canvas-batch-link.png
 
 # Plugin-local secrets and runtime data.
 plugins/*/.env

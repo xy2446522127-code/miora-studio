@@ -1,6 +1,6 @@
 {
   "id": "miora-video",
-  "name": "Miora Video (Local)",
+  "name": "花海视频（本地）",
   "version": "0.1.0",
   "type": "video-provider",
   "runtime": "node-bridge",

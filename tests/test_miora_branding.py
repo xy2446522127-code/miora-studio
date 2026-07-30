@@ -108,6 +108,7 @@ class HuahaiBrandingTests(unittest.TestCase):
     def test_canvas_node_creation_actions_remain_available(self):
         root = Path(__file__).resolve().parents[1]
         inspector = (root / "static/js/canvas-inspector.js").read_text(encoding="utf-8")
+        canvas = (root / "static/js/canvas.js").read_text(encoding="utf-8")
         for action, function_name in (
             ("prompt", "addPromptNode"),
             ("image", "addImageNode"),
@@ -116,6 +117,10 @@ class HuahaiBrandingTests(unittest.TestCase):
         ):
             self.assertIn(f'data-hh-action="{action}"', inspector)
             self.assertIn(function_name, inspector)
+        self.assertIn("defaultNodePoint", canvas)
+        self.assertIn('data-create-generator-input="prompt"', canvas)
+        self.assertIn('data-create-generator-input="image"', canvas)
+        self.assertIn("createGeneratorInputNode", canvas)
 
     def test_smart_canvas_uses_native_functional_controls(self):
         root = Path(__file__).resolve().parents[1]
@@ -182,6 +187,16 @@ class HuahaiBrandingTests(unittest.TestCase):
         self.assertNotIn("B站私信", combined)
         self.assertNotIn("space.bilibili.com", combined)
         self.assertNotIn("recommend-seedance-private", combined)
+
+    def test_plugin_folder_and_local_update_recovery_controls_exist(self):
+        root = Path(__file__).resolve().parents[1]
+        index = (root / "static/index.html").read_text(encoding="utf-8")
+        plugin_center = (root / "static/plugin-center.html").read_text(encoding="utf-8")
+
+        self.assertIn('id="project-update-rollback-btn"', index)
+        self.assertIn("rollbackProjectUpdate()", index)
+        self.assertIn('id="openPluginFolderBtn"', plugin_center)
+        self.assertIn("/api/plugins/open-directory", plugin_center)
 
 
 if __name__ == "__main__":

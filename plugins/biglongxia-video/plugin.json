@@ -1,0 +1,85 @@
+{
+  "id": "biglongxia-video",
+  "name": "大龙虾视频插件",
+  "version": "1.0.0",
+  "type": "video-provider",
+  "runtime": "python-external-plugin",
+  "entry": "backend/runner.py",
+  "externalEntryGlobs": [
+    "downloads/biglongxia-grok-video-plugin/**/main.py"
+  ],
+  "defaultProviderId": "custom-api",
+  "requiresAccount": false,
+  "models": [
+    "grok-imagine-1.0-video",
+    "grok-imagine-video-1.5-preview"
+  ],
+  "capabilities": [
+    "validateAccount",
+    "submitTask",
+    "pollTask",
+    "fetchArtifacts"
+  ],
+  "permissions": {
+    "network": [
+      "https://api.biglongxia.cn"
+    ],
+    "filesystem": [
+      "downloads/biglongxia-grok-video-plugin",
+      "assets/input",
+      "assets/output"
+    ],
+    "browserProfile": false,
+    "secrets": [
+      "providerApiKey"
+    ]
+  },
+  "installation": {
+    "resourceId": 9,
+    "resourcePage": "https://api.biglongxia.cn/",
+    "message": "请从大龙虾资源站下载“GROK1.5龙虾视频插件优化版”，解压到 downloads/biglongxia-grok-video-plugin。"
+  },
+  "taskSchema": {
+    "type": "object",
+    "required": [
+      "prompt"
+    ],
+    "properties": {
+      "prompt": {
+        "type": "string"
+      },
+      "model": {
+        "type": "string",
+        "enum": [
+          "grok-imagine-1.0-video",
+          "grok-imagine-video-1.5-preview"
+        ]
+      },
+      "duration": {
+        "type": "number",
+        "enum": [
+          6,
+          10,
+          15
+        ]
+      },
+      "aspectRatio": {
+        "type": "string",
+        "enum": [
+          "16:9",
+          "9:16",
+          "1:1",
+          "2:3",
+          "3:2"
+        ]
+      },
+      "resolution": {
+        "type": "string",
+        "enum": [
+          "480p",
+          "720p"
+        ]
+      }
+    }
+  }
+}

@@ -170,7 +170,7 @@ class ConnectionManager:
 
 manager = ConnectionManager()
 GLOBAL_LOOP = None
-APP_VERSION = "2026.07.28.2"
+APP_VERSION = "2026.07.30.1"
 BRAND_NAME = "花海画布"
 BRAND_AUTHOR = "xy2446522127-code"
 UPSTREAM_REPO_URL = "https://github.com/hero8152/Infinite-Canvas"
@@ -11492,6 +11492,13 @@ async def build_chat_text_reply(payload, conversation):
 async def index():
     return static_html_response("index.html")
 
+
+@app.get("/favicon.ico", include_in_schema=False)
+async def favicon():
+    icon_path = os.path.join(STATIC_DIR, "images", "huahai-launcher.ico")
+    return FileResponse(icon_path, media_type="image/x-icon")
+
+
 @app.get("/api/view")
 def view_image(filename: str, type: str = "input", subfolder: str = ""):
     # 先按原逻辑去各 ComfyUI 后端找
@@ -15098,6 +15105,175 @@ def resolved_plugins_dir() -> str:
     os.makedirs(path, exist_ok=True)
     return path
 
+def plugin_error_message(value: Any, api_key: str = "") -> str:
+    message = str(value or "").replace("PLUGIN_ERROR:::", "").strip()
+    if api_key:
+        message = message.replace(api_key, "[已隐藏]")
+    message = re.sub(r"(?i)(authorization:\s*bearer\s+)[^\s,;]+", r"\1[已隐藏]", message)
+    no_channel = re.search(
+        r"(?i)no available channel for model\s+([^\s]+)",
+        message,
+    )
+    if no_channel:
+        model = no_channel.group(1).strip("`'\".,;:()[]{}")
+        return (
+            f"当前 API 账号没有视频模型「{model}」的可用通道。"
+            "请登录对应 API 平台开通该模型或充值后重试；"
+            "也可以在视频节点中切换到账号已开通的模型。"
+        )
+    if re.search(r"(?i)insufficient (account )?balance|余额不足", message):
+        return "当前 API 账号余额不足，请充值后重试视频生成。"
+    if "\ufffd" in message:
+        readable = re.sub(r"\ufffd+", "", message)
+        message = readable.strip() or "视频插件返回了无法解码的错误，请检查插件日志"
+    return message[:2400] or "视频插件执行失败"
+
+def plugin_local_asset(asset: Dict[str, Any]) -> Dict[str, Any]:
+    item = dict(asset or {})
+    url = str(item.get("url") or "").strip()
+    if url:
+        try:
+            local_path = local_media_path_from_url(url)
+        except (HTTPException, OSError, ValueError):
+            local_path = None
+        if local_path and os.path.isfile(local_path):
+            item["local_path"] = os.path.abspath(local_path)
+    return item
+
+async def run_python_external_video_plugin(
+    plugin_id: str,
+    manifest: Dict[str, Any],
+    payload: PluginJobRequest,
+    job: Dict[str, Any],
+):
+    runner_path = PLUGIN_RUNTIME.entry_path(plugin_id)
+    external_main = PLUGIN_RUNTIME.external_entry_path(plugin_id)
+    if not runner_path:
+        message = "视频插件适配器文件缺失，请重新更新花海画布"
+        PLUGIN_RUNTIME.update_job(plugin_id, job["id"], status="failed", error=message)
+        raise HTTPException(status_code=500, detail=message)
+    if not external_main:
+        installation = manifest.get("installation") if isinstance(manifest.get("installation"), dict) else {}
+        message = str(
+            installation.get("message")
+            or "尚未安装外部视频插件，请在插件中心打开插件目录并按说明安装"
+        )
+        PLUGIN_RUNTIME.update_job(plugin_id, job["id"], status="failed", error=message)
+        raise HTTPException(status_code=409, detail=message)
+
+    parameters = payload.parameters if isinstance(payload.parameters, dict) else {}
+    provider_id = str(
+        parameters.get("providerId")
+        or parameters.get("provider_id")
+        or manifest.get("defaultProviderId")
+        or ""
+    ).strip()
+    if not provider_id:
+        message = "视频插件未指定 API 平台"
+        PLUGIN_RUNTIME.update_job(plugin_id, job["id"], status="failed", error=message)
+        raise HTTPException(status_code=400, detail=message)
+    try:
+        provider = get_api_provider(provider_id)
+    except HTTPException as exc:
+        message = f"视频插件使用的 API 平台不存在：{provider_id}"
+        PLUGIN_RUNTIME.update_job(plugin_id, job["id"], status="failed", error=message)
+        raise HTTPException(status_code=400, detail=message) from exc
+    api_key = provider_env_key_value(provider_id)
+    if not api_key:
+        message = f"请先在 API 设置中为 {provider.get('name') or provider_id} 配置 API Key"
+        PLUGIN_RUNTIME.update_job(plugin_id, job["id"], status="failed", error=message)
+        raise HTTPException(status_code=400, detail=message)
+    base_url = str(provider.get("base_url") or provider.get("api_base") or "").strip()
+    if not base_url:
+        message = f"请先在 API 设置中为 {provider.get('name') or provider_id} 配置 Base URL"
+        PLUGIN_RUNTIME.update_job(plugin_id, job["id"], status="failed", error=message)
+        raise HTTPException(status_code=400, detail=message)
+
+    requested_timeout = int(parameters.get("timeout") or 1200)
+    process_timeout = max(180, min(1800, requested_timeout + 60))
+    request_body = {
+        "project_root": os.path.abspath(BASE_DIR),
+        "external_main": str(external_main),
+        "output_dir": os.path.abspath(OUTPUT_OUTPUT_DIR),
+        "base_url": base_url,
+        "api_key": api_key,
+        "job": {
+            **payload.model_dump(),
+            "assets": [plugin_local_asset(item) for item in (payload.assets or []) if isinstance(item, dict)],
+        },
+    }
+    PLUGIN_RUNTIME.update_job(
+        plugin_id,
+        job["id"],
+        status="running",
+        message="视频插件正在提交并等待生成结果",
+        providerId=provider_id,
+    )
+    try:
+        process = await asyncio.create_subprocess_exec(
+            sys.executable,
+            str(runner_path),
+            cwd=str(runner_path.parent),
+            stdin=asyncio.subprocess.PIPE,
+            stdout=asyncio.subprocess.PIPE,
+            stderr=asyncio.subprocess.PIPE,
+        )
+        stdout, stderr = await asyncio.wait_for(
+            process.communicate(json.dumps(request_body, ensure_ascii=False).encode("utf-8")),
+            timeout=process_timeout,
+        )
+    except asyncio.TimeoutError as exc:
+        if process.returncode is None:
+            process.kill()
+            await process.communicate()
+        message = f"视频插件等待超过 {process_timeout} 秒，任务已停止"
+        PLUGIN_RUNTIME.update_job(plugin_id, job["id"], status="failed", error=message)
+        raise HTTPException(status_code=504, detail=message) from exc
+    except OSError as exc:
+        message = plugin_error_message(exc, api_key)
+        PLUGIN_RUNTIME.update_job(plugin_id, job["id"], status="failed", error=message)
+        raise HTTPException(status_code=502, detail=f"无法启动视频插件：{message}") from exc
+
+    output_text = stdout.decode("utf-8", errors="replace").strip()
+    result = {}
+    for line in reversed(output_text.splitlines()):
+        try:
+            candidate = json.loads(line)
+        except ValueError:
+            continue
+        if isinstance(candidate, dict):
+            result = candidate
+            break
+    if process.returncode != 0 or not result.get("ok"):
+        raw_error = result.get("error") or stderr.decode("utf-8", errors="replace")
+        message = plugin_error_message(raw_error, api_key)
+        PLUGIN_RUNTIME.update_job(plugin_id, job["id"], status="failed", error=message)
+        raise HTTPException(status_code=502, detail=message)
+
+    videos = []
+    for path in result.get("outputs") or []:
+        url = jimeng_local_output_url(path, "video")
+        if url and url not in videos:
+            videos.append(url)
+    if not videos:
+        message = "视频插件执行完成，但没有返回可读取的视频文件"
+        PLUGIN_RUNTIME.update_job(plugin_id, job["id"], status="failed", error=message)
+        raise HTTPException(status_code=502, detail=message)
+    updated = PLUGIN_RUNTIME.update_job(
+        plugin_id,
+        job["id"],
+        status="done",
+        message="视频生成完成",
+        artifacts=videos,
+        providerId=provider_id,
+    )
+    return {
+        "job": updated or job,
+        "videos": [{"url": url, "kind": "video"} for url in videos],
+        "queued": False,
+        "provider_id": f"plugin:{plugin_id}",
+    }
+
 @app.get("/api/plugins/directory")
 def get_plugin_directory(request: Request):
     require_local_plugin_request(request)
@@ -15183,6 +15359,8 @@ async def run_plugin_video(plugin_id: str, payload: PluginJobRequest):
     if manifest.get("type") != "video-provider" or not required.issubset(set(manifest.get("capabilities") or [])):
         raise HTTPException(status_code=400, detail="Plugin is not a compatible video provider")
     job = PLUGIN_RUNTIME.queue_job(plugin_id, payload.model_dump())
+    if manifest.get("runtime") == "python-external-plugin":
+        return await run_python_external_video_plugin(plugin_id, manifest, payload, job)
     service = str(manifest.get("service") or "").rstrip("/")
     if not service:
         updated = PLUGIN_RUNTIME.update_job(plugin_id, job["id"], status="queued", message="Plugin task queued")

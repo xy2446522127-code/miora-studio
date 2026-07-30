@@ -167,6 +167,8 @@
         let point = {x:-200,y:-200};
         let pointerDown = null;
         let hovered = null;
+        const reducedMotion = window.matchMedia?.('(prefers-reduced-motion: reduce)');
+        const motionReduced = () => Boolean(reducedMotion?.matches);
 
         function renderPointer(){
             frame = 0;
@@ -185,8 +187,12 @@
         }
 
         window.addEventListener('pointermove', event => {
-            schedulePointer(event);
-            body.classList.toggle('huahai-pointer-visible', event.pointerType !== 'touch' && !dragging());
+            if(motionReduced()){
+                body.classList.remove('huahai-pointer-visible');
+            }else{
+                schedulePointer(event);
+                body.classList.toggle('huahai-pointer-visible', event.pointerType !== 'touch' && !dragging());
+            }
             if(pointerDown && Math.hypot(event.clientX - pointerDown.x, event.clientY - pointerDown.y) > 4) {
                 pointerDown.moved = true;
                 body.classList.add('huahai-interacting');
@@ -216,7 +222,7 @@
         window.addEventListener('click', event => {
             const state = pointerDown;
             pointerDown = null;
-            if(event.button !== 0 || state?.moved || dragging() || canvasBlank(event.target, page)) return;
+            if(motionReduced() || event.button !== 0 || state?.moved || dragging() || canvasBlank(event.target, page)) return;
             const target = event.target.closest?.(INTERACTIVE);
             if(!target) return;
             const count = page === 'canvas-list' && target.closest('.ws-card') ? 3 : 2;

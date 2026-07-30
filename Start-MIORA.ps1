@@ -25,7 +25,7 @@ if (-not $NoBrowser) {
     Start-Job -ScriptBlock {
         param($Url)
         Start-Sleep -Seconds 3
-        Start-Process $Url -WindowStyle Hidden
+        Start-Process $Url
     } -ArgumentList "http://127.0.0.1:$Port/" | Out-Null
 }
 

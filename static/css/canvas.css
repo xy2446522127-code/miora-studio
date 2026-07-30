@@ -245,6 +245,10 @@ body.theme-dark .node-run-status.failed { background:rgba(239,68,68,.22); color:
 .video-input-head { display:flex; align-items:center; justify-content:space-between; gap:8px; margin-bottom:8px; }
 .video-input-head .tool-btn { height:28px; min-width:0; padding:0 10px; font-size:10px; white-space:nowrap; }
 .video-input-actions { display:flex; align-items:center; gap:6px; flex:0 0 auto; }
+.node-input-quick-actions { display:grid; grid-template-columns:1fr 1fr; gap:8px; margin-bottom:10px; }
+.node-input-quick-btn { min-width:0; min-height:34px; padding:0 10px; border:1px solid var(--line-2); border-radius:12px; background:var(--soft); color:var(--text); display:inline-flex; align-items:center; justify-content:center; gap:7px; font:inherit; font-size:10.5px; font-weight:850; cursor:pointer; transition:border-color .16s ease, background .16s ease, box-shadow .16s ease, transform .16s ease; }
+.node-input-quick-btn i,.node-input-quick-btn svg { width:15px; height:15px; flex:0 0 auto; color:var(--accent); }
+.node-input-quick-btn:hover,.node-input-quick-btn:focus-visible { border-color:rgba(82,211,255,.66); background:var(--soft-2); box-shadow:0 0 0 3px rgba(82,211,255,.1),0 10px 24px rgba(0,0,0,.14); outline:none; transform:translateY(-1px); }
 .node.sized.video-node .generator-body { height:100%; display:flex; flex-direction:column; }
 .node.sized.video-node .input-list { flex:1; min-height:64px; max-height:none; }
 .node.sized.video-node .gen-run-row,

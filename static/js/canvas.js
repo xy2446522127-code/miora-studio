@@ -734,6 +734,7 @@ function videoProviderPlugins(){
     const required = ['submitTask','pollTask','fetchArtifacts'];
     return (videoPlugins || []).filter(plugin =>
         plugin?.enabled !== false
+        && plugin?.runtime_ready !== false
         && plugin?.type === 'video-provider'
         && required.every(capability => (plugin.capabilities || []).includes(capability))
     );
@@ -743,7 +744,8 @@ function videoPluginModels(pluginId){
     const plugin = videoPluginById(pluginId);
     const fromManifest = Array.isArray(plugin?.models) ? plugin.models : [];
     const fromSchema = Array.isArray(plugin?.taskSchema?.properties?.model?.enum) ? plugin.taskSchema.properties.model.enum : [];
-    return uniqueModels([...fromManifest, ...fromSchema, 'default']);
+    const models = uniqueModels([...fromManifest, ...fromSchema]);
+    return models.length ? models : ['default'];
 }
 function normalizedVideoSource(node){ return node?.videoSource === 'plugin' && videoPluginById(node.pluginId) ? 'plugin' : 'api'; }
 function videoSourceValue(node){
@@ -762,7 +764,9 @@ function videoProviderOptions(node){
     ).join('');
     const pluginOptions = videoProviderPlugins().map(plugin => {
         const accountCount = (videoPluginAccounts[plugin.id] || []).length;
-        const suffix = accountCount ? ` · ${accountCount}` : ' · 未配置';
+        const suffix = plugin.requiresAccount === false
+            ? ' · API 设置'
+            : (accountCount ? ` · ${accountCount}` : ' · 未配置');
         return `<option value="plugin:${escapeHtml(plugin.id)}" ${`plugin:${plugin.id}` === selected ? 'selected' : ''}>${escapeHtml((plugin.name || plugin.id) + suffix)}</option>`;
     }).join('');
     return `<optgroup label="API 平台">${apiOptions}</optgroup>${pluginOptions ? `<optgroup label="本地插件">${pluginOptions}</optgroup>` : ''}`;
@@ -2623,16 +2627,65 @@ function addNode(node){
     return node;
 }
 function defaultPoint(dx=0, dy=0){ return screenToWorld(window.innerWidth / 2 + dx, window.innerHeight / 2 + dy); }
+function defaultNodePoint(type='image'){
+    const view = currentWorldViewRect();
+    const size = defaultNodeSize(type);
+    const automaticHeights = {
+        prompt:260,
+        loop:430,
+        group:300,
+        generator:560,
+        msgen:600,
+        video:620,
+        rh:620,
+        output:330
+    };
+    const width = Math.max(220, Number(size.w || 320));
+    const height = Math.max(180, Number(size.h || automaticHeights[type] || 300));
+    const center = {
+        x:view.x + view.w / 2 - width / 2,
+        y:view.y + view.h / 2 - height / 2
+    };
+    const stepX = Math.max(380, width + 54);
+    const stepY = Math.max(330, height + 54);
+    const slots = [
+        [0,0],[-1,0],[1,0],[0,-1],[0,1],
+        [-1,-1],[1,-1],[-1,1],[1,1],
+        [-2,0],[2,0],[0,-2],[0,2],
+        [-2,-1],[2,-1],[-2,1],[2,1]
+    ];
+    const occupied = (nodes || []).map(estimatedNodeRect);
+    const margin = 28;
+    const clear = candidate => !occupied.some(rect =>
+        candidate.x < rect.x + rect.w + margin
+        && candidate.x + candidate.w + margin > rect.x
+        && candidate.y < rect.y + rect.h + margin
+        && candidate.y + candidate.h + margin > rect.y
+    );
+    for(const [column, row] of slots){
+        const candidate = {
+            x:center.x + column * stepX,
+            y:center.y + row * stepY,
+            w:width,
+            h:height
+        };
+        if(clear(candidate)) return {x:candidate.x, y:candidate.y};
+    }
+    return {
+        x:center.x + ((nodes || []).length % 4) * stepX,
+        y:center.y + (Math.floor((nodes || []).length / 4) + 1) * stepY
+    };
+}
 function addImageNode(point){
-    const p = point || defaultPoint(-120, 0);
+    const p = point || defaultNodePoint('image');
     return addNode({id:uid('img'), type:'image', x:p.x, y:p.y, url:'', name:'空白图片'});
 }
 function addPromptNode(point){
-    const p = point || defaultPoint(0, 0);
+    const p = point || defaultNodePoint('prompt');
     return addNode({id:uid('prompt'), type:'prompt', x:p.x, y:p.y, text:''});
 }
 function addLoopNode(point){
-    const p = point || defaultPoint(40, 0);
+    const p = point || defaultNodePoint('loop');
     return addNode({
         id:uid('loop'),
         type:'loop',
@@ -2651,7 +2704,7 @@ function addLoopNode(point){
     });
 }
 function addGroupNode(point){
-    const p = point || defaultPoint(40, 0);
+    const p = point || defaultNodePoint('group');
     return addNode({id:uid('grp'), type:'group', x:p.x, y:p.y, w:300, h:220, items:[]});
 }
 function pickMediaForNode(nodeId){
@@ -2665,7 +2718,7 @@ function pickMediaForNode(nodeId){
     input.click();
 }
 function addLLMNode(point){
-    const p = point || defaultPoint(80, 0);
+    const p = point || defaultNodePoint('llm');
     const providerId = chatApiProviders()[0]?.id || 'comfly';
     return addNode({
         id:uid('llm'),
@@ -2685,13 +2738,13 @@ function addLLMNode(point){
     });
 }
 function addGeneratorNode(point){
-    const p = point || defaultPoint(120, 0);
+    const p = point || defaultNodePoint('generator');
     const providerId = imageApiProviders()[0]?.id || '';
     const model = allImageModels(providerId)[0] || '';
     return addNode({id:uid('gen'), type:'generator', x:p.x, y:p.y, apiProvider:providerId, model, ratio:'square', resolution:defaultApiImageResolution(model), customRatio:'', customSize:'', customRatioWidth:'', customRatioHeight:'', customWidth:'', customHeight:'', inputs:[]});
 }
 function addMsGenNode(point){
-    const p = point || defaultPoint(140, 0);
+    const p = point || defaultNodePoint('msgen');
     return addNode({
         id:uid('msgen'),
         type:'msgen',
@@ -2716,7 +2769,7 @@ function addMsGenNode(point){
     });
 }
 function addVideoNode(point){
-    const p = point || defaultPoint(160, 0);
+    const p = point || defaultNodePoint('video');
     const providerId = videoApiProviders()[0]?.id || 'comfly';
     const models = providerVideoModels(providerId);
     return addNode({
@@ -2742,7 +2795,7 @@ function addVideoNode(point){
     });
 }
 function addRhNode(point){
-    const p = point || defaultPoint(180, 0);
+    const p = point || defaultNodePoint('rh');
     return addNode({
         id:uid('rh'),
         type:'rh',
@@ -2775,7 +2828,7 @@ function defaultLTXSegment(start=0, length=120){
     };
 }
 function addLTXDirectorNode(point){
-    const p = point || defaultPoint(200, 0);
+    const p = point || defaultNodePoint('ltxDirector');
     return addNode({
         id:uid('ltxdir'),
         type:'ltxDirector',
@@ -3265,7 +3318,7 @@ async function runMsGenNode(nodeId, opts={}){
     }
 }
 function addComfyNode(point){
-    const p = point || defaultPoint(160, 0);
+    const p = point || defaultNodePoint('comfy');
     return addNode({
         id:uid('comfy'),
         type:'comfy',
@@ -3297,7 +3350,7 @@ function addComfyNode(point){
     });
 }
 function addOutputNode(point){
-    const p = point || defaultPoint(260, 0);
+    const p = point || defaultNodePoint('output');
     return addNode({id:uid('out'), type:'output', x:p.x, y:p.y, images:[]});
 }
 function openCreateMenu(clientX, clientY){
@@ -3686,6 +3739,54 @@ function createLinkedNode(type){
         scheduleSave();
         render();
     }
+    return created;
+}
+function createGeneratorInputNode(targetId, type){
+    const target = nodes.find(node => node.id === targetId);
+    if(!target || !['prompt','image'].includes(type)) return null;
+    const targetRect = estimatedNodeRect(target);
+    const sourceSize = defaultNodeSize(type);
+    const verticalOffset = type === 'image'
+        ? Math.max(0, targetRect.h - Math.max(180, sourceSize.h || 300))
+        : 0;
+    linkCreateState = {
+        originId:target.id,
+        originKind:'in',
+        point:{
+            x:target.x - Math.max(350, Number(sourceSize.w || 300) + 54),
+            y:target.y + verticalOffset
+        }
+    };
+    const created = createLinkedNode(type);
+    if(!created) return null;
+    selected.clear();
+    selected.add(created.id);
+    render();
+    if(type === 'prompt'){
+        requestAnimationFrame(() => {
+            const textarea = nodesEl.querySelector(`.prompt-node[data-id="${CSS.escape(created.id)}"] textarea`);
+            textarea?.focus();
+        });
+    } else {
+        setTimeout(() => pickImageForNode(created.id), 0);
+    }
+    return created;
+}
+function generatorInputActionsHtml(){
+    return `<div class="node-input-quick-actions">
+        <button type="button" class="node-input-quick-btn" data-create-generator-input="prompt"><i data-lucide="text-cursor-input"></i><span>新建提示词并连接</span></button>
+        <button type="button" class="node-input-quick-btn" data-create-generator-input="image"><i data-lucide="image-plus"></i><span>添加媒体并连接</span></button>
+    </div>`;
+}
+function bindGeneratorInputActions(container, node){
+    container?.querySelectorAll?.('[data-create-generator-input]').forEach(button => {
+        button.onmousedown = event => event.stopPropagation();
+        button.onclick = event => {
+            event.preventDefault();
+            event.stopPropagation();
+            createGeneratorInputNode(node.id, button.dataset.createGeneratorInput);
+        };
+    });
 }
 function createNodeByType(type, point){
     if(type === 'image') return addImageNode(point);
@@ -8406,6 +8507,7 @@ function renderGeneratorBody(node){
     sanitizeImageNodeProviderModel(node);
     normalizeApiNodeSizeChoice(node);
     wrap.innerHTML = `
+        ${generatorInputActionsHtml()}
         <div class="prompt-list mb-3"></div>
         <div class="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-2">${tr('canvas.images')}</div>
         <div class="input-list"></div>
@@ -8722,6 +8824,7 @@ function renderGeneratorBody(node){
     const list = wrap.querySelector('.input-list');
     renderImageInputList(list, node, mediaInputs);
     renderPromptPreview(wrap.querySelector('.prompt-list'), promptInputs);
+    bindGeneratorInputActions(wrap, node);
     wrap.querySelector('.gen-btn').onclick = e => { e.stopPropagation(); runCanvasGenerate(node.id); };
     bindCascadeButtons(wrap, node.id);
     return wrap;
@@ -8738,6 +8841,7 @@ function renderVideoBody(node){
     const videoSource = normalizedVideoSource(node);
     const videoSourceId = videoSource === 'plugin' ? node.pluginId : node.apiProvider;
     wrap.innerHTML = `
+        ${generatorInputActionsHtml()}
         <div class="prompt-list mb-3"></div>
         <div class="video-input-head">
             <div class="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Media</div>
@@ -8864,6 +8968,7 @@ function renderVideoBody(node){
     const list = wrap.querySelector('.video-img-list');
     renderVideoImageInputs(list, node, mediaInputs);
     renderPromptPreview(wrap.querySelector('.prompt-list'), promptInputs);
+    bindGeneratorInputActions(wrap, node);
     wrap.querySelector('.gen-btn').onclick = e => { e.stopPropagation(); runCanvasGenerate(node.id); };
     bindCascadeButtons(wrap, node.id);
     return wrap;

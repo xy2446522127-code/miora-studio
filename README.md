@@ -1,112 +1,91 @@
 # 花海画布
 
-> A professional, local-first AI creation workspace built on the Infinite Canvas project.
+> 面向图片、视频与工作流创作的本地优先无限画布。
 
 **花海画布 · Developed by [xy2446522127-code](https://github.com/xy2446522127-code)**
 
-Based on [hero8152/Infinite-Canvas](https://github.com/hero8152/Infinite-Canvas) by
-hero8152 / wuli大雄. This derivative remains open source and follows the
-upstream non-commercial and attribution requirements.
+本项目基于 [hero8152/Infinite-Canvas](https://github.com/hero8152/Infinite-Canvas)
+进行开源二次开发，保留原项目作者 hero8152 / wuli大雄的署名与许可证要求。
 
-## 花海画布特色
+## 主要功能
 
-- 潮汐玻璃视觉系统覆盖首页、项目管理、无限画布与全部创作工具。
-- 鼠标跟随光效、悬停反馈和短促点击波纹不会干扰节点拖拽与连线。
-- 自更新仅指向本项目仓库，避免上游版本自动覆盖二次开发内容。
-- Python 3.12 虚拟环境工作流，使用 `Start-Huahai.ps1`、兼容入口 `Start-MIORA.ps1` 或 `run.bat`。
+- 普通画布与智能画布：节点创建、连接、批量框选、批量连接、拖动、缩放和工作流运行。
+- 图片与视频生成：支持提示词、拖入或上传参考素材、OpenAI 兼容接口、ModelScope、
+  RunningHub、ComfyUI 以及本地视频提供方插件。
+- 成果轨：在画布右侧分类查看图片和视频，可复制、拖回画布、打开文件或所在目录。
+- 项目管理：画布按更新时间从左到右、从上到下固定排列；项目页保留克制的水面倒影。
+- 素材库、AI 对话、工作流设置、API 设置和插件中心。
+- 潮汐玻璃视觉、鼠标跟随光、短波纹反馈、深浅主题、中英文和界面缩放。
 
-### Quick start on Windows
+画布创作区不使用倒影。空白画布点击、节点拖动、连线、框选、平移、缩放与调整大小
+不会产生波纹；系统启用“减少动态效果”时，跟随光与波纹自动关闭。
+
+## Windows 快速启动
+
+项目要求 Python 3.12。首次使用：
 
 ```powershell
 py -3.12 -m venv .venv
 .\.venv\Scripts\Activate.ps1
+python -m pip install --upgrade pip
 python -m pip install -r requirements.txt "uvicorn[standard]"
 .\Start-Huahai.ps1
 ```
 
-Open `http://127.0.0.1:3000/`.
+以后可以直接双击：
 
-Create project-folder and desktop shortcuts with the bundled 花海画布 icon:
+- `启动花海画布.lnk`
+- `run.bat`
+- `Start-Huahai.ps1`
+
+所有启动入口都优先使用 `.venv\Scripts\python.exe`。默认地址为
+`http://127.0.0.1:3000/`。
+
+如需重新创建带花海图标的快捷方式：
 
 ```powershell
 .\Create-Huahai-Shortcut.ps1
 ```
 
-UI previews and verified application screenshots are stored in
-[`docs/ui-preview`](docs/ui-preview).
+## 插件
 
----
+插件中心扫描：
 
-# Infinite-Canvas upstream documentation
-Supports comfyui/API calls/modelscope calls
+```text
+plugins/<插件 ID>/plugin.json
+```
 
-配套的chrome采集插件已经上线：https://chromewebstore.google.com/detail/infinite-canvas-%E5%9B%BE%E5%83%8F%E8%A7%86%E9%A2%91%E6%96%87%E5%AD%97%E6%8A%93%E5%8F%96%E5%B7%A5/ajfhnbklbmpfaaookhfakohabnpmlcic?authuser=0&hl=en
+插件中心提供“打开插件文件夹”按钮。视频节点会自动列出具备
+`video-provider` 能力的插件；插件可实现账号校验、任务提交、轮询和成果获取。
+凭据只从本机 API 设置读取，不应写入插件清单或提交到 Git。
 
-详细教程：[https://youtu.be/1y9ShTvgC_w](https://youtu.be/r_y_9ALr7fg)
+## 更新
 
-由于最近很多API网址关停，我找到一个稳定的网址：
+应用内“项目主页”和“一键更新”只指向：
 
-https://apib.ai/register?aff=1uyAbb （包含所有生图模型/视频模型/LLM模型）
+```text
+https://github.com/xy2446522127-code/miora-studio
+```
 
-https://www.fhl.mom/register?aff=86L574B4T2N9  （包含codex和GPT image 2模型）
+上游仓库仅用于署名展示和人工同步，不会自动覆盖花海画布的二次开发内容。
 
-功能请求/功能更新/视频教程/联系我，都可以在B站评论或私信：https://space.bilibili.com/78652351
+## 测试与截图
 
+测试使用虚拟环境：
 
-----
+```powershell
+.\.venv\Scripts\python.exe -m pytest -q
+```
 
-【新增了version文件，我每次更新都会更新version的版本号，如果你下载version文件，打开项目后，导航栏的GitHub按键就会提示新版本，如果不想查看更新提示，就删除version文件】
+正式应用截图位于 [`docs/ui-preview/actual-2026-07-31`](docs/ui-preview/actual-2026-07-31)。
+概念图与实际截图分开保存，避免把设计效果图误认为已实现页面。
 
-【A version file has been added. I update the version number with each update. If you download the version file, the GitHub button in the navigation bar will indicate the new version after opening the project. If you don't want to see update notifications, delete the version file.】
+## 隐私
 
-----
+`.venv`、API Key、Cookie、浏览器资料、日志、运行时数据库、下载文件、生成媒体和
+插件本地账号数据均不得提交。仓库已通过 `.gitignore` 排除这些内容。
 
-支持的功能：
-1. 支持几乎所有OpenAI协议的API/异步协议/Gemini协议/方舟协议
-2. RunningHub的工作流/AI应用/收费模型调用
-3. 火山引擎调用（人脸认证还在修复bug）
-4. Modelscope免费LLM模型和图像模型调用
-5. 即梦CLI调用，可直接调用即梦高级会员的积分，支持文生图/图生图/文生视频/图生视频
-6. 支持调用本地局域网的ComfyUI
-7. 扩展图片/360全景图预览截图/视频帧抽取/循环节点等诸多功能
-8. tools文件夹中，增加了chrome批量采集到素材库的插件，PS直连画布调用所有功能的插件
+## 许可证
 
---------
-
-已经申请著作权，禁止商业用途
-
-Commercial use is prohibited.
-
-
-* 可以自己使用和公司使用，禁止用于任何形式的修改封装成商业产品，商用须取得授权。
-
-* 根据代码二次开发的软件必须保持开源并注明来源作者
-
-* This software is for personal and company use only, but is prohibited from being modified or packaged into commercial products in any way. Commercial use requires authorization.
-
-* Software developed based on this code must remain open source and the original author must be credited.
-
---------
-
-
-<img width="2079" height="665" alt="image" src="https://github.com/user-attachments/assets/8469923b-f7a2-403c-9c37-e6e789211f28" />
-
-<img width="1865" height="1503" alt="image" src="https://github.com/user-attachments/assets/f4030201-67c6-4845-b08b-b6fdf304afaa" />
-
-
-<img width="1696" height="1350" alt="b68e144c5b04a322bfd035da4d89aba3" src="https://github.com/user-attachments/assets/0a6090fb-a8dd-4c3d-adee-b1f9233a2d91" />
-
-   
-<img width="1525" height="1473" alt="image" src="https://github.com/user-attachments/assets/6f61fcf9-746c-425b-9e36-cfc8d252da7c" />
-
-   <img width="1261" height="864" alt="image" src="https://github.com/user-attachments/assets/57f3e230-3134-488f-8179-d97e7d15383a" />
-<img width="1530" height="858" alt="image" src="https://github.com/user-attachments/assets/9990e42d-22d5-4a10-a1e1-ad35a634edd2" />
-
-<img width="1735" height="1400" alt="image" src="https://github.com/user-attachments/assets/d8328ff8-bbe0-4f1c-9ffa-7b56e8a1a51d" />
-<img width="2258" height="969" alt="image" src="https://github.com/user-attachments/assets/4a752d99-885d-4ba9-8b86-91b495786b5c" />
-
-
-<img width="1531" height="1374" alt="image" src="https://github.com/user-attachments/assets/0af79e38-0955-4740-9e65-5c9bb057f58c" />
-
-<img width="2196" height="1040" alt="image" src="https://github.com/user-attachments/assets/6d823668-cde2-4836-8332-1858efe5f520" />
-<img width="2214" height="771" alt="image" src="https://github.com/user-attachments/assets/52e10958-753f-45ba-a50e-3bbec27be436" />
+原始 [`LICENSE`](LICENSE) 保留不变。非商业、持续开源和原作者署名要求继续适用于
+本二次开发项目。详情见 [`NOTICE.md`](NOTICE.md)。

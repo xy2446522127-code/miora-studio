@@ -3,7 +3,7 @@
     const LEGACY_KEY = 'canvas_theme';
     const SCALE_KEY = 'studio_ui_scale_mode';
     const SCALE_OPTIONS = ['auto', '60', '65', '70', '75', '80', '85', '90', '95', '100', '115', '125', '140'];
-    const HUAHAI_VERSION = '2026.07.29.1';
+    const HUAHAI_VERSION = '2026.07.30.1';
 
     function ensureHuahaiAssets(){
         if(!document.querySelector('link[data-huahai-theme]')){
@@ -295,6 +295,11 @@
     });
     window.addEventListener('message', event => {
         if(event.data?.type === 'studio-theme') applyTheme(event.data.theme);
+        if(event.data?.type === 'studio-lang') {
+            const lang = event.data.lang === 'en' ? 'en' : 'zh';
+            document.documentElement.setAttribute('lang', lang === 'en' ? 'en' : 'zh-CN');
+            if(window.StudioI18n?.set) window.StudioI18n.set(lang);
+        }
         if(event.data?.type === 'studio-ui-scale') {
             const incomingScale = normalizeExternalScale(event.data.scale);
             if(incomingScale !== null) externalScaleValue = incomingScale;
