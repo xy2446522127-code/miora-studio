@@ -3,7 +3,7 @@
     const LEGACY_KEY = 'canvas_theme';
     const SCALE_KEY = 'studio_ui_scale_mode';
     const SCALE_OPTIONS = ['auto', '60', '65', '70', '75', '80', '85', '90', '95', '100', '115', '125', '140'];
-    const HUAHAI_VERSION = '2026.07.30.1';
+    const HUAHAI_VERSION = '2026.07.31.1';
 
     function ensureHuahaiAssets(){
         if(!document.querySelector('link[data-huahai-theme]')){

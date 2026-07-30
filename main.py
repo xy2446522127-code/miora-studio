@@ -170,7 +170,7 @@ class ConnectionManager:
 
 manager = ConnectionManager()
 GLOBAL_LOOP = None
-APP_VERSION = "2026.07.30.1"
+APP_VERSION = "2026.07.31.1"
 BRAND_NAME = "花海画布"
 BRAND_AUTHOR = "xy2446522127-code"
 UPSTREAM_REPO_URL = "https://github.com/hero8152/Infinite-Canvas"

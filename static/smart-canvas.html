@@ -164,6 +164,14 @@
             <div id="smartResultsList" class="smart-results-list"></div>
         </section>
         <button id="smartArrangeBtn" class="minimap-arrange-btn" type="button" title="整理选中节点" aria-label="整理选中节点"><i data-lucide="layout-grid"></i><span>整理选中</span></button>
+        <div id="smartCanvasZoom" class="huahai-canvas-zoom" aria-label="智能画布缩放">
+            <span>画布缩放</span>
+            <button type="button" data-smart-zoom-out title="缩小画布" aria-label="缩小画布"><i data-lucide="minus"></i></button>
+            <button id="smartCanvasZoomPercent" class="canvas-zoom-percent" type="button" title="Ctrl + 滚轮缩放画布，点击重置为 100%" aria-label="当前智能画布缩放 100%，点击重置">100%</button>
+            <button type="button" data-smart-zoom-in title="放大画布" aria-label="放大画布"><i data-lucide="plus"></i></button>
+            <button type="button" data-smart-zoom-fit title="适应全部节点" aria-label="适应全部节点"><i data-lucide="maximize"></i></button>
+            <small>Ctrl + 滚轮</small>
+        </div>
         <div id="minimap" class="smart-minimap" aria-hidden="true">
             <div id="minimapContent" class="smart-minimap-content">
                 <div id="minimapViewport" class="smart-minimap-viewport"></div>

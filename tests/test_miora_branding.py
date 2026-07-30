@@ -174,7 +174,31 @@ class HuahaiBrandingTests(unittest.TestCase):
         self.assertIn("smartVideoProviderPlugins", smart_script)
         self.assertIn("/api/generated-assets/reveal", normal_script)
         self.assertIn("/api/generated-assets/reveal", smart_script)
+        self.assertIn('id="smartCanvasZoomPercent"', smart_page)
+        self.assertIn("setSmartCanvasViewportScale", smart_script)
+        self.assertIn("smartViewportScalePercent", smart_script)
         self.assertNotIn("智能建议", smart_page)
+
+    def test_both_canvases_restore_sharp_visible_media_after_zoom(self):
+        root = Path(__file__).resolve().parents[1]
+        normal_script = (root / "static/js/canvas.js").read_text(encoding="utf-8")
+        smart_script = (root / "static/js/smart-canvas.js").read_text(encoding="utf-8")
+
+        for source, prefix in (
+            (normal_script, "Canvas"),
+            (smart_script, "Smart"),
+        ):
+            self.assertIn(f"schedule{prefix}ImageResolutionSync", source)
+            self.assertIn(f"{prefix.lower()}ViewportWantsHighRes", source)
+            self.assertIn(f"{prefix.lower()}ImageNearViewport", source)
+        self.assertIn(
+            "selectedNode || (canvasViewportWantsHighRes() && canvasImageNearViewport(img))",
+            normal_script,
+        )
+        self.assertIn(
+            "imageSelected || (smartViewportWantsHighRes() && smartImageNearViewport(img))",
+            smart_script,
+        )
 
     def test_api_settings_has_no_bilibili_contact_promotion(self):
         root = Path(__file__).resolve().parents[1]

@@ -580,9 +580,11 @@ function bindSmartPreviewImageFallbacks(root=document){
     });
 }
 const SMART_SELECTED_HIGH_RES_DELAY = 320;
+const SMART_HIGH_RES_ZOOM_THRESHOLD = 0.86;
 let smartSelectedHighResTimer = 0;
 let smartSelectedHighResSeq = 0;
 let smartSelectedHighResNodeIds = new Set();
+let smartImageResolutionSyncTimer = 0;
 const smartSelectedHighResLoaded = new Set();
 const smartSelectedHighResLoading = new Map();
 function smartImageEditorIsOpen(){
@@ -617,8 +619,18 @@ function smartNodeElementsByIds(ids){
 }
 function smartNodeElementsForHighResSync(root){
     if(root && root !== world) return [root];
-    const ids = new Set([...smartSelectedHighResNodeIds, ...selectedNodeIds()]);
-    return smartNodeElementsByIds(ids);
+    return [world];
+}
+function smartViewportWantsHighRes(){
+    return Number(viewport?.scale || 1) >= SMART_HIGH_RES_ZOOM_THRESHOLD;
+}
+function smartImageNearViewport(img){
+    if(!img?.isConnected || !shell) return false;
+    const shellRect = shell.getBoundingClientRect();
+    const rect = img.getBoundingClientRect();
+    const margin = 220;
+    return rect.right >= shellRect.left - margin && rect.left <= shellRect.right + margin
+        && rect.bottom >= shellRect.top - margin && rect.top <= shellRect.bottom + margin;
 }
 function syncSmartSelectedImageResolution(root=null){
     const selectedImages = [];
@@ -628,9 +640,13 @@ function syncSmartSelectedImageResolution(root=null){
         const selectedNode = Boolean(nodeId && isNodeSelected(nodeId));
         scope.querySelectorAll?.('img[data-preview-src][data-original-src]').forEach(img => {
             if(img.dataset.previewKind === 'video') return;
+            const imageNode = img.closest('.image-node');
+            const imageNodeId = imageNode?.dataset?.id || nodeId;
+            const imageSelected = Boolean(imageNodeId && isNodeSelected(imageNodeId));
+            const wantsHighRes = imageSelected || (smartViewportWantsHighRes() && smartImageNearViewport(img));
             const preview = img.dataset.previewSrc || '';
             const original = img.dataset.originalSrc || '';
-            if(!selectedNode){
+            if(!wantsHighRes){
                 delete img.dataset.selectedHighResTarget;
                 if(preview && img.getAttribute('src') !== preview) img.src = preview;
                 return;
@@ -658,10 +674,18 @@ function syncSmartSelectedImageResolution(root=null){
         selectedImages.forEach(({img, target}) => {
             if(!img.isConnected || img.dataset.selectedHighResTarget !== target) return;
             const nodeEl = img.closest('.image-node');
-            if(!nodeEl?.dataset?.id || !isNodeSelected(nodeEl.dataset.id)) return;
+            const selectedNode = Boolean(nodeEl?.dataset?.id && isNodeSelected(nodeEl.dataset.id));
+            if(!selectedNode && (!smartViewportWantsHighRes() || !smartImageNearViewport(img))) return;
             if(smartSelectedHighResLoaded.has(target) && img.getAttribute('src') !== target) img.src = target;
         });
     }, SMART_SELECTED_HIGH_RES_DELAY);
+}
+function scheduleSmartImageResolutionSync(root=world, delay=120){
+    if(smartImageResolutionSyncTimer) clearTimeout(smartImageResolutionSyncTimer);
+    smartImageResolutionSyncTimer = setTimeout(() => {
+        smartImageResolutionSyncTimer = 0;
+        syncSmartSelectedImageResolution(root);
+    }, Math.max(0, Number(delay) || 0));
 }
 function cloneSmartSettings(source=settings){
     try {
@@ -1309,6 +1333,30 @@ function safeScale(value){
     const n = Number(value);
     return Number.isFinite(n) && n > 0 ? n : 1;
 }
+function safeSmartViewportScale(value){
+    const n = Number(value);
+    return Number.isFinite(n) && n > 0 ? Math.max(.08, Math.min(8, n)) : 1;
+}
+function smartViewportScalePercent(){
+    return Math.round(safeSmartViewportScale(viewport.scale) * 100);
+}
+function setSmartCanvasViewportScale(value, anchorClientX=null, anchorClientY=null){
+    const nextScale = safeSmartViewportScale(value);
+    const rect = shell.getBoundingClientRect();
+    const clientX = Number.isFinite(anchorClientX) ? anchorClientX : rect.left + rect.width / 2;
+    const clientY = Number.isFinite(anchorClientY) ? anchorClientY : rect.top + rect.height / 2;
+    const oldScale = safeSmartViewportScale(viewport.scale);
+    const worldX = (clientX - rect.left - viewport.x) / oldScale;
+    const worldY = (clientY - rect.top - viewport.y) / oldScale;
+    viewport.scale = nextScale;
+    viewport.x = clientX - rect.left - worldX * nextScale;
+    viewport.y = clientY - rect.top - worldY * nextScale;
+    applyViewport();
+    scheduleSave();
+}
+window.huahaiSmartCanvasZoomBy = delta => setSmartCanvasViewportScale(viewport.scale + Number(delta || 0));
+window.huahaiSmartCanvasResetZoom = () => setSmartCanvasViewportScale(1);
+window.huahaiSmartCanvasZoomPercent = smartViewportScalePercent;
 function nodeScale(node){
     const v = Number(node?.scale);
     if((node?.images || []).length > 1 && v === MEDIA_GROUP_PREVIOUS_DEFAULT_SCALE) return MEDIA_GROUP_DEFAULT_SCALE;
@@ -2077,9 +2125,21 @@ function applyViewport(){
     world.classList.toggle('canvas-scaled', Math.abs(viewport.scale - 1) > 0.001);
     shell.style.backgroundSize = '24px 24px';
     shell.style.backgroundPosition = '0 0';
+    const zoomLabel = document.getElementById('smartCanvasZoomPercent');
+    if(zoomLabel){
+        const percent = smartViewportScalePercent();
+        zoomLabel.textContent = `${percent}%`;
+        zoomLabel.title = `画布缩放 ${percent}% · 点击重置到 100%`;
+        zoomLabel.setAttribute('aria-label', `当前智能画布缩放 ${percent}%，点击重置到 100%`);
+    }
     renderMinimap();
     renderSmartSelectionHub();
+    scheduleSmartImageResolutionSync(world, 120);
 }
+document.querySelector('[data-smart-zoom-out]')?.addEventListener('click', () => window.huahaiSmartCanvasZoomBy(-.1));
+document.querySelector('[data-smart-zoom-in]')?.addEventListener('click', () => window.huahaiSmartCanvasZoomBy(.1));
+document.querySelector('[data-smart-zoom-fit]')?.addEventListener('click', () => fitAllNodesViewport());
+document.getElementById('smartCanvasZoomPercent')?.addEventListener('click', () => window.huahaiSmartCanvasResetZoom());
 function screenToWorld(event){
     const rect = shell.getBoundingClientRect();
     return {
@@ -16992,7 +17052,7 @@ shell.addEventListener('wheel', e => {
     const sy = e.clientY - rect.top;
     const before = {x:(sx - viewport.x) / viewport.scale, y:(sy - viewport.y) / viewport.scale};
     const factor = canvasWheelZoomFactor(e, shell.clientHeight || window.innerHeight || 800);
-    viewport.scale = safeScale(viewport.scale * factor);
+    viewport.scale = safeSmartViewportScale(viewport.scale * factor);
     viewport.x = sx - before.x * viewport.scale;
     viewport.y = sy - before.y * viewport.scale;
     applyViewport();
