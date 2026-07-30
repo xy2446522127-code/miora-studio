@@ -34,7 +34,8 @@ class PluginRuntime:
             return None
         raw["id"] = plugin_id
         raw["enabled"] = bool(raw.get("enabled", True))
-        raw["runtime_ready"] = bool(raw.get("entry"))
+        entry = str(raw.get("entry") or "").strip()
+        raw["runtime_ready"] = bool(entry and (path.parent / entry).is_file())
         raw["source"] = "local-folder"
         return raw
 
@@ -125,3 +126,14 @@ class PluginRuntime:
         rows.insert(0, job)
         self._write(self._state_file(plugin_id, "jobs.json"), rows[:500])
         return job
+
+    def update_job(self, plugin_id: str, job_id: str, **changes: Any) -> Dict[str, Any] | None:
+        rows = self.jobs(plugin_id)
+        for index, row in enumerate(rows):
+            if row.get("id") != job_id:
+                continue
+            updated = {**row, **changes, "updatedAt": int(time.time() * 1000)}
+            rows[index] = updated
+            self._write(self._state_file(plugin_id, "jobs.json"), rows[:500])
+            return updated
+        return None

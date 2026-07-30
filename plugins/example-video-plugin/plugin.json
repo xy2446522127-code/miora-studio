@@ -5,6 +5,7 @@
   "type": "video-provider",
   "runtime": "node",
   "entry": "backend/index.mjs",
+  "models": ["example-video"],
   "capabilities": [
     "validateAccount",
     "estimateCost",

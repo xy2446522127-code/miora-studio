@@ -18,7 +18,7 @@
         })();
     </script>
     <script src="/static/vendor/js/lucide.js?v=2026.07.28.2.1785236257"></script>
-    <script src="/static/js/theme.js?v=2026.07.29.1"></script>
+    <script src="/static/js/theme.js?v=2026.07.28.2.1785326828"></script>
     <script src="/static/js/touch-mouse.js?v=2026.07.28.2.1785236257"></script>
     <script src="/static/js/i18n.js?v=2026.07.28.2.1785236257"></script>
     <link rel="stylesheet" href="/static/css/smart-canvas.css?v=2026.07.28.2.1785236257">
@@ -137,6 +137,32 @@
             <div id="promptTemplateCats" class="prompt-template-cats"></div>
             <div id="promptTemplateBody" class="prompt-template-body"></div>
         </div>
+        <aside id="smartResultsRail" class="smart-results-rail" aria-label="生成成果">
+            <div class="smart-results-rail-title">成果</div>
+            <button class="smart-results-rail-btn active" type="button" data-smart-results-kind="all" aria-label="全部成果"><i data-lucide="folder-open"></i><span>全部</span><b data-smart-results-count="all">0</b></button>
+            <button class="smart-results-rail-btn" type="button" data-smart-results-kind="image" aria-label="图片成果"><i data-lucide="image"></i><span>图片</span><b data-smart-results-count="image">0</b></button>
+            <button class="smart-results-rail-btn" type="button" data-smart-results-kind="video" aria-label="视频成果"><i data-lucide="circle-play"></i><span>视频</span><b data-smart-results-count="video">0</b></button>
+            <button class="smart-results-rail-btn" type="button" data-smart-results-kind="task" aria-label="生成任务"><i data-lucide="list-checks"></i><span>任务</span><b data-smart-results-count="task">0</b></button>
+        </aside>
+        <section id="smartResultsPanel" class="smart-results-panel" aria-label="生成成果面板">
+            <div class="smart-results-head">
+                <div><strong>生成成果</strong><span id="smartResultsSummary">当前画布 · 0 项</span></div>
+                <div class="smart-results-head-actions">
+                    <button id="smartResultsRevealFolder" type="button" title="打开输出目录" aria-label="打开输出目录"><i data-lucide="folder"></i></button>
+                    <button id="smartResultsClose" type="button" title="收起成果面板" aria-label="收起成果面板"><i data-lucide="x"></i></button>
+                </div>
+            </div>
+            <div class="smart-results-filters">
+                <select id="smartResultsScope" aria-label="成果范围"><option value="canvas">当前画布</option><option value="project">当前项目</option></select>
+                <div class="smart-results-kind-tabs" role="tablist" aria-label="成果类型">
+                    <button class="active" type="button" data-smart-results-panel-kind="all">全部</button>
+                    <button type="button" data-smart-results-panel-kind="image">图片</button>
+                    <button type="button" data-smart-results-panel-kind="video">视频</button>
+                    <button type="button" data-smart-results-panel-kind="task">任务</button>
+                </div>
+            </div>
+            <div id="smartResultsList" class="smart-results-list"></div>
+        </section>
         <button id="smartArrangeBtn" class="minimap-arrange-btn" type="button" title="整理选中节点" aria-label="整理选中节点"><i data-lucide="layout-grid"></i><span>整理选中</span></button>
         <div id="minimap" class="smart-minimap" aria-hidden="true">
             <div id="minimapContent" class="smart-minimap-content">
@@ -212,7 +238,8 @@
             <img alt="asset preview">
             <div class="asset-hover-name"></div>
         </div>
-        <div id="selectionBox" class="selection-box"></div>
+            <div id="selectionBox" class="selection-box"></div>
+            <div id="smartSelectionHub" class="smart-selection-hub" aria-live="polite"></div>
         <div id="smartLogModal" class="log-modal" onclick="closeSmartCanvasLog()">
             <div class="log-panel" onclick="event.stopPropagation()">
                 <div class="log-head">
@@ -442,6 +469,8 @@
         <div id="toast" class="toast"></div>
         <div id="mentionPreview" class="mention-preview"><img alt="preview"></div>
     </div>
-    <script src="/static/js/smart-canvas.js?v=2026.07.28.2.1785236257"></script>
+<script src="/static/js/huahai-interactions.js?v=2026.07.30.1"></script>
+<script src="/static/js/huahai-batch-links.js?v=2026.07.30.1"></script>
+<script src="/static/js/smart-canvas.js?v=2026.07.30.1"></script>
 </body>
 </html>

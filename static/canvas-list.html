@@ -18,14 +18,15 @@
     </script>
     <script src="/static/vendor/js/tailwindcss-cdn.js?v=2026.07.28.2.1785236257"></script>
     <script src="/static/vendor/js/lucide.js?v=2026.07.28.2.1785236257"></script>
-    <script src="/static/js/theme.js?v=2026.07.29.1"></script>
+    <script src="/static/js/theme.js?v=2026.07.28.2.1785326828"></script>
     <script src="/static/js/touch-mouse.js?v=2026.07.28.2.1785236257"></script>
     <script src="/static/js/i18n.js?v=2026.07.28.2.1785236257"></script>
-    <link rel="stylesheet" href="/static/css/canvas-list.css?v=2026.07.28.2.1785236257">
     <link rel="stylesheet" href="/static/css/theme.css?v=2026.07.28.2.1785236257">
     <link rel="stylesheet" href="/static/css/miora.css?v=2026.07.28.2.1785237538">
+    <link rel="stylesheet" href="/static/css/huahai.css?v=2026.07.30.1">
+    <link rel="stylesheet" href="/static/css/canvas-list.css?v=2026.07.30.1">
 </head>
-<body>
+<body data-huaha-page="canvas-list">
     <div id="workspace" class="workspace">
         <!-- LEFT: project sidebar -->
         <aside id="sidebar" class="ws-sidebar">
@@ -66,13 +67,13 @@
                 </div>
                 <div class="ws-topbar-right">
                     <button id="pasteCanvasBtn" class="ws-paste-btn" type="button" title="粘贴到此项目" style="display:none"><i data-lucide="clipboard-paste" class="w-4 h-4"></i><span>粘贴到此项目</span></button>
-                    <button id="boardResetView" class="ws-icon-btn" type="button" title="整理并重置视图" aria-label="整理并重置视图"><i data-lucide="layout-grid" class="w-4 h-4"></i></button>
+                    <button id="boardResetView" class="ws-order-lock" type="button" title="按更新时间固定排序：从左到右，从上到下" aria-label="按更新时间固定排序"><i data-lucide="lock-keyhole" class="w-4 h-4"></i><span>更新时间：新 → 旧</span></button>
                     <button id="boardRefresh" class="ws-icon-btn" type="button" title="刷新" aria-label="刷新"><i data-lucide="refresh-cw" class="w-4 h-4"></i></button>
                     <button id="newCanvasBtn" class="ws-primary-btn" type="button"><i data-lucide="plus" class="w-4 h-4"></i><span>新建画布</span></button>
                 </div>
             </div>
 
-            <!-- Board (pan/zoom) -->
+            <!-- Board (fixed chronological grid) -->
             <div id="board" class="ws-board">
                 <div id="boardWorld" class="ws-board-world"></div>
                 <div id="boardEmptyHint" class="ws-board-empty">
@@ -98,6 +99,7 @@
             <div id="boardStatus" class="ws-status"></div>
         </main>
     </div>
-    <script src="/static/js/canvas-list.js?v=2026.07.29.1"></script>
+    <script src="/static/js/huahai-interactions.js?v=2026.07.30.1"></script>
+    <script src="/static/js/canvas-list.js?v=2026.07.30.1"></script>
 </body>
 </html>

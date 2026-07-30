@@ -271,6 +271,13 @@ const nodesEl = document.getElementById('nodes');
 const minimap = document.getElementById('minimap');
 const minimapContent = document.getElementById('minimapContent');
 const canvasArrangeBtn = document.getElementById('canvasArrangeBtn');
+const canvasResultsRail = document.getElementById('canvasResultsRail');
+const canvasResultsPanel = document.getElementById('canvasResultsPanel');
+const canvasResultsClose = document.getElementById('canvasResultsClose');
+const canvasResultsRevealFolder = document.getElementById('canvasResultsRevealFolder');
+const canvasResultsScope = document.getElementById('canvasResultsScope');
+const canvasResultsSummary = document.getElementById('canvasResultsSummary');
+const canvasResultsList = document.getElementById('canvasResultsList');
 let minimapViewport = document.getElementById('minimapViewport');
 const linksEl = document.getElementById('links');
 const linkControlsEl = document.getElementById('linkControls');
@@ -370,6 +377,8 @@ let zoomPreviewState = null;
 let resizeNode = null;
 let llmPaneDrag = null;
 let tempLink = null;
+let batchLinkState = null;
+let batchConflictState = null;
 let knifeActive = false;
 let knifePoint = null;
 let knifeTrail = [];
@@ -410,6 +419,12 @@ let chatModels = ['gpt-4o-mini'];
 let videoModels = [];
 let msChatModels = [];
 let apiProviders = [];
+let videoPlugins = [];
+let videoPluginAccounts = {};
+let canvasResultsKind = 'all';
+let canvasResultsScopeValue = 'canvas';
+let canvasResultsProjectCache = [];
+let canvasResultsProjectCacheAt = 0;
 let comfyBackendCount = 1;
 let comfyWorkflows = [];
 let comfyWorkflowCache = {};
@@ -715,13 +730,42 @@ function videoApiProviders(){
         .filter(p => p.id !== 'modelscope' && p.enabled !== false && (p.video_models || []).length);
     return providers.length ? providers : defaultApiProviders();
 }
+function videoProviderPlugins(){
+    const required = ['submitTask','pollTask','fetchArtifacts'];
+    return (videoPlugins || []).filter(plugin =>
+        plugin?.enabled !== false
+        && plugin?.type === 'video-provider'
+        && required.every(capability => (plugin.capabilities || []).includes(capability))
+    );
+}
+function videoPluginById(id){ return videoProviderPlugins().find(plugin => plugin.id === id) || null; }
+function videoPluginModels(pluginId){
+    const plugin = videoPluginById(pluginId);
+    const fromManifest = Array.isArray(plugin?.models) ? plugin.models : [];
+    const fromSchema = Array.isArray(plugin?.taskSchema?.properties?.model?.enum) ? plugin.taskSchema.properties.model.enum : [];
+    return uniqueModels([...fromManifest, ...fromSchema, 'default']);
+}
+function normalizedVideoSource(node){ return node?.videoSource === 'plugin' && videoPluginById(node.pluginId) ? 'plugin' : 'api'; }
+function videoSourceValue(node){
+    return normalizedVideoSource(node) === 'plugin'
+        ? `plugin:${node.pluginId}`
+        : `api:${resolveVideoProviderId(node?.apiProvider || 'comfly')}`;
+}
 function resolveVideoProviderId(id){
     const providers = videoApiProviders();
     return providers.find(p => p.id === id)?.id || providers[0]?.id || 'comfly';
 }
-function videoProviderOptions(selectedId){
-    const selected = resolveVideoProviderId(selectedId);
-    return videoApiProviders().map(provider => `<option value="${escapeHtml(provider.id)}" ${provider.id === selected ? 'selected' : ''}>${escapeHtml(provider.name || provider.id)}</option>`).join('');
+function videoProviderOptions(node){
+    const selected = videoSourceValue(node);
+    const apiOptions = videoApiProviders().map(provider =>
+        `<option value="api:${escapeHtml(provider.id)}" ${`api:${provider.id}` === selected ? 'selected' : ''}>${escapeHtml(provider.name || provider.id)}</option>`
+    ).join('');
+    const pluginOptions = videoProviderPlugins().map(plugin => {
+        const accountCount = (videoPluginAccounts[plugin.id] || []).length;
+        const suffix = accountCount ? ` · ${accountCount}` : ' · 未配置';
+        return `<option value="plugin:${escapeHtml(plugin.id)}" ${`plugin:${plugin.id}` === selected ? 'selected' : ''}>${escapeHtml((plugin.name || plugin.id) + suffix)}</option>`;
+    }).join('');
+    return `<optgroup label="API 平台">${apiOptions}</optgroup>${pluginOptions ? `<optgroup label="本地插件">${pluginOptions}</optgroup>` : ''}`;
 }
 function providerVideoModels(providerId){
     // 不走 providerById（会 fallback 到第一个 provider，造成串台），直接查精确匹配
@@ -735,13 +779,19 @@ function providerVideoModels(providerId){
 }
 function sanitizeVideoNodeProviderModel(node){
     if(!node || node.type !== 'video') return;
+    if(node.videoSource === 'plugin' && videoPluginById(node.pluginId)){
+        const models = videoPluginModels(node.pluginId);
+        if(!models.includes(node.model)) node.model = models[0] || 'default';
+        return;
+    }
+    node.videoSource = 'api';
     node.apiProvider = resolveVideoProviderId(node.apiProvider || 'comfly');
     const models = providerVideoModels(node.apiProvider);
     if(!models.length) node.model = '';
     else if(!models.includes(node.model)) node.model = models[0] || '';
 }
-function videoModelOptions(selectedModel, providerId){
-    const models = providerVideoModels(providerId);
+function videoModelOptions(selectedModel, providerId, source='api'){
+    const models = source === 'plugin' ? videoPluginModels(providerId) : providerVideoModels(providerId);
     if(!models.length){
         return `<option value="" disabled selected>${tr('canvas.noModelsHint') || '暂无模型，请到 API 设置添加'}</option>`;
     }
@@ -1355,6 +1405,8 @@ window.huahaiCanvasDuplicateSelected = () => {
     render();
     scheduleSave();
 };
+window.huahaiCanvasGroupSelected = () => groupSelectedImages();
+window.huahaiCanvasArrangeSelected = () => arrangeSelectedCanvasNodes();
 function fitAllNodesViewport(){
     const rect = board.getBoundingClientRect();
     if(!nodes.length){
@@ -1583,6 +1635,20 @@ async function loadConfig(){
         msChatModels = cfg.ms_chat_models?.length ? cfg.ms_chat_models : msChatModels;
         comfyBackendCount = Math.max(1, (cfg.comfy_instances || []).length || 1);
         apiProviders = Array.isArray(cfg.api_providers) && cfg.api_providers.length ? cfg.api_providers : defaultApiProviders();
+        try {
+            const pluginData = await fetch('/api/plugins').then(r => r.ok ? r.json() : {plugins:[]});
+            videoPlugins = Array.isArray(pluginData.plugins) ? pluginData.plugins : [];
+            const accountEntries = await Promise.all(videoProviderPlugins().map(async plugin => {
+                try {
+                    const data = await fetch(`/api/plugins/${encodeURIComponent(plugin.id)}/accounts`).then(r => r.ok ? r.json() : {accounts:[]});
+                    return [plugin.id, Array.isArray(data.accounts) ? data.accounts : []];
+                } catch(_) { return [plugin.id, []]; }
+            }));
+            videoPluginAccounts = Object.fromEntries(accountEntries);
+        } catch(_) {
+            videoPlugins = [];
+            videoPluginAccounts = {};
+        }
         models.nano = imageModels.find(m => m.toLowerCase().includes('nano')) || 'nano-banana-pro';
         models.gpt = imageModels.find(m => !m.toLowerCase().includes('nano')) || cfg.image_model || 'gpt-image-2';
         try {
@@ -5980,6 +6046,7 @@ function render(){
     syncCanvasSelectedImageResolution(nodesEl);
     measureCanvasOriginalImageNodes(nodesEl);
     refreshOutputTimer();
+    refreshCanvasResults();
 }
 function refreshNodes(ids=[]){
     const uniqueIds = [...new Set((ids || []).filter(Boolean))];
@@ -6372,7 +6439,17 @@ function renderNode(node){
         }
         startNodeDrag(e, node);
     };
-    el.querySelector('.resize-handle').onmousedown = e => { if(e.button === 0 && !e.shiftKey) startNodeResize(e, node); };
+    const resizeHandle = el.querySelector('.resize-handle');
+    resizeHandle.onmousedown = e => { if(e.button === 0 && !e.shiftKey) startNodeResize(e, node); };
+    if(node.type === 'output'){
+        resizeHandle.ondblclick = e => {
+            e.preventDefault(); e.stopPropagation();
+            node.outputSizeMode = 'auto';
+            const item = (node.images || [])[0];
+            applyOutputAutoSize(node, Number(item?.width || 1), Number(item?.height || 1));
+            render();
+        };
+    }
     el.ondragstart = e => { e.preventDefault(); e.stopPropagation(); };
     const out = el.querySelector('.port.out');
     if(out) out.onmousedown = e => { if(e.button === 0 && !e.shiftKey) startLink(e, node.id, 'out'); };
@@ -6388,6 +6465,14 @@ function bindOutputWrap(wrap, node){
     const playBtn = wrap.querySelector('.canvas-video-play');
     const del = wrap.querySelector('.output-del');
     const recoverQuery = wrap.querySelector('.output-recover-query');
+    const measureAutoOutput = () => {
+        if(node.outputSizeMode === 'manual' || (node.images || []).length !== 1 || (node._pending || []).length) return;
+        const item = node.images[0];
+        const media = wrap.querySelector('img,video');
+        const width = Number(media?.naturalWidth || media?.videoWidth || item?.width || 0);
+        const height = Number(media?.naturalHeight || media?.videoHeight || item?.height || 0);
+        if(width > 0 && height > 0) applyOutputAutoSize(node, width, height);
+    };
     if(img){
         img.draggable = true;
         img.ondragstart = e => {
@@ -6404,6 +6489,8 @@ function bindOutputWrap(wrap, node){
             if(img.dataset.dragging) return;
             openOutputLightbox(img.dataset.url, node);
         };
+        if(img.complete) requestAnimationFrame(measureAutoOutput);
+        else img.addEventListener('load', measureAutoOutput, {once:true});
     }
     wrap.addEventListener('click', e => {
         const fallbackVideo = e.target.closest?.('video[data-output-video-fallback]');
@@ -6412,6 +6499,7 @@ function bindOutputWrap(wrap, node){
         openOutputLightbox(fallbackVideo.dataset.url, node);
     });
     if(video){
+        video.addEventListener('loadedmetadata', measureAutoOutput, {once:true});
         video.onclick = e => {
             e.stopPropagation();
             openOutputLightbox(video.dataset.url, node);
@@ -6475,8 +6563,12 @@ function refreshOutputNodeContent(node){
     body.onwheel = e => { e.stopPropagation(); };
     const layout = outputGridLayout(node);
     grid.classList.toggle('grid-layout', !!layout);
+    const isSingle = !layout && (node.images || []).length === 1 && !(node._pending || []).length;
+    grid.classList.toggle('single-output', isSingle);
     if(layout) grid.style.setProperty('--grid-cols', String(Math.max(1, Number(layout.cols || 1))));
     else grid.style.removeProperty('--grid-cols');
+    if(isSingle) grid.style.setProperty('--output-aspect', String(outputStoredAspect(node)));
+    else grid.style.removeProperty('--output-aspect');
     const items = [
         ...(node.images || []).map(item => ({
             key:outputDomKeyForItem(item),
@@ -6531,7 +6623,7 @@ function defaultNodeSize(type){
     if(type === 'rh') return {w:430, h:0};
     if(type === 'comfy') return {w:420, h:460};
     if(type === 'ltxDirector') return {w:1000, h:800};
-    if(type === 'output') return {w:460, h:0};
+    if(type === 'output') return {w:360, h:0};
     return {w:260, h:0};
 }
 function loopCount(node){
@@ -8643,6 +8735,8 @@ function renderVideoBody(node){
     const promptInputs = ordered.filter(src => src.prompt && !src.refs?.length);
     sanitizeVideoNodeProviderModel(node);
     node.model = node.model || 'veo3-fast';
+    const videoSource = normalizedVideoSource(node);
+    const videoSourceId = videoSource === 'plugin' ? node.pluginId : node.apiProvider;
     wrap.innerHTML = `
         <div class="prompt-list mb-3"></div>
         <div class="video-input-head">
@@ -8655,8 +8749,8 @@ function renderVideoBody(node){
         <div class="input-list video-img-list"></div>
         <div class="gen-settings">
             <div class="gen-settings-row">
-                <select class="select-lite video-provider" style="flex:1">${videoProviderOptions(node.apiProvider)}</select>
-                <select class="select-lite video-model" style="flex:2">${videoModelOptions(node.model, node.apiProvider)}</select>
+                <select class="select-lite video-provider" style="flex:1">${videoProviderOptions(node)}</select>
+                <select class="select-lite video-model" style="flex:2">${videoModelOptions(node.model, videoSourceId, videoSource)}</select>
             </div>
             <div class="gen-settings-row">
                 <label class="field" style="flex:1">
@@ -8709,7 +8803,7 @@ function renderVideoBody(node){
     const durationSelect = wrap.querySelector('.video-duration');
     const aspectSelect = wrap.querySelector('.video-aspect');
     const resolutionSelect = wrap.querySelector('.video-resolution');
-    providerSelect.value = node.apiProvider;
+    providerSelect.value = videoSourceValue(node);
     durationSelect.value = String(node.duration || 5);
     aspectSelect.value = node.aspectRatio || '16:9';
     resolutionSelect.value = node.resolution || '';
@@ -8719,10 +8813,13 @@ function renderVideoBody(node){
     });
     providerSelect.onchange = e => {
         e.stopPropagation();
-        node.apiProvider = e.target.value;
-        const models = providerVideoModels(node.apiProvider);
+        const [source, id] = String(e.target.value || '').split(':');
+        node.videoSource = source === 'plugin' ? 'plugin' : 'api';
+        if(node.videoSource === 'plugin') node.pluginId = id;
+        else node.apiProvider = id;
+        const models = node.videoSource === 'plugin' ? videoPluginModels(node.pluginId) : providerVideoModels(node.apiProvider);
         if(!models.includes(node.model)) node.model = models[0] || node.model;
-        modelSelect.innerHTML = videoModelOptions(node.model, node.apiProvider);
+        modelSelect.innerHTML = videoModelOptions(node.model, node.videoSource === 'plugin' ? node.pluginId : node.apiProvider, node.videoSource);
         scheduleSave();
     };
     modelSelect.onchange = e => { e.stopPropagation(); node.model = e.target.value; scheduleSave(); };
@@ -10707,28 +10804,43 @@ async function runVideoNode(nodeId, opts={}){
     if(!opts.cascade){ node.running = true; refreshRunNodes(node, out); }
     else refreshRunNodes(node, out);
     try {
-        const result = await cascadeFetch('/api/canvas-video', {
+        const usePlugin = normalizedVideoSource(node) === 'plugin';
+        const pluginAccounts = usePlugin ? (videoPluginAccounts[node.pluginId] || []) : [];
+        const endpoint = usePlugin ? `/api/plugins/${encodeURIComponent(node.pluginId)}/video` : '/api/canvas-video';
+        const requestBody = usePlugin ? {
+            accountId:pluginAccounts[0]?.id || '',
+            model:node.model || 'default',
+            kind:'video',
+            prompt,
+            parameters:{
+                duration:Number(node.duration || 5), aspectRatio:node.aspectRatio || '16:9',
+                resolution:node.resolution || '', enhancePrompt:Boolean(node.enhancePrompt),
+                enableUpsample:Boolean(node.enableUpsample), watermark:Boolean(node.watermark),
+                cameraFixed:Boolean(node.cameraFixed), generateAudio:Boolean(node.generateAudio),
+                multimodal:Boolean(node.multimodal)
+            },
+            assets:mediaRefs.map(ref => ({url:ref.url, kind:mediaKindForRef(ref), role:ref.role || ''}))
+        } : {
+            prompt,
+            provider_id:resolveVideoProviderId(node.apiProvider || 'comfly'),
+            model:node.model || 'veo3-fast',
+            duration:Number(node.duration || 5),
+            aspect_ratio:node.aspectRatio || '16:9',
+            resolution:node.resolution || '',
+            images:refs,
+            videos:manualVideoUrlForNode(node) ? [manualVideoUrlForNode(node)] : videoRefs.map(ref => tempShUploadedUrlForNode(node, ref.url)),
+            audios:audioRefs.map(ref => ref.url).filter(Boolean),
+            enhance_prompt:Boolean(node.enhancePrompt),
+            enable_upsample:Boolean(node.enableUpsample),
+            watermark:Boolean(node.watermark),
+            camerafixed:Boolean(node.cameraFixed),
+            generate_audio:Boolean(node.generateAudio),
+            multimodal:Boolean(node.multimodal)
+        };
+        const result = await cascadeFetch(endpoint, {
             method:'POST',
             headers:{'Content-Type':'application/json'},
-            body:JSON.stringify({
-                prompt,
-                provider_id:resolveVideoProviderId(node.apiProvider || 'comfly'),
-                model:node.model || 'veo3-fast',
-                duration:Number(node.duration || 5),
-                aspect_ratio:node.aspectRatio || '16:9',
-                resolution:node.resolution || '',
-                images:refs,
-                videos:manualVideoUrlForNode(node)
-                    ? [manualVideoUrlForNode(node)]
-                    : videoRefs.map(ref => tempShUploadedUrlForNode(node, ref.url)),
-                audios:audioRefs.map(ref => ref.url).filter(Boolean),
-                enhance_prompt:Boolean(node.enhancePrompt),
-                enable_upsample:Boolean(node.enableUpsample),
-                watermark:Boolean(node.watermark),
-                camerafixed:Boolean(node.cameraFixed),
-                generate_audio:Boolean(node.generateAudio),
-                multimodal:Boolean(node.multimodal)
-            })
+            body:JSON.stringify(requestBody)
         }, {cascadeTargetId}).then(async r => { if(!r.ok) throw new Error(await responseErrorMessage(r, tr('canvas.videoFailed'))); return r.json(); });
         const meta = collectRunMeta(out, pendingId);
         if(out) out._pending = (out._pending || []).filter(p => p.id !== pendingId);
@@ -10736,6 +10848,17 @@ async function runVideoNode(nodeId, opts={}){
             const url = outputUrlValue(item);
             return item && typeof item === 'object' ? {...item, url, kind:item.kind || 'video'} : {url, kind:'video'};
         }).filter(item => item.url);
+        if(!outputUrls.length && result.queued){
+            run.request = requestMetaFromResult(result);
+            if(out) out._pending = (out._pending || []).filter(p => p.id !== pendingId);
+            node.runStatus = 'queued';
+            node.runError = '';
+            addGenerationLog({run, outputs:[], runMs:meta.runMs || 0});
+            refreshRunNodes(node, out);
+            refreshCanvasResults();
+            scheduleSave();
+            return;
+        }
         if(!outputUrls.length) throw new Error(tr('canvas.videoFailed'));
         run.request = requestMetaFromResult(result);
         appendOutputImages(out, outputUrls, refs[0], [{...meta, kind:'video'}]);
@@ -12271,6 +12394,7 @@ function addGenerationLog({run, outputs=[], runMs=0, error=''}) {
         error:error ? String(error) : '',
     };
     canvas.logs = [entry, ...canvas.logs].slice(0, 500);
+    refreshCanvasResults();
 }
 function renderCanvasLog(){
     const list = document.getElementById('logList') || (typeof logList !== 'undefined' ? logList : null);
@@ -12710,10 +12834,48 @@ function outputGridLayout(node){
     const allMatch = images.every(item => item && typeof item === 'object' && item.grid?.groupId === layout.groupId);
     return allMatch ? layout : null;
 }
+function outputAutoNodeSize(width, height){
+    const ratio = Math.max(.28, Math.min(3.2, Number(width || 1) / Math.max(1, Number(height || 1))));
+    const targetArea = 90000;
+    let mediaW = Math.sqrt(targetArea * ratio);
+    let mediaH = mediaW / ratio;
+    const scale = Math.min(1, 520 / mediaW, 520 / mediaH);
+    mediaW *= scale;
+    mediaH *= scale;
+    if(mediaW < 220){ mediaH *= 220 / mediaW; mediaW = 220; }
+    if(mediaH < 150){ mediaW *= 150 / mediaH; mediaH = 150; }
+    return {w:Math.round(Math.min(560, mediaW + 24)), h:Math.round(Math.min(590, mediaH + 72)), ratio};
+}
+function outputStoredAspect(node){
+    if((node?.images || []).length !== 1) return 1;
+    const item = node.images[0];
+    if(item && typeof item === 'object'){
+        if(Number(item.width) > 0 && Number(item.height) > 0) return Number(item.width) / Number(item.height);
+        if(Number(item.aspectRatio) > 0) return Number(item.aspectRatio);
+    }
+    return 1;
+}
+function applyOutputAutoSize(node, width, height){
+    if(!node || node.outputSizeMode === 'manual' || (node.images || []).length !== 1) return;
+    const next = outputAutoNodeSize(width, height);
+    const item = node.images[0];
+    if(item && typeof item === 'object'){
+        item.width = Math.round(width); item.height = Math.round(height); item.aspectRatio = next.ratio;
+    }
+    if(Math.abs(Number(node.w || 0) - next.w) < 2 && Math.abs(Number(node.h || 0) - next.h) < 2) return;
+    node.w = next.w; node.h = next.h; node.outputSizeMode = 'auto';
+    const el = nodesEl.querySelector(`.output-node[data-id="${CSS.escape(node.id)}"]`);
+    if(el){
+        el.classList.add('sized'); el.style.width = `${next.w}px`; el.style.height = `${next.h}px`;
+        el.querySelector('.output-grid')?.style.setProperty('--output-aspect', String(next.ratio));
+    }
+    scheduleLinksRender(); scheduleMinimapRender(); scheduleSave();
+}
 function renderOutputGrid(node, pendingHtml=''){
     const layout = outputGridLayout(node);
-    const gridClass = layout ? 'output-grid grid-layout' : 'output-grid';
-    const style = layout ? ` style="--grid-cols:${Math.max(1, Number(layout.cols || 1))}"` : '';
+    const isSingle = !layout && (node.images || []).length === 1 && !(node._pending || []).length;
+    const gridClass = layout ? 'output-grid grid-layout' : `output-grid${isSingle ? ' single-output' : ''}`;
+    const style = layout ? ` style="--grid-cols:${Math.max(1, Number(layout.cols || 1))}"` : (isSingle ? ` style="--output-aspect:${outputStoredAspect(node)}"` : '');
     return `<div class="${gridClass}"${style}>${(node.images || []).map(item => renderOutputMedia(item, !!layout)).join('')}${pendingHtml}</div>`;
 }
 function outputImageName(url){
@@ -12750,8 +12912,14 @@ function appendOutputImages(out, images, compareRef, metas=[], layout=null){
         if(source.kind || source.mediaKind) item.kind = source.kind || source.mediaKind;
         if(meta.kind) item.kind = meta.kind;
         if(meta.grid) item.grid = meta.grid;
+        if(Number(source.width || meta.width) > 0) item.width = Number(source.width || meta.width);
+        if(Number(source.height || meta.height) > 0) item.height = Number(source.height || meta.height);
+        if(Number(source.aspectRatio || meta.aspectRatio) > 0) item.aspectRatio = Number(source.aspectRatio || meta.aspectRatio);
         return item;
     })];
+    if(out.images.length !== 1 && out.outputSizeMode === 'auto'){
+        delete out.w; delete out.h; delete out.outputSizeMode;
+    }
     if(compareRef?.url){
         out.imageComparisons = out.imageComparisons || {};
         list.forEach(url => {
@@ -12822,11 +12990,7 @@ function navigateOutputLightbox(direction){
 }
 function createImageCardFromOutput(url, point){
     if(!ensureCanvas() || !url) return;
-    if(mediaKindForRef(url) !== 'image') return;
-    const p = point || defaultPoint(0, 0);
-    nodes.push({id:uid('img'), type:'image', x:p.x, y:p.y, url, name:outputImageName(url)});
-    render();
-    scheduleSave();
+    createImageCardFromUrl(url, point || defaultPoint(0, 0), outputImageName(url));
 }
 async function downloadUrl(url, filename){
     const res = await fetch(url);
@@ -13602,44 +13766,147 @@ function finishSelection(){
 }
 function renderSelectionHub(){
     selectionHub.innerHTML = '';
-    selectionHub.classList.remove('open');
+    selectionHub.classList.remove('open', 'batch-open');
+    selectionHub.style.cssText = '';
+    const sourceIds = [...selected].filter(id => nodes.some(node => node.id === id));
+    if(sourceIds.length < 2 || !canvas) return;
+    const box = nodeBounds(sourceIds);
+    if(!Number.isFinite(box.x) || !Number.isFinite(box.y)) return;
+    const scale = safeViewportScale(viewport.scale);
+    const left = viewport.x + box.x * scale;
+    const top = viewport.y + box.y * scale;
+    const width = Math.max(44, box.w * scale);
+    const height = Math.max(44, box.h * scale);
+    selectionHub.classList.add('open', 'batch-open');
+    selectionHub.style.left = `${left}px`;
+    selectionHub.style.top = `${top}px`;
+    selectionHub.style.width = `${width}px`;
+    selectionHub.style.height = `${height}px`;
+    const conflict = batchConflictState && batchConflictState.sourceIds.join('|') === sourceIds.join('|')
+        ? batchConflictState
+        : null;
+    const conflictHtml = conflict ? `
+        <div class="batch-conflict-popover" role="dialog" aria-label="${langIsEn() ? 'Partial connection' : '部分节点不兼容'}">
+            <strong>${langIsEn() ? `${conflict.validation.compatibleCount} compatible, ${conflict.validation.conflictCount} conflicts` : `可连接 ${conflict.validation.compatibleCount}，冲突 ${conflict.validation.conflictCount}`}</strong>
+            <span>${langIsEn() ? 'No incompatible nodes will be skipped silently.' : '不会静默跳过不兼容节点。'}</span>
+            <div>
+                <button type="button" data-batch-action="cancel">${langIsEn() ? 'Cancel' : '取消'}</button>
+                <button type="button" class="primary" data-batch-action="compatible">${langIsEn() ? `Connect ${conflict.validation.compatibleCount}` : `仅连接兼容的 ${conflict.validation.compatibleCount} 个`}</button>
+            </div>
+        </div>` : '';
+    selectionHub.innerHTML = `
+        <div class="batch-selection-frame" aria-hidden="true"></div>
+        <div class="batch-selection-count">${langIsEn() ? `${sourceIds.length} nodes selected` : `已选择 ${sourceIds.length} 个节点`}</div>
+        <button class="batch-proxy-port" type="button" title="${langIsEn() ? 'Drag to connect selected nodes' : '拖动可批量连接'}" aria-label="${langIsEn() ? 'Batch connect selected nodes' : '批量连接所选节点'}">
+            <i data-lucide="git-branch"></i><b>${sourceIds.length}</b>
+        </button>
+        ${conflictHtml}`;
+    selectionHub.querySelector('.batch-proxy-port')?.addEventListener('mousedown', event => startSelectionLink(event, 'batch'));
+    selectionHub.querySelector('[data-batch-action="cancel"]')?.addEventListener('click', event => {
+        event.stopPropagation();
+        batchConflictState = null;
+        renderSelectionHub();
+    });
+    selectionHub.querySelector('[data-batch-action="compatible"]')?.addEventListener('click', event => {
+        event.stopPropagation();
+        if(conflict?.validation?.compatibleCount) commitSelectionBatch(conflict.validation);
+    });
+    refreshIcons();
 }
-function startSelectionLink(e, kind){
+function clearBatchTargetFeedback(){
+    nodesEl.querySelectorAll('.node.batch-target-all,.node.batch-target-partial,.node.batch-target-none').forEach(node => {
+        node.classList.remove('batch-target-all', 'batch-target-partial', 'batch-target-none');
+    });
+    nodesEl.querySelectorAll('.port.batch-target-port').forEach(port => port.classList.remove('batch-target-port'));
+}
+function selectionBatchValidation(targetId){
+    if(!window.HuahaiBatchLinks) return null;
+    return window.HuahaiBatchLinks.validate({
+        sourceIds:[...selected],
+        targetId,
+        nodes,
+        connections,
+        canConnect:(fromId, toId) => canConnect(fromId, toId),
+        kind:'flow'
+    });
+}
+function commitSelectionBatch(validation){
+    if(!validation?.compatibleCount) return false;
+    pushUndo();
+    const batchId = uid('batch');
+    const created = window.HuahaiBatchLinks.createConnections({
+        validation,
+        createId:() => uid('c'),
+        kind:'flow',
+        batchId
+    });
+    created.forEach(connection => {
+        connections.push(connection);
+        syncLatestGeneratedOutputToConnection(connection.from, connection.to);
+    });
+    batchConflictState = null;
+    syncGeneratorInputs();
+    scheduleSave();
+    setStatus(langIsEn() ? `${created.length} connections created` : `已建立 ${created.length} 条连接`);
+    render();
+    return true;
+}
+function startSelectionLink(e, kind='batch'){
     e.preventDefault();
     e.stopPropagation();
+    if(kind !== 'batch' || selected.size < 2) return;
+    batchConflictState = null;
     const p = screenToWorld(e.clientX, e.clientY);
-    tempLink = {from:`selection:${kind}`, x1:p.x, y1:p.y, x2:p.x, y2:p.y};
-    window.onmousemove = e2 => { const next = screenToWorld(e2.clientX, e2.clientY); tempLink.x2 = next.x; tempLink.y2 = next.y; renderLinks(); };
+    batchLinkState = {sourceIds:[...selected], hoverTargetId:'', validation:null};
+    tempLink = {from:'selection:batch', x1:p.x, y1:p.y, x2:p.x, y2:p.y};
+    document.body.classList.add('canvas-batch-linking');
+    window.onmousemove = e2 => {
+        const next = screenToWorld(e2.clientX, e2.clientY);
+        tempLink.x2 = next.x;
+        tempLink.y2 = next.y;
+        const targetPort = nearestPort(e2.clientX, e2.clientY, 'in');
+        const target = targetPort?.closest('.node');
+        const targetId = target?.dataset.id || '';
+        const validation = targetId ? selectionBatchValidation(targetId) : null;
+        batchLinkState.hoverTargetId = targetId;
+        batchLinkState.validation = validation;
+        clearBatchTargetFeedback();
+        if(target && validation){
+            target.classList.add(`batch-target-${validation.status}`);
+            targetPort.classList.add('batch-target-port');
+        }
+        renderLinks();
+    };
     window.onmouseup = e2 => {
         const targetPort = nearestPort(e2.clientX, e2.clientY, 'in');
-        const target = targetPort?.closest('.generator-node');
-        if(target) connectSelectionToGenerator(kind, target.dataset.id);
+        const target = targetPort?.closest('.node');
+        const validation = target ? selectionBatchValidation(target.dataset.id) : null;
+        clearBatchTargetFeedback();
         tempLink = null;
+        batchLinkState = null;
+        document.body.classList.remove('canvas-batch-linking');
         window.onmousemove = null;
         window.onmouseup = null;
-        render();
-        scheduleSave();
+        if(validation?.status === 'all') commitSelectionBatch(validation);
+        else if(validation?.status === 'partial'){
+            batchConflictState = {sourceIds:[...selected], validation};
+            setStatus(langIsEn() ? 'Some selected nodes are incompatible' : '部分所选节点不兼容，请确认连接范围');
+            renderLinks();
+            renderSelectionHub();
+        } else {
+            if(target) setStatus(langIsEn() ? 'The selected nodes cannot connect here' : '所选节点无法连接到该接口');
+            renderLinks();
+            renderSelectionHub();
+        }
     };
 }
 function connectSelectionToGenerator(kind, genId){
-    const ids = [...selected];
-    let source = null;
-    if(kind === 'images'){
-        const imgs = ids.map(id => nodes.find(n => n.id === id)).filter(n => n?.type === 'image' && n.url);
-        if(!imgs.length) return;
-        const box = nodeBounds(imgs.map(n => n.id));
-        source = {id:uid('grp'), type:'group', x:box.x - 24, y:box.y - 58, w:box.w + 48, h:box.h + 90, items:imgs.map(n => n.id)};
-    } else {
-        const prompts = ids.map(id => nodes.find(n => n.id === id)).filter(n => n?.type === 'prompt');
-        if(!prompts.length) return;
-        const box = nodeBounds(prompts.map(n => n.id));
-        source = {id:uid('pg'), type:'promptGroup', x:box.x - 24, y:box.y - 58, w:box.w + 48, h:box.h + 90, items:prompts.map(n => n.id)};
+    const validation = selectionBatchValidation(genId);
+    if(validation?.status === 'all') commitSelectionBatch(validation);
+    else if(validation?.status === 'partial'){
+        batchConflictState = {sourceIds:[...selected], validation};
+        renderSelectionHub();
     }
-    nodes.push(source);
-    connections.push({id:uid('c'), from:source.id, to:genId});
-    selected.clear();
-    selected.add(source.id);
-    syncGeneratorInputs();
 }
 
 function pushUndo(){
@@ -14068,6 +14335,7 @@ function onNodeResize(e){
     const nextH = Math.max(96, resizeNode.sh + (e.clientY - resizeNode.sy) / viewport.scale);
     resizeNode.node.w = Math.round(nextW);
     resizeNode.node.h = Math.round(nextH);
+    if(resizeNode.node.type === 'output') resizeNode.node.outputSizeMode = 'manual';
     const el = nodesEl.querySelector(`.node[data-id="${resizeNode.node.id}"]`);
     if(el){
         el.classList.add('sized');
@@ -14441,9 +14709,14 @@ function renderLinks(){
         if(!canResolvePort(c.from) || !canResolvePort(c.to)) return;
         segments.push({c, a:portPoint(c.from, 'out'), b:portPoint(c.to, 'in')});
     });
+    const relation = connectionRelationState();
     segments.forEach(({c, a, b}) => {
-        const relClass = isConnectionSelected(c) ? ' link-active' : '';
+        const state = relation.get(c.id) || '';
+        const relClass = state ? ` ${state}` : '';
         linksEl.appendChild(pathEl(a.x, a.y, b.x, b.y, `link${relClass}`));
+        const flow = pathEl(a.x, a.y, b.x, b.y, `link-flow${relClass}`);
+        flow.setAttribute('pathLength', '1000');
+        linksEl.appendChild(flow);
         linkControlsEl.appendChild(linkDeleteButton(c, a, b));
         linksEl.appendChild(linkHitEl(a.x, a.y, b.x, b.y, c.id));
     });
@@ -14451,6 +14724,29 @@ function renderLinks(){
         linksEl.appendChild(pathEl(tempLink.x1, tempLink.y1, tempLink.x2, tempLink.y2, 'link temp'));
     }
     renderKnifeTrail();
+}
+function connectionRelationState(){
+    const result = new Map();
+    if(!selected.size) return result;
+    const directIds = new Set();
+    const reachable = new Set(selected);
+    connections.forEach(connection => {
+        if(selected.has(connection.from) || selected.has(connection.to)) directIds.add(connection.id);
+    });
+    let changed = true;
+    while(changed){
+        changed = false;
+        connections.forEach(connection => {
+            if(reachable.has(connection.from) && !reachable.has(connection.to)){ reachable.add(connection.to); changed = true; }
+            if(reachable.has(connection.to) && !reachable.has(connection.from)){ reachable.add(connection.from); changed = true; }
+        });
+    }
+    connections.forEach(connection => {
+        if(directIds.has(connection.id)) result.set(connection.id, 'link-active');
+        else if(reachable.has(connection.from) && reachable.has(connection.to)) result.set(connection.id, 'link-related');
+        else result.set(connection.id, 'link-muted');
+    });
+    return result;
 }
 function renderKnifeTrail(){
     if(!knifeActive || knifeTrail.length < 2) return;
@@ -14669,6 +14965,139 @@ minimap?.addEventListener('mousedown', e => {
         window.onmouseup = null;
         scheduleViewportSave();
     };
+});
+function canvasResultItemsFromCanvas(sourceCanvas){
+    if(!sourceCanvas) return [];
+    const items = [];
+    const seen = new Set();
+    const addMedia = (raw, details={}) => {
+        const url = outputUrlValue(raw);
+        if(!url || seen.has(url)) return;
+        seen.add(url);
+        const kind = mediaKindForOutputItem(raw);
+        items.push({
+            id:`media:${url}`, kind:kind === 'video' ? 'video' : 'image', url,
+            name:raw?.name || outputImageName(url), createdAt:Number(details.createdAt || raw?.createdAt || 0),
+            status:'success', canvasId:sourceCanvas.id, canvasTitle:sourceCanvas.title || '',
+            prompt:details.prompt || raw?.run?.prompt || ''
+        });
+    };
+    (sourceCanvas.nodes || []).filter(node => node.type === 'output').forEach(node => {
+        (node.images || []).forEach(item => addMedia(item));
+        (node._pending || []).forEach(pending => items.push({
+            id:`task:${sourceCanvas.id}:${pending.id}`, kind:'task', status:pending.failed ? 'failed' : 'running',
+            name:pending.failed ? '生成失败' : '生成中', createdAt:Number(pending.startedAt || Date.now()),
+            canvasId:sourceCanvas.id, canvasTitle:sourceCanvas.title || '', prompt:pending.run?.prompt || '', message:pending.error || ''
+        }));
+    });
+    (sourceCanvas.logs || []).forEach(log => {
+        (log.outputs || []).forEach(item => addMedia(item, {createdAt:log.createdAt, prompt:log.prompt}));
+        if(log.status === 'failed') items.push({
+            id:`task:${sourceCanvas.id}:${log.id}`, kind:'task', status:'failed', name:'生成失败',
+            createdAt:Number(log.createdAt || 0), canvasId:sourceCanvas.id, canvasTitle:sourceCanvas.title || '',
+            prompt:log.prompt || '', message:log.error || ''
+        });
+    });
+    return items;
+}
+async function canvasResultsSourceCanvases(){
+    if(canvasResultsScopeValue !== 'project') return canvas ? [canvas] : [];
+    if(Date.now() - canvasResultsProjectCacheAt < 8000 && canvasResultsProjectCache.length) return canvasResultsProjectCache;
+    const projectId = canvas?.project || 'default';
+    const targets = (canvases || []).filter(item => (item.project || 'default') === projectId);
+    const loaded = await Promise.all(targets.map(async item => {
+        if(item.id === canvas?.id) return canvas;
+        try {
+            const data = await fetch(`/api/canvases/${encodeURIComponent(item.id)}`).then(r => r.ok ? r.json() : null);
+            return data?.canvas || null;
+        } catch(_) { return null; }
+    }));
+    canvasResultsProjectCache = loaded.filter(Boolean);
+    canvasResultsProjectCacheAt = Date.now();
+    return canvasResultsProjectCache;
+}
+function canvasResultPreviewHtml(item){
+    if(item.kind === 'video') return `${canvasVideoPreviewHtml(item.url, 360, 'alt="video result"')}<span class="canvas-result-thumb-badge">VIDEO</span>`;
+    if(item.kind === 'image') return `${canvasPreviewImgHtml(item.url, 360, 'alt="image result"')}<span class="canvas-result-thumb-badge">IMAGE</span>`;
+    return `<div class="canvas-result-empty"><i data-lucide="${item.status === 'failed' ? 'circle-alert' : 'loader-circle'}"></i><span>${escapeHtml(item.message || item.name)}</span></div>`;
+}
+function renderCanvasResultItems(items){
+    if(!canvasResultsList) return;
+    const filtered = canvasResultsKind === 'all' ? items : items.filter(item => item.kind === canvasResultsKind);
+    const counts = {
+        all:items.length, image:items.filter(item => item.kind === 'image').length,
+        video:items.filter(item => item.kind === 'video').length, task:items.filter(item => item.kind === 'task').length
+    };
+    canvasResultsRail?.querySelectorAll('[data-results-count]').forEach(el => { el.textContent = String(counts[el.dataset.resultsCount] || 0); });
+    if(canvasResultsSummary) canvasResultsSummary.textContent = `${canvasResultsScopeValue === 'project' ? '当前项目' : '当前画布'} · ${filtered.length} 项`;
+    if(!filtered.length){
+        canvasResultsList.innerHTML = `<div class="canvas-result-empty"><i data-lucide="waves"></i><span>这里会按时间收集生成图片、视频和任务</span></div>`;
+        refreshIcons(); return;
+    }
+    canvasResultsList.innerHTML = filtered.sort((a,b) => Number(b.createdAt || 0) - Number(a.createdAt || 0)).map(item => `
+        <article class="canvas-result-card" data-result-id="${escapeAttr(item.id)}">
+            <div class="canvas-result-thumb" ${item.url ? 'draggable="true"' : ''} data-result-url="${escapeAttr(item.url || '')}" data-result-kind="${escapeAttr(item.kind)}">${canvasResultPreviewHtml(item)}</div>
+            <div class="canvas-result-info">
+                <div class="canvas-result-name" title="${escapeAttr(item.name)}">${escapeHtml(item.name)}</div>
+                <div class="canvas-result-meta">${escapeHtml(item.canvasTitle || '当前画布')}<br>${item.createdAt ? new Date(item.createdAt).toLocaleString() : ''}</div>
+                <div class="canvas-result-state ${item.status || ''}">${item.status === 'failed' ? '失败' : item.status === 'running' ? '进行中' : '已完成'}</div>
+            </div>
+            ${item.url ? `<div class="canvas-result-actions">
+                <button class="primary" type="button" data-result-add="${escapeAttr(item.url)}"><i data-lucide="move-down-right"></i>拖入画布</button>
+                <button type="button" data-result-copy="${escapeAttr(item.url)}"><i data-lucide="copy"></i>复制</button>
+                <button type="button" data-result-asset="${escapeAttr(item.url)}"><i data-lucide="library"></i>素材库</button>
+                <button type="button" data-result-reveal="${escapeAttr(item.url)}"><i data-lucide="folder-open"></i>定位</button>
+            </div>` : ''}
+        </article>`).join('');
+    canvasResultsList.querySelectorAll('.canvas-result-thumb[draggable="true"]').forEach(thumb => {
+        thumb.addEventListener('dragstart', event => {
+            const url = thumb.dataset.resultUrl || '';
+            event.dataTransfer.effectAllowed = 'copy';
+            event.dataTransfer.setData('application/x-canvas-output-image', url);
+            event.dataTransfer.setData('text/uri-list', url);
+            setOutputDragPreview(event, thumb.querySelector('img,video'));
+        });
+    });
+    refreshIcons();
+}
+async function refreshCanvasResults(){
+    if(!canvasResultsRail) return;
+    const sourceCanvases = await canvasResultsSourceCanvases();
+    renderCanvasResultItems(sourceCanvases.flatMap(canvasResultItemsFromCanvas));
+}
+function openCanvasResults(kind=canvasResultsKind){
+    canvasResultsKind = kind || 'all';
+    canvasResultsPanel?.classList.add('open');
+    canvasResultsRail?.querySelectorAll('[data-results-kind]').forEach(btn => btn.classList.toggle('active', btn.dataset.resultsKind === canvasResultsKind));
+    canvasResultsPanel?.querySelectorAll('[data-results-panel-kind]').forEach(btn => btn.classList.toggle('active', btn.dataset.resultsPanelKind === canvasResultsKind));
+    refreshCanvasResults();
+}
+async function revealCanvasResult(url=''){
+    const response = await fetch('/api/generated-assets/reveal', {
+        method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({url})
+    });
+    if(!response.ok) throw new Error(await responseErrorMessage(response, '无法打开文件位置'));
+}
+canvasResultsRail?.querySelectorAll('[data-results-kind]').forEach(btn => btn.addEventListener('click', event => {
+    event.preventDefault(); event.stopPropagation(); openCanvasResults(btn.dataset.resultsKind);
+}));
+canvasResultsPanel?.querySelectorAll('[data-results-panel-kind]').forEach(btn => btn.addEventListener('click', event => {
+    event.preventDefault(); event.stopPropagation(); openCanvasResults(btn.dataset.resultsPanelKind);
+}));
+canvasResultsClose?.addEventListener('click', event => { event.stopPropagation(); canvasResultsPanel?.classList.remove('open'); });
+canvasResultsScope?.addEventListener('change', () => {
+    canvasResultsScopeValue = canvasResultsScope.value || 'canvas'; canvasResultsProjectCacheAt = 0; refreshCanvasResults();
+});
+canvasResultsRevealFolder?.addEventListener('click', () => revealCanvasResult().catch(err => setStatus(err.message)));
+canvasResultsList?.addEventListener('click', async event => {
+    const add = event.target.closest('[data-result-add]');
+    const copy = event.target.closest('[data-result-copy]');
+    const asset = event.target.closest('[data-result-asset]');
+    const reveal = event.target.closest('[data-result-reveal]');
+    if(add) createImageCardFromOutput(add.dataset.resultAdd, defaultPoint(80, 40));
+    if(copy) await copyTextToClipboard(copy.dataset.resultCopy);
+    if(asset){ toggleCanvasAssetLibrary(true); await addUrlToCanvasAssetLibrary(asset.dataset.resultAsset, outputImageName(asset.dataset.resultAsset)); }
+    if(reveal) await revealCanvasResult(reveal.dataset.resultReveal);
 });
 canvasArrangeBtn?.addEventListener('mousedown', e => e.stopPropagation());
 canvasArrangeBtn?.addEventListener('click', e => {

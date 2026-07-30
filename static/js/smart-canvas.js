@@ -33,6 +33,14 @@ const smartWorkflowExportMeta = document.getElementById('smartWorkflowExportMeta
 const smartWorkflowImportInput = document.getElementById('smartWorkflowImportInput');
 const smartWorkflowImportDropZone = document.getElementById('smartWorkflowImportDropZone');
 const selectionBox = document.getElementById('selectionBox');
+const smartSelectionHub = document.getElementById('smartSelectionHub');
+const smartResultsRail = document.getElementById('smartResultsRail');
+const smartResultsPanel = document.getElementById('smartResultsPanel');
+const smartResultsSummary = document.getElementById('smartResultsSummary');
+const smartResultsScope = document.getElementById('smartResultsScope');
+const smartResultsList = document.getElementById('smartResultsList');
+const smartResultsClose = document.getElementById('smartResultsClose');
+const smartResultsRevealFolder = document.getElementById('smartResultsRevealFolder');
 const assetToggle = document.getElementById('assetToggle');
 const assetPanel = document.getElementById('assetPanel');
 const assetCloseBtn = document.getElementById('assetCloseBtn');
@@ -91,9 +99,17 @@ let mentionInsertMode = 'token';
 let panState = null;
 let didPan = false;
 let portDragState = null;
+let batchPortDragState = null;
+let smartBatchConflictState = null;
+let smartResultsKind = 'all';
+let smartResultsScopeValue = 'canvas';
+let smartResultsProjectCache = [];
+let smartResultsProjectCacheAt = 0;
 let connectionEraseState = null;
 let saveTimer = null;
 let apiProviders = [];
+let videoPlugins = [];
+let videoPluginAccounts = {};
 let comfyWorkflows = [];
 let comfyInstanceCount = 1;
 let assetLibrary = {categories:[]};
@@ -321,6 +337,8 @@ let settings = {
     quality:'auto',
     count:1,
     videoProvider:'',
+    videoSource:'api',
+    videoPluginId:'',
     videoModel:'',
     videoDuration:5,
     videoAspect:'16:9',
@@ -1275,6 +1293,7 @@ function syncSelectionUi(){
     syncSmartSelectedImageResolution(world);
     syncRunButtonState();
     scheduleConnectionLayerRefresh();
+    renderSmartSelectionHub();
 }
 function isNodeSelected(id){
     return selectedId === id || selectedIds.includes(id);
@@ -2059,6 +2078,7 @@ function applyViewport(){
     shell.style.backgroundSize = '24px 24px';
     shell.style.backgroundPosition = '0 0';
     renderMinimap();
+    renderSmartSelectionHub();
 }
 function screenToWorld(event){
     const rect = shell.getBoundingClientRect();
@@ -2466,7 +2486,7 @@ function filterJimengVideoModels(models){
 let _jimengLastVideoCommand = null;
 function syncJimengVideoModelPillForRefs(){
     if(_jimengModelRefreshing) return;
-    if(!isJimengProviderId(settings.videoProvider) || settings.engine !== 'api' || settings.apiKind !== 'video'){
+    if(settings.videoSource === 'plugin' || !isJimengProviderId(settings.videoProvider) || settings.engine !== 'api' || settings.apiKind !== 'video'){
         _jimengLastVideoCommand = null;
         return;
     }
@@ -2500,9 +2520,15 @@ function sanitizeSmartApiSelection(target=settings){
         if(!target.resolution) target.resolution = allowAuto ? defaultSmartApiResolution(target.model) : '1k';
         if(!allowAuto && target.resolution === 'auto') target.resolution = '1k';
     }
-    if(target.videoProvider){
-        const models = providerVideoModels(target.videoProvider);
-        if(models.length && !models.includes(target.videoModel)) target.videoModel = models[0] || '';
+    if(target.videoSource === 'plugin' && smartVideoPluginById(target.videoPluginId)){
+        const models = smartVideoPluginModels(target.videoPluginId);
+        if(models.length && !models.includes(target.videoModel)) target.videoModel = models[0] || 'default';
+    } else {
+        target.videoSource = 'api';
+        if(target.videoProvider){
+            const models = providerVideoModels(target.videoProvider);
+            if(models.length && !models.includes(target.videoModel)) target.videoModel = models[0] || '';
+        }
     }
     return target;
 }
@@ -2518,6 +2544,49 @@ function videoApiProviders(){
     if(fromConfig.length) return fromConfig;
     return [{id:'comfly', name:'Comfly', video_models:DEFAULT_VIDEO_MODELS, enabled:true}];
 }
+function smartVideoProviderPlugins(){
+    const required = ['submitTask','pollTask','fetchArtifacts'];
+    return (videoPlugins || []).filter(plugin =>
+        plugin?.enabled !== false
+        && plugin?.type === 'video-provider'
+        && required.every(capability => (plugin.capabilities || []).includes(capability))
+    );
+}
+function smartVideoPluginById(pluginId){
+    return smartVideoProviderPlugins().find(plugin => plugin.id === pluginId) || null;
+}
+function smartVideoPluginModels(pluginId){
+    const plugin = smartVideoPluginById(pluginId);
+    const fromManifest = Array.isArray(plugin?.models) ? plugin.models : [];
+    const fromSchema = Array.isArray(plugin?.taskSchema?.properties?.model?.enum) ? plugin.taskSchema.properties.model.enum : [];
+    return [...new Set([...fromManifest, ...fromSchema, 'default'].filter(Boolean))];
+}
+function smartVideoSourceIsPlugin(sourceSettings=settings){
+    return sourceSettings?.videoSource === 'plugin' && Boolean(smartVideoPluginById(sourceSettings.videoPluginId));
+}
+function smartVideoProviderChoice(sourceSettings=settings){
+    return smartVideoSourceIsPlugin(sourceSettings)
+        ? `plugin:${sourceSettings.videoPluginId}`
+        : `api:${sourceSettings.videoProvider || videoApiProviders()[0]?.id || 'comfly'}`;
+}
+function smartVideoProviderChoices(){
+    return [
+        ...videoApiProviders().map(provider => ({
+            source:'api',
+            id:provider.id,
+            value:`api:${provider.id}`,
+            name:provider.name || provider.id,
+            detail:'API 平台'
+        })),
+        ...smartVideoProviderPlugins().map(plugin => ({
+            source:'plugin',
+            id:plugin.id,
+            value:`plugin:${plugin.id}`,
+            name:plugin.name || plugin.id,
+            detail:`本地插件 · ${(videoPluginAccounts[plugin.id] || []).length ? `${(videoPluginAccounts[plugin.id] || []).length} 个账号` : '未配置账号'}`
+        }))
+    ];
+}
 function videoProviderById(providerId){
     if(providerId === 'volcengine') return volcengineProvider();
     return videoApiProviders().find(p => p.id === providerId) || videoApiProviders()[0] || null;
@@ -2532,18 +2601,27 @@ function providerVideoModels(providerId){
         : (provider?.video_models || DEFAULT_VIDEO_MODELS);
     return [...new Set(models)];
 }
+function smartSelectedVideoModels(sourceSettings=settings){
+    return smartVideoSourceIsPlugin(sourceSettings)
+        ? smartVideoPluginModels(sourceSettings.videoPluginId)
+        : providerVideoModels(sourceSettings.videoProvider);
+}
 function volcengineVideoModels(){
     const provider = (apiProviders || []).find(p => p.id === 'volcengine');
     return [...new Set(provider?.video_models || DEFAULT_VIDEO_MODELS)];
 }
 function renderVideoProviderControl(providers){
-    const current = (providers || []).find(p => p.id === settings.videoProvider) || videoProviderById(settings.videoProvider);
+    const choices = smartVideoProviderChoices();
+    const selected = smartVideoProviderChoice(settings);
+    const current = choices.find(choice => choice.value === selected)
+        || (providers || []).map(provider => ({name:provider.name || provider.id, value:`api:${provider.id}`})).find(choice => choice.value === selected)
+        || {name:settings.videoProvider || tr('smart.platform')};
     return `<div class="smart-control provider-control">
         <button class="smart-pill" type="button"><i data-lucide="plug-zap"></i><span class="sub">${escapeHtml(current?.name || settings.videoProvider || tr('smart.platform'))}</span></button>
         <div class="smart-popover compact-popover">
-            <div class="smart-popover-title">${escapeHtml(tr('smart.videoPlatform'))}</div>
+            <div class="smart-popover-title">${escapeHtml(tr('smart.videoPlatform'))} · API / 插件</div>
             <div class="model-list">
-                ${providers.map(p => `<button type="button" class="direct-option ${p.id === settings.videoProvider ? 'active' : ''}" data-smart-param="videoProvider" data-smart-value="${escapeHtml(p.id)}"><span>${escapeHtml(p.name || p.id)}</span></button>`).join('') || `<div class="muted-note">${escapeHtml(tr('smart.noVideoPlatform'))}</div>`}
+                ${choices.map(choice => `<button type="button" class="direct-option ${choice.value === selected ? 'active' : ''}" data-smart-param="videoProviderChoice" data-smart-value="${escapeHtml(choice.value)}"><span>${escapeHtml(choice.name)}</span><small>${escapeHtml(choice.detail)}</small></button>`).join('') || `<div class="muted-note">${escapeHtml(tr('smart.noVideoPlatform'))}</div>`}
             </div>
         </div>
     </div>`;
@@ -2859,8 +2937,13 @@ function renderJimengUpscaleControl(){
 }
 function renderApiVideoParams(){
     const providers = videoApiProviders();
-    if(!settings.videoProvider || !providers.some(p => p.id === settings.videoProvider)) settings.videoProvider = providers[0]?.id || 'comfly';
-    const models = filterJimengVideoModels(providerVideoModels(settings.videoProvider));
+    if(settings.videoSource === 'plugin' && !smartVideoPluginById(settings.videoPluginId)) settings.videoSource = 'api';
+    if(settings.videoSource !== 'plugin'){
+        settings.videoSource = 'api';
+        if(!settings.videoProvider || !providers.some(p => p.id === settings.videoProvider)) settings.videoProvider = providers[0]?.id || 'comfly';
+    }
+    const sourceModels = smartSelectedVideoModels(settings);
+    const models = settings.videoSource === 'plugin' ? sourceModels : filterJimengVideoModels(sourceModels);
     if(!settings.videoModel || !models.includes(settings.videoModel)) settings.videoModel = models[0] || 'veo3-fast';
     dynamicParams.innerHTML = `
         ${renderVideoProviderControl(providers)}
@@ -2875,7 +2958,7 @@ function renderApiVideoParams(){
         ${renderVideoToggleControl('videoWatermark', tr('smart.videoWatermark'))}
         ${renderVideoToggleControl('videoMultimodal', tr('smart.videoMultimodal'))}
         ${renderVideoToggleControl('videoUseFrameRoles', tr('smart.videoUseFrameRoles'))}
-        ${isJimengProviderId(settings.videoProvider) ? '' : renderVideoTrustedAssetControl()}
+        ${settings.videoSource !== 'plugin' && isJimengProviderId(settings.videoProvider) ? '' : renderVideoTrustedAssetControl()}
     `;
 }
 function renderVolcengineParams(){
@@ -2899,6 +2982,7 @@ function renderVolcengineVideoParams(){
     const providers = [provider];
     const models = volcengineVideoModels();
     settings.videoProvider = 'volcengine';
+    settings.videoSource = 'api';
     if(!settings.videoModel || !models.includes(settings.videoModel)) settings.videoModel = models[0] || 'seedance-1.0-pro';
     dynamicParams.innerHTML = `
         ${renderVideoProviderControl(providers)}
@@ -3944,6 +4028,18 @@ function smartComfyRandomValue(field){
 function setDynamicSetting(key, value){
     const numericKeys = new Set(['count','width','height','videoDuration','enhanceStrength','enhanceUpscaleRes','editUpscaleRes','customRatioWidth','customRatioHeight','customWidth','customHeight','msCustomRatioWidth','msCustomRatioHeight','msCustomWidth','msCustomHeight']);
     const layoutKeys = new Set(['provider_id','model','resolution','ratio','msgenModel','msCustomModel','msResolution','msRatio','videoProvider','videoModel','videoAspect','videoResolution','comfyMode','comfyWorkflow','quality','count','enhanceUpscaleRes','editUpscaleRes','jimengUpscaleRes','rhConfigKey','rhPayment','rhInstanceType']);
+    if(key === 'videoProviderChoice'){
+        const [source, id] = String(value || '').split(':');
+        settings.videoSource = source === 'plugin' ? 'plugin' : 'api';
+        if(settings.videoSource === 'plugin') settings.videoPluginId = id || '';
+        else settings.videoProvider = id || '';
+        settings.videoModel = '';
+        persistActiveSmartSettings();
+        rememberRecentSmartSettings(settings, activeSettingsSubject());
+        renderDynamicParams();
+        scheduleSave();
+        return;
+    }
     settings[key] = numericKeys.has(key) && value !== '' ? Number(value) : value;
     if(key === 'provider_id') settings.model = '';
     if(key === 'videoProvider') settings.videoModel = '';
@@ -4226,8 +4322,15 @@ function smartConfigSignature(){
         rhApps:(provider.rh_apps || []).map(item => item?.appId || item?.webappId || item?.id || '').join('|'),
         rhWorkflows:(provider.rh_workflows || []).map(item => item?.workflowId || item?.id || '').join('|')
     }));
+    const pluginSig = (videoPlugins || []).map(plugin => ({
+        id:plugin.id || '',
+        enabled:plugin.enabled !== false,
+        type:plugin.type || '',
+        models:(plugin.models || []).join('|'),
+        accounts:(videoPluginAccounts[plugin.id] || []).map(account => account.id || '').join('|')
+    }));
     const workflowSig = (comfyWorkflows || []).map(workflow => `${workflow.name || ''}:${workflow.title || ''}`).join('|');
-    return JSON.stringify({providers:providerSig, workflows:workflowSig, comfyInstanceCount});
+    return JSON.stringify({providers:providerSig, plugins:pluginSig, workflows:workflowSig, comfyInstanceCount});
 }
 function scheduleSmartConfigRefresh(delay=220){
     if(smartConfigRefreshTimer) clearTimeout(smartConfigRefreshTimer);
@@ -4260,6 +4363,22 @@ async function loadConfig(options={}){
         const cfg = await fetch('/api/config').then(r => r.json());
         apiProviders = Array.isArray(cfg.api_providers) ? cfg.api_providers : [];
         comfyInstanceCount = Math.max(1, (Array.isArray(cfg.comfy_instances) ? cfg.comfy_instances : []).filter(Boolean).length || 1);
+        try {
+            const pluginData = await fetch('/api/plugins').then(r => r.ok ? r.json() : {plugins:[]});
+            videoPlugins = Array.isArray(pluginData.plugins) ? pluginData.plugins : [];
+            const accountEntries = await Promise.all(smartVideoProviderPlugins().map(async plugin => {
+                try {
+                    const data = await fetch(`/api/plugins/${encodeURIComponent(plugin.id)}/accounts`).then(r => r.ok ? r.json() : {accounts:[]});
+                    return [plugin.id, Array.isArray(data.accounts) ? data.accounts : []];
+                } catch(_) {
+                    return [plugin.id, []];
+                }
+            }));
+            videoPluginAccounts = Object.fromEntries(accountEntries);
+        } catch(_) {
+            videoPlugins = [];
+            videoPluginAccounts = {};
+        }
         // 提供商配置已就绪即先渲染参数面板，避免等工作流/RunningHub 预取完成后参数才「突然刷新出来」。
         sanitizeSmartApiSelection(settings);
         if(renderDuringLoad) updateProviderModels();
@@ -5943,6 +6062,7 @@ async function loadCanvas(){
         updateProviderModels();
         applyViewport();
         render();
+        refreshSmartResults();
         if(cleanedDetachedInputs || cleanedCompletedState || recoveredLoopOutputs || hiddenCompletedTimers) scheduleSave();
         resumeSmartPendingTasks();
         resumeJimengPendingNodes();
@@ -6298,7 +6418,7 @@ function renderConnections(){
         const color = isCascade ? '#16a34a' : isHistory ? 'rgba(100,116,139,0.46)' : kind === 'input' ? 'rgba(100,116,139,0.62)' : 'rgba(148,163,184,0.62)';
         const opacity = isPendingLine ? '.82' : '1';
         const width = kind === 'input' ? '1.9' : '1.6';
-        return `<path class="${cls} conn-line" data-conn-index="${dataIndex}" d="${curve}" stroke="${color}" stroke-width="${width}" fill="none" opacity="${opacity}"></path><path class="conn-hit" data-conn-index="${dataIndex}" d="${curve}" stroke="transparent" stroke-width="14" fill="none"></path><circle class="conn-end" data-conn-index="${dataIndex}" cx="${tx}" cy="${ty}" r="3.5" fill="${color}" opacity=".66"></circle><g class="conn-cut" data-conn-index="${dataIndex}" transform="translate(${mx} ${my})"><circle r="8" fill="var(--card)" stroke="${color}" stroke-width="1.4"></circle><path d="M-3 -3 L3 3 M3 -3 L-3 3" stroke="${color}" stroke-width="1.5" stroke-linecap="round"></path></g>`;
+        return `<path class="${cls} conn-line" data-conn-index="${dataIndex}" d="${curve}" stroke="${color}" stroke-width="${width}" fill="none" opacity="${opacity}"></path><path class="conn-flow ${isSelectedLine ? 'conn-flow-selected' : ''}" d="${curve}" fill="none"></path><path class="conn-hit" data-conn-index="${dataIndex}" d="${curve}" stroke="transparent" stroke-width="14" fill="none"></path><circle class="conn-end" data-conn-index="${dataIndex}" cx="${tx}" cy="${ty}" r="3.5" fill="${color}" opacity=".66"></circle><g class="conn-cut" data-conn-index="${dataIndex}" transform="translate(${mx} ${my})"><circle r="8" fill="var(--card)" stroke="${color}" stroke-width="1.4"></circle><path d="M-3 -3 L3 3 M3 -3 L-3 3" stroke="${color}" stroke-width="1.5" stroke-linecap="round"></path></g>`;
     }).join('');
     return `<svg class="connection-layer ${reduceMotion ? 'conn-reduce-motion' : ''}" width="6000" height="4000" viewBox="0 0 6000 4000" xmlns="http://www.w3.org/2000/svg">${paths}</svg>`;
 }
@@ -6868,14 +6988,25 @@ function smartRunPlatformLabel(run){
     const s = run?.settings || {};
     if(s.engine === 'comfy') return 'ComfyUI';
     if(s.engine === 'modelscope') return 'Modelscope';
-    if(run?.kind === 'video') return videoProviderById(s.videoProvider || '')?.name || s.videoProvider || 'Video';
+    if(run?.kind === 'video'){
+        if(smartVideoSourceIsPlugin(s)) return smartVideoPluginById(s.videoPluginId)?.name || s.videoPluginId || 'Video Plugin';
+        return videoProviderById(s.videoProvider || '')?.name || s.videoProvider || 'Video';
+    }
     return apiProviderById(s.provider_id || '')?.name || s.provider_id || 'API';
 }
 function smartRunRequestMeta(run){
     const s = run?.settings || {};
     if(s.engine === 'comfy') return {workflow_json:s.comfyWorkflow || '', mode:s.comfyMode || 'text'};
     if(s.engine === 'modelscope') return {backend:'Modelscope', model:s.msgenModel || '', custom_model:s.msCustomModel || ''};
-    if(run?.kind === 'video') return {provider_id:s.videoProvider || '', model:s.videoModel || '', duration:s.videoDuration || '', aspect_ratio:s.videoAspect || '', resolution:s.videoResolution || ''};
+    if(run?.kind === 'video') return {
+        source:smartVideoSourceIsPlugin(s) ? 'plugin' : 'api',
+        provider_id:s.videoProvider || '',
+        plugin_id:s.videoPluginId || '',
+        model:s.videoModel || '',
+        duration:s.videoDuration || '',
+        aspect_ratio:s.videoAspect || '',
+        resolution:s.videoResolution || ''
+    };
     return {provider_id:s.provider_id || '', model:s.model || '', size:run?.size || '', quality:s.quality || '', n:s.count || 1};
 }
 function smartRunSnapshot(node, prompt, refs=[], kind='image'){
@@ -6923,7 +7054,207 @@ function addSmartGenerationLog({run, outputs=[], runMs=0, error=''}) {
     canvas.logs = [entry, ...canvas.logs].slice(0, 500);
     if(!error && recoverStuckLoopOutputsFromLogs()) render();
     scheduleSave();
+    refreshSmartResults();
 }
+function smartResultItemsFromCanvas(sourceCanvas){
+    if(!sourceCanvas) return [];
+    const items = [];
+    const seen = new Set();
+    const addMedia = (raw, details={}) => {
+        const normalized = smartLogOutputItem(raw);
+        const url = smartOriginalMediaUrl(normalized || raw);
+        if(!url || seen.has(url)) return;
+        seen.add(url);
+        const kind = mediaKindForItem(normalized || raw);
+        items.push({
+            id:`media:${url}`,
+            kind:kind === 'video' ? 'video' : 'image',
+            url,
+            name:normalized?.name || smartImageNameFromUrl(url),
+            createdAt:Number(details.createdAt || normalized?.createdAt || 0),
+            status:'success',
+            canvasId:sourceCanvas.id || '',
+            canvasTitle:sourceCanvas.title || '',
+            prompt:details.prompt || ''
+        });
+    };
+    (sourceCanvas.logs || []).forEach(log => {
+        (log.outputs || []).forEach(item => addMedia(item, {createdAt:log.createdAt, prompt:log.prompt}));
+        if(log.status === 'failed') items.push({
+            id:`task:${sourceCanvas.id || ''}:${log.id || log.createdAt || items.length}`,
+            kind:'task',
+            status:'failed',
+            name:'生成失败',
+            createdAt:Number(log.createdAt || 0),
+            canvasId:sourceCanvas.id || '',
+            canvasTitle:sourceCanvas.title || '',
+            prompt:log.prompt || '',
+            message:log.error || ''
+        });
+    });
+    (sourceCanvas.nodes || []).forEach(node => {
+        (node.images || []).forEach(item => addMedia(item, {createdAt:node.updated_at || node.created_at || 0, prompt:node.prompt || ''}));
+        const pendingCount = Number(node.pending || 0);
+        if(pendingCount > 0 || node.running){
+            items.push({
+                id:`task:${sourceCanvas.id || ''}:${node.id}`,
+                kind:'task',
+                status:'running',
+                name:'生成中',
+                createdAt:Number(node.runStartedAt || node.updated_at || Date.now()),
+                canvasId:sourceCanvas.id || '',
+                canvasTitle:sourceCanvas.title || '',
+                prompt:node.prompt || '',
+                message:`${Math.max(1, pendingCount)} 个任务`
+            });
+        }
+    });
+    return items;
+}
+async function smartResultsSourceCanvases(){
+    if(smartResultsScopeValue !== 'project') return canvas ? [canvas] : [];
+    if(Date.now() - smartResultsProjectCacheAt < 8000 && smartResultsProjectCache.length) return smartResultsProjectCache;
+    const projectId = canvas?.project || 'default';
+    try {
+        const listResponse = await fetch('/api/canvases');
+        const listData = listResponse.ok ? await listResponse.json() : {canvases:[]};
+        const targets = (listData.canvases || []).filter(item => (item.project || 'default') === projectId);
+        const loaded = await Promise.all(targets.map(async item => {
+            if(item.id === canvas?.id) return canvas;
+            try {
+                const response = await fetch(`/api/canvases/${encodeURIComponent(item.id)}`);
+                if(!response.ok) return null;
+                const data = await response.json();
+                return data.canvas || null;
+            } catch(_) {
+                return null;
+            }
+        }));
+        smartResultsProjectCache = loaded.filter(Boolean);
+        smartResultsProjectCacheAt = Date.now();
+        return smartResultsProjectCache;
+    } catch(_) {
+        return canvas ? [canvas] : [];
+    }
+}
+function smartResultPreviewHtml(item){
+    if(item.kind === 'video') return `${smartVideoPreviewHtml(item, 360, 'alt="video result"')}<span class="smart-result-thumb-badge">VIDEO</span>`;
+    if(item.kind === 'image') return `${smartPreviewImgHtml(item, 360, 'alt="image result"')}<span class="smart-result-thumb-badge">IMAGE</span>`;
+    return `<div class="smart-result-empty"><i data-lucide="${item.status === 'failed' ? 'circle-alert' : 'loader-circle'}"></i><span>${escapeHtml(item.message || item.name)}</span></div>`;
+}
+function renderSmartResultItems(items){
+    if(!smartResultsList) return;
+    const filtered = smartResultsKind === 'all' ? items : items.filter(item => item.kind === smartResultsKind);
+    const counts = {
+        all:items.length,
+        image:items.filter(item => item.kind === 'image').length,
+        video:items.filter(item => item.kind === 'video').length,
+        task:items.filter(item => item.kind === 'task').length
+    };
+    smartResultsRail?.querySelectorAll('[data-smart-results-count]').forEach(el => {
+        el.textContent = String(counts[el.dataset.smartResultsCount] || 0);
+    });
+    if(smartResultsSummary) smartResultsSummary.textContent = `${smartResultsScopeValue === 'project' ? '当前项目' : '当前画布'} · ${filtered.length} 项`;
+    if(!filtered.length){
+        smartResultsList.innerHTML = '<div class="smart-result-empty"><i data-lucide="waves"></i><span>这里会按时间收集生成图片、视频和任务</span></div>';
+        refreshIcons();
+        return;
+    }
+    smartResultsList.innerHTML = filtered
+        .slice()
+        .sort((a,b) => Number(b.createdAt || 0) - Number(a.createdAt || 0))
+        .map(item => `
+            <article class="smart-result-card" data-smart-result-id="${escapeAttr(item.id)}">
+                <div class="smart-result-thumb" ${item.url ? 'draggable="true"' : ''} data-smart-result-url="${escapeAttr(item.url || '')}" data-smart-result-kind="${escapeAttr(item.kind)}">${smartResultPreviewHtml(item)}</div>
+                <div class="smart-result-info">
+                    <div class="smart-result-name" title="${escapeAttr(item.name)}">${escapeHtml(item.name)}</div>
+                    <div class="smart-result-meta">${escapeHtml(item.canvasTitle || '当前画布')}<br>${item.createdAt ? new Date(item.createdAt).toLocaleString() : ''}</div>
+                    <div class="smart-result-state ${item.status || ''}">${item.status === 'failed' ? '失败' : item.status === 'running' ? '进行中' : '已完成'}</div>
+                </div>
+                ${item.url ? `<div class="smart-result-actions">
+                    <button class="primary" type="button" data-smart-result-add="${escapeAttr(item.url)}" data-smart-result-kind="${escapeAttr(item.kind)}"><i data-lucide="move-down-right"></i>拖入画布</button>
+                    <button type="button" data-smart-result-copy="${escapeAttr(item.url)}"><i data-lucide="copy"></i>复制</button>
+                    <button type="button" data-smart-result-asset="${escapeAttr(item.url)}"><i data-lucide="library"></i>素材库</button>
+                    <button type="button" data-smart-result-reveal="${escapeAttr(item.url)}"><i data-lucide="folder-open"></i>定位</button>
+                </div>` : ''}
+            </article>`).join('');
+    smartResultsList.querySelectorAll('.smart-result-thumb[draggable="true"]').forEach(thumb => {
+        thumb.addEventListener('dragstart', event => {
+            const url = thumb.dataset.smartResultUrl || '';
+            event.dataTransfer.effectAllowed = 'copy';
+            event.dataTransfer.setData('application/x-canvas-output-image', url);
+            event.dataTransfer.setData('text/uri-list', url);
+        });
+    });
+    refreshIcons();
+}
+async function refreshSmartResults(){
+    if(!smartResultsRail) return;
+    const sourceCanvases = await smartResultsSourceCanvases();
+    renderSmartResultItems(sourceCanvases.flatMap(smartResultItemsFromCanvas));
+}
+function openSmartResults(kind=smartResultsKind){
+    smartResultsKind = kind || 'all';
+    smartResultsPanel?.classList.add('open');
+    smartResultsRail?.querySelectorAll('[data-smart-results-kind]').forEach(btn => btn.classList.toggle('active', btn.dataset.smartResultsKind === smartResultsKind));
+    smartResultsPanel?.querySelectorAll('[data-smart-results-panel-kind]').forEach(btn => btn.classList.toggle('active', btn.dataset.smartResultsPanelKind === smartResultsKind));
+    refreshSmartResults();
+}
+async function revealSmartResult(url=''){
+    const response = await fetch('/api/generated-assets/reveal', {
+        method:'POST',
+        headers:{'Content-Type':'application/json'},
+        body:JSON.stringify({url})
+    });
+    if(!response.ok){
+        const data = await response.json().catch(() => ({}));
+        throw new Error(data.detail || '无法打开文件位置');
+    }
+}
+function addSmartResultToCanvas(url, kind='image'){
+    if(!url) return;
+    pushUndo();
+    createImageNodeAt(viewportCenter(), [{url, kind, name:smartImageNameFromUrl(url)}], {skipUndo:true});
+    render();
+    scheduleSave();
+}
+smartResultsRail?.querySelectorAll('[data-smart-results-kind]').forEach(btn => btn.addEventListener('click', event => {
+    event.preventDefault();
+    event.stopPropagation();
+    openSmartResults(btn.dataset.smartResultsKind);
+}));
+smartResultsPanel?.querySelectorAll('[data-smart-results-panel-kind]').forEach(btn => btn.addEventListener('click', event => {
+    event.preventDefault();
+    event.stopPropagation();
+    openSmartResults(btn.dataset.smartResultsPanelKind);
+}));
+smartResultsClose?.addEventListener('click', event => {
+    event.preventDefault();
+    event.stopPropagation();
+    smartResultsPanel?.classList.remove('open');
+});
+smartResultsScope?.addEventListener('change', () => {
+    smartResultsScopeValue = smartResultsScope.value || 'canvas';
+    smartResultsProjectCacheAt = 0;
+    refreshSmartResults();
+});
+smartResultsRevealFolder?.addEventListener('click', () => revealSmartResult().catch(error => toast(error.message)));
+smartResultsList?.addEventListener('click', async event => {
+    const add = event.target.closest('[data-smart-result-add]');
+    const copy = event.target.closest('[data-smart-result-copy]');
+    const asset = event.target.closest('[data-smart-result-asset]');
+    const reveal = event.target.closest('[data-smart-result-reveal]');
+    if(add) addSmartResultToCanvas(add.dataset.smartResultAdd, add.dataset.smartResultKind || 'image');
+    if(copy){
+        const ok = await copyTextToClipboard(copy.dataset.smartResultCopy);
+        toast(ok ? '已复制成果地址' : '复制失败');
+    }
+    if(asset){
+        toggleAssetLibrary(true);
+        await addUrlToAssetLibrary(asset.dataset.smartResultAsset, smartImageNameFromUrl(asset.dataset.smartResultAsset));
+    }
+    if(reveal) await revealSmartResult(reveal.dataset.smartResultReveal);
+});
 const SMART_LOG_PREVIEW_NODE_ID = '__smart_log_preview__';
 let smartLogPreviewRestore = null;
 function smartLogOutputItem(output){
@@ -7751,6 +8082,7 @@ function render(){
     bindConnectionEvents();
     updateComposer();
     renderMinimap();
+    renderSmartSelectionHub();
     if(window.lucide) lucide.createIcons();
     scheduleSmartPostRenderMediaWork();
     refreshRunTimerPills();
@@ -7789,6 +8121,7 @@ function render(){
     bindConnectionEvents();
     updateComposer();
     renderMinimap();
+    renderSmartSelectionHub();
     if(window.lucide) lucide.createIcons();
     measureSmartNodeImages();
     refreshRunTimerPills();
@@ -8279,7 +8612,7 @@ function handlePortDrop(drag, e){
         return;
     }
     if(!drag.moved){ discardPendingUndo(); render(); return; }
-    if(hit?.closest?.('.composer,.smart-back,.asset-panel,.asset-toggle,.smart-log-toggle,.smart-shortcut-toggle,.smart-workflow-toggle,.log-modal,.shortcut-modal,.image-edit-modal,.smart-minimap')){
+        if(hit?.closest?.('.composer,.smart-back,.asset-panel,.asset-toggle,.smart-log-toggle,.smart-shortcut-toggle,.smart-workflow-toggle,.log-modal,.shortcut-modal,.image-edit-modal,.smart-minimap,.smart-results-rail,.smart-results-panel')){
         discardPendingUndo(); render(); return;
     }
     const p = screenToWorld(e);
@@ -14999,12 +15332,15 @@ async function runRunningHubGeneration(prompt, refs, runSettings=settings){
 async function runApiVideoGeneration(prompt, refs, runSettings=settings){
     if(!runSettings.videoModel) throw new Error(tr('smart.errNoVideoModel'));
     try {
+        const usePlugin = smartVideoSourceIsPlugin(runSettings);
+        const plugin = usePlugin ? smartVideoPluginById(runSettings.videoPluginId) : null;
+        const pluginAccounts = usePlugin ? (videoPluginAccounts[runSettings.videoPluginId] || []) : [];
         const uploadedRefs = applyUploadedUrlsToSmartRefs(refs, runSettings);
         const trustedMode = Boolean(runSettings.videoTrustedAsset);
         const trustedSource = trustedMode ? (['library','cloud','manual'].includes(runSettings.videoTrustedSource) ? runSettings.videoTrustedSource : 'library') : 'none';
         // 仅「素材库链接」来源才走 asset:// 认证地址 + 后端可信素材路由；上传云端/手动网址走普通直链。
         const useAssetUris = trustedSource === 'library';
-        const targetPlatform = videoProviderPlatform(runSettings.videoProvider || 'comfly');
+        const targetPlatform = usePlugin ? '' : videoProviderPlatform(runSettings.videoProvider || 'comfly');
         let mismatchedAsset = false;
         const effUrl = ref => {
             const uris = (ref && ref.asset_uris && typeof ref.asset_uris === 'object') ? ref.asset_uris : null;
@@ -15029,7 +15365,7 @@ async function runApiVideoGeneration(prompt, refs, runSettings=settings){
         const refVideos = manualVideo ? manualSmartMediaLinks(runSettings).map(item => item.url).filter(Boolean) : videoRefsOnly(uploadedRefs).map(ref => effUrl(ref)).filter(Boolean);
         let refAudios = audioRefsOnly(uploadedRefs).map(ref => effUrl(ref)).filter(Boolean).slice(0, 3);
         // 即梦全能参考要求音频 2–15s：提交前探测时长，超范围的给出提示并忽略（探测失败则放行，交后端/CLI）。
-        if(refAudios.length && isJimengProviderId(runSettings.videoProvider)){
+        if(refAudios.length && !usePlugin && isJimengProviderId(runSettings.videoProvider)){
             const kept = [];
             for(const audioUrl of refAudios){
                 const dur = await probeMediaDuration(audioUrl, 'audio');
@@ -15043,7 +15379,7 @@ async function runApiVideoGeneration(prompt, refs, runSettings=settings){
             refAudios = kept;
         }
         if(mismatchedAsset) toast('部分认证素材属于其它平台，已回退为普通素材。切换到对应平台的视频接口才能用 asset:// 认证地址。');
-        const payload = {
+        const apiPayload = {
             prompt,
             provider_id: runSettings.videoProvider || 'comfly',
             model: runSettings.videoModel || 'veo3-fast',
@@ -15061,12 +15397,35 @@ async function runApiVideoGeneration(prompt, refs, runSettings=settings){
             multimodal: Boolean(runSettings.videoMultimodal),
             trusted_asset: useAssetUris
         };
-        const result = await fetch('/api/canvas-video', {
+        const pluginPayload = {
+            accountId:pluginAccounts[0]?.id || '',
+            model:runSettings.videoModel || 'default',
+            kind:'video',
+            prompt,
+            parameters:{
+                duration:Math.max(1, Math.min(60, Number(runSettings.videoDuration) || 5)),
+                aspectRatio:runSettings.videoAspect || '16:9',
+                resolution:runSettings.videoResolution || '',
+                enhancePrompt:Boolean(runSettings.videoEnhancePrompt),
+                enableUpsample:Boolean(runSettings.videoEnableUpsample),
+                watermark:Boolean(runSettings.videoWatermark),
+                cameraFixed:Boolean(runSettings.videoCameraFixed),
+                generateAudio:Boolean(runSettings.videoGenerateAudio),
+                multimodal:Boolean(runSettings.videoMultimodal)
+            },
+            assets:[
+                ...refImages.map(ref => ({url:ref.url, kind:'image', role:ref.role || ''})),
+                ...refVideos.map(url => ({url, kind:'video', role:''})),
+                ...refAudios.map(url => ({url, kind:'audio', role:''}))
+            ]
+        };
+        const endpoint = usePlugin ? `/api/plugins/${encodeURIComponent(plugin.id)}/video` : '/api/canvas-video';
+        const result = await fetch(endpoint, {
             method:'POST',
             headers:{'Content-Type':'application/json'},
-            body:JSON.stringify(payload)
+            body:JSON.stringify(usePlugin ? pluginPayload : apiPayload)
         }).then(async r => { if(!r.ok) throw new Error(await smartResponseErrorMessage(r, tr('smart.errRunFailed'))); return r.json(); });
-        if(result && result.jimeng_pending) throw new JimengPendingSignal({submitId:result.submit_id, kind:result.kind || 'video', queueInfo:result.queue_info, message:result.message});
+        if(!usePlugin && result && result.jimeng_pending) throw new JimengPendingSignal({submitId:result.submit_id, kind:result.kind || 'video', queueInfo:result.queue_info, message:result.message});
         return resultMediaUrls(result);
     } finally {
         transientSmartCloudLinks = [];
@@ -15627,6 +15986,178 @@ function resumeSmartPendingTasks(){
         resumeSmartPendingNode(node);
     });
 }
+function smartBatchCanConnect(fromId, toId){
+    const from = nodes.find(node => node.id === fromId);
+    const to = nodes.find(node => node.id === toId);
+    if(!from || !to || from.id === to.id) return false;
+    if(to.type !== 'smart-loop') return true;
+    const groupImages = isSmartGroupNode(from) ? imagesForNode(from).filter(image => image?.url) : [];
+    const groupPrompts = isSmartGroupNode(from) ? promptTextItemsForNode(from).filter(Boolean) : [];
+    const looksImage = isSmartImageNode(from) || groupImages.length > 0 || (from.type === 'smart-loop' && from.imageInput);
+    const looksPrompt = from.type === 'smart-prompt' || groupPrompts.length > 0 || (from.type === 'smart-loop' && from.showPrompt);
+    return looksImage || looksPrompt;
+}
+function smartBatchValidation(targetId){
+    if(!window.HuahaiBatchLinks || !canvas) return null;
+    return window.HuahaiBatchLinks.validate({
+        sourceIds:selectedNodeIds(),
+        targetId,
+        nodes,
+        connections:canvas.connections || [],
+        canConnect:(fromId, toId) => smartBatchCanConnect(fromId, toId),
+        kind:'input'
+    });
+}
+function smartSelectionBounds(ids){
+    const rects = (ids || []).map(id => nodes.find(node => node.id === id)).filter(Boolean).map(nodeRect);
+    if(!rects.length) return null;
+    const x = Math.min(...rects.map(rect => rect.x));
+    const y = Math.min(...rects.map(rect => rect.y));
+    const right = Math.max(...rects.map(rect => rect.x + rect.width));
+    const bottom = Math.max(...rects.map(rect => rect.y + rect.height));
+    return {x, y, width:right - x, height:bottom - y};
+}
+function renderSmartSelectionHub(){
+    if(!smartSelectionHub) return;
+    smartSelectionHub.innerHTML = '';
+    smartSelectionHub.classList.remove('open');
+    smartSelectionHub.style.cssText = '';
+    const sourceIds = selectedNodeIds().filter(id => nodes.some(node => node.id === id));
+    if(sourceIds.length < 2 || !canvas) return;
+    const bounds = smartSelectionBounds(sourceIds);
+    if(!bounds) return;
+    const scale = safeScale(viewport.scale);
+    smartSelectionHub.classList.add('open');
+    smartSelectionHub.style.left = `${viewport.x + bounds.x * scale}px`;
+    smartSelectionHub.style.top = `${viewport.y + bounds.y * scale}px`;
+    smartSelectionHub.style.width = `${Math.max(44, bounds.width * scale)}px`;
+    smartSelectionHub.style.height = `${Math.max(44, bounds.height * scale)}px`;
+    const english = window.StudioI18n?.lang?.() === 'en';
+    const conflict = smartBatchConflictState && smartBatchConflictState.sourceIds.join('|') === sourceIds.join('|')
+        ? smartBatchConflictState
+        : null;
+    smartSelectionHub.innerHTML = `
+        <div class="smart-batch-selection-frame" aria-hidden="true"></div>
+        <div class="smart-batch-selection-count">${english ? `${sourceIds.length} nodes selected` : `已选择 ${sourceIds.length} 个节点`}</div>
+        <button class="smart-batch-proxy-port" type="button" title="${english ? 'Drag to connect selected nodes' : '拖动可批量连接'}" aria-label="${english ? 'Batch connect selected nodes' : '批量连接所选节点'}">
+            <i data-lucide="git-branch"></i><b>${sourceIds.length}</b>
+        </button>
+        ${conflict ? `
+            <div class="smart-batch-conflict" role="dialog" aria-label="${english ? 'Partial connection' : '部分节点不兼容'}">
+                <strong>${english ? `${conflict.validation.compatibleCount} compatible, ${conflict.validation.conflictCount} conflicts` : `可连接 ${conflict.validation.compatibleCount}，冲突 ${conflict.validation.conflictCount}`}</strong>
+                <span>${english ? 'No incompatible nodes will be skipped silently.' : '不会静默跳过不兼容节点。'}</span>
+                <div>
+                    <button type="button" data-smart-batch-action="cancel">${english ? 'Cancel' : '取消'}</button>
+                    <button type="button" class="primary" data-smart-batch-action="compatible">${english ? `Connect ${conflict.validation.compatibleCount}` : `仅连接兼容的 ${conflict.validation.compatibleCount} 个`}</button>
+                </div>
+            </div>` : ''}`;
+    smartSelectionHub.querySelector('.smart-batch-proxy-port')?.addEventListener('mousedown', startSmartBatchLink);
+    smartSelectionHub.querySelector('[data-smart-batch-action="cancel"]')?.addEventListener('click', event => {
+        event.stopPropagation();
+        smartBatchConflictState = null;
+        renderSmartSelectionHub();
+    });
+    smartSelectionHub.querySelector('[data-smart-batch-action="compatible"]')?.addEventListener('click', event => {
+        event.stopPropagation();
+        if(conflict?.validation?.compatibleCount) commitSmartSelectionBatch(conflict.validation);
+    });
+    window.lucide?.createIcons?.();
+}
+function clearSmartBatchTargetFeedback(){
+    world.querySelectorAll('.image-node.batch-target-all,.image-node.batch-target-partial,.image-node.batch-target-none').forEach(node => {
+        node.classList.remove('batch-target-all', 'batch-target-partial', 'batch-target-none', 'port-hover');
+    });
+    world.querySelectorAll('.node-port.batch-target-port').forEach(port => {
+        port.classList.remove('batch-target-port', 'is-active');
+    });
+}
+function smartBatchTargetAt(event){
+    const hit = document.elementFromPoint(event.clientX, event.clientY);
+    const port = hit?.closest?.('.node-port[data-port="in"]');
+    const node = port?.closest?.('.image-node') || hit?.closest?.('.image-node');
+    if(!node?.dataset?.id) return {node:null, port:null, targetId:''};
+    if(!port){
+        const rect = node.getBoundingClientRect();
+        if(event.clientX > rect.left + Math.min(72, rect.width * .32)) return {node:null, port:null, targetId:''};
+    }
+    const inputPort = port || node.querySelector('.node-port[data-port="in"]');
+    return {node, port:inputPort, targetId:node.dataset.id};
+}
+function updateSmartBatchDrag(event){
+    if(!batchPortDragState) return;
+    const point = screenToWorld(event);
+    batchPortDragState.currentWorld = point;
+    const dx = Math.max(50, Math.abs(point.x - batchPortDragState.startWorld.x) * .45);
+    const path = ensurePortDragPathElement();
+    if(path) path.setAttribute('d', `M${batchPortDragState.startWorld.x} ${batchPortDragState.startWorld.y} C ${batchPortDragState.startWorld.x + dx} ${batchPortDragState.startWorld.y}, ${point.x - dx} ${point.y}, ${point.x} ${point.y}`);
+    const target = smartBatchTargetAt(event);
+    const validation = target.targetId ? smartBatchValidation(target.targetId) : null;
+    batchPortDragState.targetId = target.targetId;
+    batchPortDragState.validation = validation;
+    clearSmartBatchTargetFeedback();
+    if(target.node && validation){
+        target.node.classList.add(`batch-target-${validation.status}`, 'port-hover');
+        target.port?.classList.add('batch-target-port', 'is-active');
+    }
+}
+function startSmartBatchLink(event){
+    if(event.button !== 0 || selectedNodeIds().length < 2) return;
+    event.preventDefault();
+    event.stopPropagation();
+    smartBatchConflictState = null;
+    batchPortDragState = {
+        sourceIds:selectedNodeIds(),
+        startWorld:screenToWorld(event),
+        currentWorld:screenToWorld(event),
+        targetId:'',
+        validation:null
+    };
+    shell.classList.add('batch-port-dragging');
+    ensurePortDragPathElement();
+    updateSmartBatchDrag(event);
+}
+function commitSmartSelectionBatch(validation){
+    if(!validation?.compatibleCount || !canvas) return false;
+    pushUndo();
+    const batchId = uid('batch');
+    const before = (canvas.connections || []).length;
+    validation.compatible.forEach(item => connectInputNode(item.sourceId, validation.targetId));
+    (canvas.connections || []).slice(before).forEach((connection, index) => {
+        connection.id = connection.id || uid('c');
+        connection.batch_id = batchId;
+        connection.batch_index = index;
+    });
+    smartBatchConflictState = null;
+    toast(window.StudioI18n?.lang?.() === 'en'
+        ? `${validation.compatibleCount} connections created`
+        : `已建立 ${validation.compatibleCount} 条连接`);
+    render();
+    scheduleSave();
+    return true;
+}
+function finishSmartBatchLink(event){
+    if(!batchPortDragState) return false;
+    const target = smartBatchTargetAt(event);
+    const validation = target.targetId ? smartBatchValidation(target.targetId) : null;
+    batchPortDragState = null;
+    shell.classList.remove('batch-port-dragging');
+    clearPortDragVisual();
+    clearSmartBatchTargetFeedback();
+    if(validation?.status === 'all') commitSmartSelectionBatch(validation);
+    else if(validation?.status === 'partial'){
+        smartBatchConflictState = {sourceIds:selectedNodeIds(), validation};
+        toast(window.StudioI18n?.lang?.() === 'en'
+            ? 'Some selected nodes are incompatible'
+            : '部分所选节点不兼容，请确认连接范围');
+        renderSmartSelectionHub();
+    } else {
+        if(target.targetId) toast(window.StudioI18n?.lang?.() === 'en'
+            ? 'The selected nodes cannot connect here'
+            : '所选节点无法连接到该接口');
+        renderSmartSelectionHub();
+    }
+    return true;
+}
 function updateSelectionBox(event){
     if(!selectionState) return;
     const sx = selectionState.startScreen.x, sy = selectionState.startScreen.y;
@@ -15877,14 +16408,14 @@ function createNodeFromMenu(type){
 shell.addEventListener('mousedown', e => {
     if(!zoomPreviewState) return;
     if(e.button !== 0) return;
-    if(e.target.closest('.composer,.smart-back,.asset-panel,.asset-toggle,.smart-log-toggle,.smart-shortcut-toggle,.smart-workflow-toggle,.log-modal,.shortcut-modal,.image-edit-modal,.create-menu,.smart-minimap')) return;
+    if(e.target.closest('.composer,.smart-back,.asset-panel,.asset-toggle,.smart-log-toggle,.smart-shortcut-toggle,.smart-workflow-toggle,.log-modal,.shortcut-modal,.image-edit-modal,.create-menu,.smart-minimap,.smart-results-rail,.smart-results-panel')) return;
     e.preventDefault();
     e.stopPropagation();
 }, true);
 shell.addEventListener('click', e => {
     if(!zoomPreviewState) return;
     if(e.button !== 0) return;
-    if(e.target.closest('.composer,.smart-back,.asset-panel,.asset-toggle,.smart-log-toggle,.smart-shortcut-toggle,.smart-workflow-toggle,.log-modal,.shortcut-modal,.image-edit-modal,.create-menu,.smart-minimap')) return;
+    if(e.target.closest('.composer,.smart-back,.asset-panel,.asset-toggle,.smart-log-toggle,.smart-shortcut-toggle,.smart-workflow-toggle,.log-modal,.shortcut-modal,.image-edit-modal,.create-menu,.smart-minimap,.smart-results-rail,.smart-results-panel')) return;
     e.preventDefault();
     e.stopPropagation();
     const nodeEl = e.target.closest('.image-node');
@@ -15892,8 +16423,8 @@ shell.addEventListener('click', e => {
     else exitZoomPreview(screenToWorld(e));
 }, true);
 shell.onmousedown = e => {
-    if(zoomPreviewState && e.button === 0 && !e.target.closest('.composer,.smart-back,.asset-panel,.asset-toggle,.smart-log-toggle,.smart-shortcut-toggle,.smart-workflow-toggle,.log-modal,.shortcut-modal,.image-edit-modal,.create-menu,.smart-minimap')) return;
-    if(e.target.closest('.image-node,.composer,.smart-back,.asset-panel,.asset-toggle,.smart-log-toggle,.smart-shortcut-toggle,.smart-workflow-toggle,.log-modal,.shortcut-modal,.create-menu,.smart-minimap')) return;
+    if(zoomPreviewState && e.button === 0 && !e.target.closest('.composer,.smart-back,.asset-panel,.asset-toggle,.smart-log-toggle,.smart-shortcut-toggle,.smart-workflow-toggle,.log-modal,.shortcut-modal,.image-edit-modal,.create-menu,.smart-minimap,.smart-results-rail,.smart-results-panel')) return;
+    if(e.target.closest('.image-node,.composer,.smart-back,.asset-panel,.asset-toggle,.smart-log-toggle,.smart-shortcut-toggle,.smart-workflow-toggle,.log-modal,.shortcut-modal,.create-menu,.smart-minimap,.smart-results-rail,.smart-results-panel')) return;
     closeCreateMenu();
     if(e.button === 0 && e.shiftKey){
         e.preventDefault();
@@ -15934,7 +16465,7 @@ shell.oncontextmenu = e => {
         e.stopPropagation();
         return;
     }
-    if(didPan || e.target.closest('.composer,.smart-back,.asset-panel,.asset-toggle,.smart-log-toggle,.smart-shortcut-toggle,.smart-workflow-toggle,.log-modal,.shortcut-modal,.image-edit-modal,.create-menu,.smart-minimap')) return;
+    if(didPan || e.target.closest('.composer,.smart-back,.asset-panel,.asset-toggle,.smart-log-toggle,.smart-shortcut-toggle,.smart-workflow-toggle,.log-modal,.shortcut-modal,.image-edit-modal,.create-menu,.smart-minimap,.smart-results-rail,.smart-results-panel')) return;
     if(document.getElementById('imageEditModal')?.classList.contains('open')) return;
     e.preventDefault();
     e.stopPropagation();
@@ -15950,14 +16481,14 @@ shell.oncontextmenu = e => {
     openCreateMenu(e);
 };
 shell.ondblclick = e => {
-    if(didPan || e.target.closest('.image-node,.composer,.smart-back,.asset-panel,.asset-toggle,.smart-log-toggle,.smart-shortcut-toggle,.smart-workflow-toggle,.log-modal,.shortcut-modal,.image-edit-modal,.create-menu')) return;
+    if(didPan || e.target.closest('.image-node,.composer,.smart-back,.asset-panel,.asset-toggle,.smart-log-toggle,.smart-shortcut-toggle,.smart-workflow-toggle,.log-modal,.shortcut-modal,.image-edit-modal,.create-menu,.smart-results-rail,.smart-results-panel')) return;
     if(document.getElementById('imageEditModal')?.classList.contains('open')) return;
     e.preventDefault();
     openCreateMenu(e);
 };
 shell.onclick = e => {
     if(selectionJustFinished) return;
-    if(didPan || e.target.closest('.image-node,.composer,.smart-back,.asset-panel,.asset-toggle,.smart-log-toggle,.smart-shortcut-toggle,.smart-workflow-toggle,.log-modal,.shortcut-modal,.image-edit-modal,.create-menu')) return;
+    if(didPan || e.target.closest('.image-node,.composer,.smart-back,.asset-panel,.asset-toggle,.smart-log-toggle,.smart-shortcut-toggle,.smart-workflow-toggle,.log-modal,.shortcut-modal,.image-edit-modal,.create-menu,.smart-results-rail,.smart-results-panel')) return;
     if(document.getElementById('imageEditModal')?.classList.contains('open')) return;
     closeCreateMenu();
     clearSelection();
@@ -15979,6 +16510,11 @@ smartArrangeBtn?.addEventListener('click', e => {
 });
 window.onmousemove = e => {
     lastMouseWorld = screenToWorld(e);
+    if(batchPortDragState){
+        e.preventDefault();
+        updateSmartBatchDrag(e);
+        return;
+    }
     if(smartMinimapDrag){
         e.preventDefault();
         centerViewportOnWorldPoint(minimapEventToWorld(e));
@@ -16256,6 +16792,10 @@ window.onmouseup = e => {
     document.body.classList.remove('smart-node-drag');
     document.body.classList.remove('smart-node-resize');
     document.body.classList.remove('smart-canvas-interacting');
+    if(batchPortDragState){
+        finishSmartBatchLink(e);
+        return;
+    }
     if(connectionEraseState){
         const changed = finishConnectionErase();
         connectionEraseState = null;
@@ -16441,7 +16981,7 @@ window.onmouseup = e => {
     }
 };
 shell.addEventListener('wheel', e => {
-    if(e.target.closest('.composer,.smart-back,.image-edit-modal,.asset-panel,.asset-toggle,.smart-log-toggle,.smart-shortcut-toggle,.smart-workflow-toggle,.workflow-transfer-panel,.log-modal,.shortcut-modal,.prompt-node-segments,.prompt-node-text,.prompt-node-llm,.smart-group-list,[data-thumb-scroll]')) return;
+    if(e.target.closest('.composer,.smart-back,.image-edit-modal,.asset-panel,.asset-toggle,.smart-log-toggle,.smart-shortcut-toggle,.smart-workflow-toggle,.workflow-transfer-panel,.log-modal,.shortcut-modal,.prompt-node-segments,.prompt-node-text,.prompt-node-llm,.smart-group-list,.smart-results-rail,.smart-results-panel,[data-thumb-scroll]')) return;
     e.preventDefault();
     const rect = shell.getBoundingClientRect();
     const sx = e.clientX - rect.left;

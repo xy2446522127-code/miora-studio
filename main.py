@@ -2517,6 +2517,9 @@ class PluginJobRequest(BaseModel):
     parameters: Dict[str, Any] = {}
     assets: List[Dict[str, Any]] = []
 
+class GeneratedAssetRevealRequest(BaseModel):
+    url: str = ""
+
 class TempShUploadRequest(BaseModel):
     url: str = ""
 
@@ -15073,6 +15076,69 @@ def volcengine_video_prompt_text(prompt, aspect_ratio="", duration=None):
 # --- Local plugin system ---------------------------------------------------
 # Plugins are discovered from plugins/<id>/plugin.json.  Their private runtime
 # state is always stored under data/local/plugins and is ignored by Git.
+def require_local_plugin_request(request: Request):
+    client_host = str(request.client.host if request.client else "").strip().lower()
+    if client_host not in {"127.0.0.1", "::1", "localhost"}:
+        raise HTTPException(status_code=403, detail="Plugin directory access is only available from this computer")
+    origin = str(request.headers.get("origin") or "").strip()
+    if origin:
+        origin_host = str(urllib.parse.urlparse(origin).hostname or "").strip().lower()
+        if origin_host not in {"127.0.0.1", "::1", "localhost"}:
+            raise HTTPException(status_code=403, detail="Plugin directory access requires a local page")
+
+def resolved_plugins_dir() -> str:
+    path = os.path.realpath(PLUGINS_DIR)
+    project_root = os.path.realpath(BASE_DIR)
+    try:
+        inside_project = os.path.commonpath([path, project_root]) == project_root
+    except ValueError:
+        inside_project = False
+    if not inside_project:
+        raise HTTPException(status_code=500, detail="Invalid plugin directory")
+    os.makedirs(path, exist_ok=True)
+    return path
+
+@app.get("/api/plugins/directory")
+def get_plugin_directory(request: Request):
+    require_local_plugin_request(request)
+    return {"path": resolved_plugins_dir()}
+
+@app.post("/api/plugins/open-directory")
+def open_plugin_directory(request: Request):
+    require_local_plugin_request(request)
+    path = resolved_plugins_dir()
+    try:
+        if os.name == "nt":
+            os.startfile(path)
+        elif sys.platform == "darwin":
+            subprocess.Popen(["open", path])
+        else:
+            subprocess.Popen(["xdg-open", path])
+    except Exception as exc:
+        raise HTTPException(status_code=500, detail=f"无法打开插件目录：{exc}") from exc
+    return {"opened": True, "path": path}
+
+@app.post("/api/generated-assets/reveal")
+def reveal_generated_asset(payload: GeneratedAssetRevealRequest, request: Request):
+    require_local_plugin_request(request)
+    target = output_file_from_url(payload.url) if payload.url else None
+    if payload.url and not target:
+        raise HTTPException(status_code=404, detail="该成果尚未保存到本地输出目录")
+    folder = os.path.abspath(OUTPUT_OUTPUT_DIR)
+    try:
+        if os.name == "nt":
+            if target and os.path.isfile(target):
+                subprocess.Popen(["explorer.exe", f"/select,{os.path.abspath(target)}"])
+            else:
+                os.startfile(os.path.dirname(target) if target else folder)
+        elif sys.platform == "darwin":
+            subprocess.Popen(["open", "-R", target] if target else ["open", folder])
+        else:
+            subprocess.Popen(["xdg-open", os.path.dirname(target) if target else folder])
+    except Exception as exc:
+        raise HTTPException(status_code=500, detail=f"无法打开生成文件位置：{exc}") from exc
+    return {"opened": True, "path": target or folder}
+
 @app.get("/api/plugins")
 def list_local_plugins():
     return {"plugins": PLUGIN_RUNTIME.plugins()}
@@ -15107,6 +15173,59 @@ def create_plugin_job(plugin_id: str, payload: PluginJobRequest):
     if not required.issubset(set(manifest.get("capabilities") or [])):
         raise HTTPException(status_code=400, detail="Plugin does not declare the required video task capabilities")
     return {"job": PLUGIN_RUNTIME.queue_job(plugin_id, payload.model_dump())}
+
+@app.post("/api/plugins/{plugin_id}/video")
+async def run_plugin_video(plugin_id: str, payload: PluginJobRequest):
+    manifest = PLUGIN_RUNTIME.plugin(plugin_id)
+    if not manifest:
+        raise HTTPException(status_code=404, detail="Plugin not found")
+    required = {"submitTask", "pollTask", "fetchArtifacts"}
+    if manifest.get("type") != "video-provider" or not required.issubset(set(manifest.get("capabilities") or [])):
+        raise HTTPException(status_code=400, detail="Plugin is not a compatible video provider")
+    job = PLUGIN_RUNTIME.queue_job(plugin_id, payload.model_dump())
+    service = str(manifest.get("service") or "").rstrip("/")
+    if not service:
+        updated = PLUGIN_RUNTIME.update_job(plugin_id, job["id"], status="queued", message="Plugin task queued")
+        return {"job": updated or job, "videos": [], "queued": True, "provider_id": f"plugin:{plugin_id}"}
+    parsed = urllib.parse.urlparse(service)
+    if parsed.scheme not in {"http", "https"} or parsed.hostname not in {"127.0.0.1", "localhost", "::1"}:
+        PLUGIN_RUNTIME.update_job(plugin_id, job["id"], status="failed", error="Plugin service must be local")
+        raise HTTPException(status_code=400, detail="Plugin service must use a local loopback address")
+    request_body = {
+        "pluginJobId": job["id"], "accountId": payload.accountId, "model": payload.model,
+        "kind": "video", "prompt": payload.prompt, "parameters": payload.parameters, "assets": payload.assets,
+    }
+    try:
+        async with httpx.AsyncClient(timeout=httpx.Timeout(connect=5.0, read=45.0, write=20.0, pool=5.0)) as client:
+            response = await client.post(f"{service}/api/tasks", json=request_body)
+            response.raise_for_status()
+            data = response.json()
+    except (httpx.HTTPError, ValueError) as exc:
+        PLUGIN_RUNTIME.update_job(plugin_id, job["id"], status="failed", error=str(exc))
+        raise HTTPException(status_code=502, detail=f"Video plugin worker unavailable: {exc}") from exc
+
+    def collect_urls(value):
+        urls = []
+        if isinstance(value, str):
+            if value.startswith(("http://", "https://", "/assets/", "/output/")): urls.append(value)
+        elif isinstance(value, list):
+            for item in value: urls.extend(collect_urls(item))
+        elif isinstance(value, dict):
+            for key, item in value.items():
+                if key.lower() in {"url", "src", "uri", "path", "videos", "artifacts", "outputs", "files", "data"}:
+                    urls.extend(collect_urls(item))
+        return list(dict.fromkeys(urls))
+
+    videos = collect_urls(data)
+    remote_status = str(data.get("status") or ("done" if videos else "submitted"))
+    task_id = str(data.get("taskId") or data.get("task_id") or data.get("id") or "")
+    updated = PLUGIN_RUNTIME.update_job(
+        plugin_id, job["id"], status=remote_status, taskId=task_id, artifacts=videos, providerResponse=data,
+    )
+    return {
+        "job": updated or job, "videos": [{"url": url, "kind": "video"} for url in videos],
+        "queued": not bool(videos), "task_id": task_id, "provider_id": f"plugin:{plugin_id}",
+    }
 
 @app.post("/api/canvas-video")
 async def canvas_video(payload: CanvasVideoRequest):

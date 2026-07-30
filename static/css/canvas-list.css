@@ -130,6 +130,12 @@ html[data-studio-scale="off"].studio-scale-managed .workspace {
 .ws-icon-btn:hover { color:var(--text); border-color:var(--line-2); background:var(--soft); box-shadow:0 6px 14px var(--shadow); }
 .ws-primary-btn { height:36px; padding:0 14px; border-radius:8px; display:inline-flex; align-items:center; justify-content:center; gap:7px; background:var(--strong); color:var(--strong-text); border:none; cursor:pointer; font-size:12px; font-weight:850; box-shadow:0 8px 18px var(--shadow); }
 .ws-primary-btn:hover { transform:translateY(-1px); box-shadow:0 12px 24px var(--shadow-strong); }
+.ws-order-lock {
+    height:36px; padding:0 12px; border-radius:10px; display:inline-flex; align-items:center; justify-content:center;
+    gap:7px; color:#d7e7f4; background:rgba(7,22,39,.62); border:1px solid rgba(118,201,238,.24);
+    font-size:11px; font-weight:800; cursor:default; box-shadow:inset 0 1px 0 rgba(255,255,255,.035);
+}
+.ws-order-lock i,.ws-order-lock svg { width:14px; height:14px; color:#8bdcf5; }
 /* 粘贴到此项目：剪切后才出现的强调按钮，固定高对比色避免主题变量冲淡文字。 */
 .ws-paste-btn { height:36px; padding:0 13px; border-radius:8px; display:inline-flex; align-items:center; justify-content:center; gap:7px; background:#1d4ed8; color:#fff; border:1px solid rgba(255,255,255,.18); cursor:pointer; font-size:12px; font-weight:850; box-shadow:0 8px 18px rgba(37,99,235,.28); }
 .ws-paste-btn:hover { background:#1e40af; box-shadow:0 10px 22px rgba(37,99,235,.34); }
@@ -196,6 +202,112 @@ html[data-studio-scale="off"].studio-scale-managed .workspace {
 .ws-card-delete-actions button { flex:1; height:30px; border-radius:8px; border:1px solid var(--line); cursor:pointer; font-size:12px; font-weight:800; }
 .ws-card-delete-yes { background:var(--danger); color:#fff; border-color:var(--danger) !important; }
 .ws-card-delete-no { background:var(--card-solid); color:var(--muted); }
+
+/* Fixed chronological project grid: newest at top-left, then left-to-right and row-by-row. */
+body[data-huaha-page="canvas-list"] .ws-board {
+    overflow:auto !important;
+    cursor:default !important;
+    user-select:auto;
+    scrollbar-width:thin;
+}
+body[data-huaha-page="canvas-list"] .ws-board-world.fixed-order {
+    position:relative;
+    inset:auto;
+    width:min(100%, 1420px);
+    min-height:100%;
+    padding:34px 42px 96px;
+    display:grid;
+    grid-template-columns:repeat(4,minmax(0,1fr));
+    gap:26px 24px;
+    align-content:start;
+    transform:none !important;
+    will-change:auto;
+}
+.ws-card-cell {
+    position:relative;
+    min-width:0;
+    height:446px;
+    isolation:isolate;
+}
+body[data-huaha-page="canvas-list"] .ws-card {
+    position:relative !important;
+    z-index:1;
+    left:auto !important;
+    top:auto !important;
+    width:100% !important;
+    height:310px !important;
+    padding:18px !important;
+    border-radius:18px !important;
+    cursor:pointer;
+    background:
+        radial-gradient(ellipse at 50% 61%, transparent 0 14%, rgba(97,219,255,.18) 15% 16%, transparent 18% 24%, rgba(97,219,255,.12) 25% 26%, transparent 28% 35%, rgba(97,219,255,.08) 36% 37%, transparent 39%),
+        linear-gradient(160deg, rgba(24,49,77,.82), rgba(10,25,45,.74)) !important;
+    -webkit-box-reflect:none !important;
+}
+body[data-huaha-page="canvas-list"] .ws-card.featured {
+    width:100% !important;
+    height:310px !important;
+    transform:none !important;
+    border-color:rgba(126,228,255,.74) !important;
+}
+body[data-huaha-page="canvas-list"] .ws-card.featured:hover,
+body[data-huaha-page="canvas-list"] .ws-card:hover {
+    transform:none !important;
+}
+body[data-huaha-page="canvas-list"] .ws-card-reflection {
+    position:absolute !important;
+    z-index:0 !important;
+    left:0 !important;
+    /* The element is vertically flipped around its top edge, so offset by its own
+       height to keep the rendered reflection below the card instead of over it. */
+    top:438px !important;
+    width:100% !important;
+    height:112px !important;
+    padding:18px !important;
+    overflow:hidden;
+    border:1px solid rgba(126,204,236,.14);
+    border-radius:18px;
+    color:var(--text);
+    background:
+        radial-gradient(ellipse at 50% 61%, transparent 0 14%, rgba(97,219,255,.14) 15% 16%, transparent 18% 24%, rgba(97,219,255,.09) 25% 26%, transparent 28% 35%, rgba(97,219,255,.055) 36% 37%, transparent 39%),
+        linear-gradient(160deg, rgba(19,43,68,.56), rgba(7,21,39,.48)) !important;
+    transform:scaleY(-1) !important;
+    transform-origin:center top;
+    opacity:.24 !important;
+    filter:blur(.7px);
+    mask-image:linear-gradient(to bottom, rgba(0,0,0,.82), transparent 92%);
+    -webkit-mask-image:linear-gradient(to bottom, rgba(0,0,0,.82), transparent 92%);
+    pointer-events:none !important;
+}
+body[data-huaha-page="canvas-list"] .ws-card-reflection::after {
+    content:"";
+    position:absolute;
+    inset:0;
+    background:repeating-linear-gradient(to bottom, transparent 0 7px, rgba(4,15,29,.25) 8px 10px);
+}
+body[data-huaha-page="canvas-list"] .ws-card-reflection .ws-card-focus-actions,
+body[data-huaha-page="canvas-list"] .ws-card-reflection .ws-card-delete-confirm { display:none !important; }
+body[data-huaha-page="canvas-list"] .ws-create-card {
+    position:relative;
+    left:auto !important;
+    top:auto !important;
+    width:100%;
+    min-height:250px;
+}
+@media (max-width:1439px) {
+    body[data-huaha-page="canvas-list"] .ws-board-world.fixed-order { grid-template-columns:repeat(3,minmax(0,1fr)); }
+}
+@media (max-width:1099px) {
+    body[data-huaha-page="canvas-list"] .ws-board-world.fixed-order { grid-template-columns:repeat(2,minmax(0,1fr)); padding-inline:28px; }
+}
+@media (max-width:759px) {
+    body[data-huaha-page="canvas-list"] .ws-board-world.fixed-order { grid-template-columns:1fr; padding:24px 18px 80px; }
+    .ws-card-cell { height:420px; }
+    body[data-huaha-page="canvas-list"] .ws-card { height:286px !important; }
+    body[data-huaha-page="canvas-list"] .ws-card.featured { height:286px !important; }
+    body[data-huaha-page="canvas-list"] .ws-card-reflection { top:402px !important; height:100px !important; }
+    .ws-order-lock span { display:none; }
+}
 
 /* ===== Card context menu ===== */
 .ws-card-pop { position:fixed; left:0; top:0; z-index:200; width:214px; padding:6px; border-radius:8px; border:1px solid var(--line); background:var(--card-solid); color:var(--text); box-shadow:0 22px 54px var(--shadow-strong); display:flex; flex-direction:column; gap:1px; }

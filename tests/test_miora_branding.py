@@ -137,15 +137,39 @@ class HuahaiBrandingTests(unittest.TestCase):
         self.assertNotIn(".huahai-smart-rail", css)
         self.assertNotIn(".huahai-smart-inspector", css)
 
-    def test_project_manager_can_restore_ordered_deck(self):
+    def test_project_manager_uses_locked_chronological_grid(self):
         root = Path(__file__).resolve().parents[1]
         script = (root / "static/js/canvas-list.js").read_text(encoding="utf-8")
         page = (root / "static/canvas-list.html").read_text(encoding="utf-8")
+        css = (root / "static/css/canvas-list.css").read_text(encoding="utf-8")
 
-        self.assertIn("arrangeProjectDeck", script)
+        self.assertIn("chronologicalCanvasesInProject", script)
         self.assertIn("arrangeCurrentProjectDeck", script)
         self.assertIn("boardResetViewBtn.addEventListener('click', arrangeCurrentProjectDeck)", script)
-        self.assertIn("整理并重置视图", page)
+        self.assertNotIn("attachCardDrag(card, c)", script)
+        self.assertNotIn("board.addEventListener('wheel', onBoardWheel", script)
+        self.assertIn("更新时间：新 → 旧", page)
+        self.assertIn("grid-template-columns:repeat(4", css)
+        self.assertIn("ws-card-reflection", script)
+
+    def test_shared_canvas_upgrades_are_present_in_both_modes(self):
+        root = Path(__file__).resolve().parents[1]
+        normal_page = (root / "static/canvas.html").read_text(encoding="utf-8")
+        smart_page = (root / "static/smart-canvas.html").read_text(encoding="utf-8")
+        normal_script = (root / "static/js/canvas.js").read_text(encoding="utf-8")
+        smart_script = (root / "static/js/smart-canvas.js").read_text(encoding="utf-8")
+
+        self.assertIn("huahai-batch-links.js", normal_page)
+        self.assertIn("huahai-batch-links.js", smart_page)
+        self.assertIn("batch-proxy-port", normal_script)
+        self.assertIn("smart-batch-proxy-port", smart_script)
+        self.assertIn('id="canvasResultsRail"', normal_page)
+        self.assertIn('id="smartResultsRail"', smart_page)
+        self.assertIn("videoProviderPlugins", normal_script)
+        self.assertIn("smartVideoProviderPlugins", smart_script)
+        self.assertIn("/api/generated-assets/reveal", normal_script)
+        self.assertIn("/api/generated-assets/reveal", smart_script)
+        self.assertNotIn("智能建议", smart_page)
 
     def test_api_settings_has_no_bilibili_contact_promotion(self):
         root = Path(__file__).resolve().parents[1]

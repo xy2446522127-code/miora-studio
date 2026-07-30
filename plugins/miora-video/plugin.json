@@ -5,6 +5,8 @@
   "type": "video-provider",
   "runtime": "node-bridge",
   "entry": "backend/bridge.mjs",
+  "service": "http://127.0.0.1:5210",
+  "models": ["default"],
   "capabilities": [
     "validateAccount",
     "provisionAccount",

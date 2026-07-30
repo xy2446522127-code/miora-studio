@@ -387,7 +387,7 @@ body[data-huaha-page="canvas-list"] .ws-card {
     background: rgba(16, 34, 57, .66) !important;
     box-shadow: 0 16px 42px rgba(0, 4, 13, .34), inset 0 1px rgba(255, 255, 255, .04) !important;
     backdrop-filter: blur(18px) saturate(128%);
-    -webkit-box-reflect: below 22px linear-gradient(transparent 0%, rgba(0, 0, 0, .03) 50%, rgba(0, 0, 0, .64) 100%);
+    -webkit-box-reflect: none;
 }
 
 body[data-huaha-page="canvas-list"] .ws-card:hover,
@@ -1362,8 +1362,8 @@ body[data-huaha-page="canvas-list"] .miora-workspace-brand {
 }
 
 body[data-huaha-page="canvas-list"] .ws-card {
-    width: 190px !important;
-    height: 300px !important;
+    width: 100% !important;
+    height: 310px !important;
     padding: 18px !important;
     background:
         radial-gradient(ellipse at 50% 61%, transparent 0 14%, rgba(97, 219, 255, .16) 15% 16%, transparent 18% 24%, rgba(97, 219, 255, .11) 25% 26%, transparent 28% 35%, rgba(97, 219, 255, .07) 36% 37%, transparent 39%),
@@ -1371,14 +1371,14 @@ body[data-huaha-page="canvas-list"] .ws-card {
 }
 
 body[data-huaha-page="canvas-list"] .ws-card.featured {
-    width: 286px !important;
-    height: 390px !important;
-    transform: translateY(-42px);
+    width: 100% !important;
+    height: 310px !important;
+    transform: none;
     border-color: rgba(126, 228, 255, .74) !important;
 }
 
 body[data-huaha-page="canvas-list"] .ws-card.featured:hover {
-    transform: translateY(-45px);
+    transform: translateY(-3px);
 }
 
 body[data-huaha-page="canvas-list"] .ws-card-title {
@@ -1840,7 +1840,7 @@ body[data-huaha-page="canvas"] .huahai-canvas-inspector {
     top: 67px;
     right: 11px;
     bottom: 214px;
-    width: 198px;
+    width: 280px;
     border-radius: 10px;
     background: rgba(4, 18, 35, .82);
 }
@@ -1914,6 +1914,94 @@ body[data-huaha-page="canvas"] .huahai-inspector-fields > p {
     color: var(--hh-muted);
     font-size: 11px;
     line-height: 1.65;
+}
+
+body[data-huaha-page="canvas"] .huahai-batch-summary {
+    display: grid;
+    gap: 2px;
+    padding: 8px 12px;
+    border: 1px solid rgba(112, 196, 234, .18);
+    border-radius: 12px;
+    background: rgba(6, 24, 42, .66);
+}
+
+body[data-huaha-page="canvas"] .huahai-batch-summary > div {
+    min-height: 40px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+}
+
+body[data-huaha-page="canvas"] .huahai-batch-summary span {
+    color: #a9bdcc;
+    font-size: 12px;
+    font-weight: 680;
+}
+
+body[data-huaha-page="canvas"] .huahai-batch-summary strong {
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
+    color: #6ee7ff;
+    font-size: 19px;
+}
+
+body[data-huaha-page="canvas"] .huahai-batch-summary strong.safe {
+    color: #7ee2b8;
+}
+
+body[data-huaha-page="canvas"] .huahai-batch-summary svg {
+    width: 18px;
+    height: 18px;
+}
+
+body[data-huaha-page="canvas"] .huahai-batch-actions {
+    display: grid;
+    gap: 8px;
+    margin-top: 14px;
+}
+
+body[data-huaha-page="canvas"] .huahai-batch-actions button {
+    min-height: 46px;
+    padding: 0 12px;
+    display: grid;
+    grid-template-columns: 22px minmax(0, 1fr) auto;
+    align-items: center;
+    gap: 9px;
+    border: 1px solid rgba(112, 196, 234, .18);
+    border-radius: 11px;
+    color: #dfeef6;
+    background: rgba(5, 20, 36, .54);
+    text-align: left;
+    cursor: pointer;
+}
+
+body[data-huaha-page="canvas"] .huahai-batch-actions button:hover,
+body[data-huaha-page="canvas"] .huahai-batch-actions button:focus-visible {
+    border-color: rgba(93, 216, 245, .52);
+    background: rgba(13, 43, 65, .72);
+    outline: none;
+}
+
+body[data-huaha-page="canvas"] .huahai-batch-actions svg {
+    width: 17px;
+    height: 17px;
+    color: #9dc4d8;
+}
+
+body[data-huaha-page="canvas"] .huahai-batch-actions kbd {
+    padding: 2px 6px;
+    border: 1px solid rgba(112, 196, 234, .14);
+    border-radius: 6px;
+    color: #8196a8;
+    background: rgba(2, 13, 24, .48);
+    font: 9px/1.4 "JetBrains Mono", monospace;
+}
+
+body[data-huaha-page="canvas"] .huahai-batch-note {
+    margin: 14px 2px 0;
+    color: #8299aa !important;
 }
 
 body[data-huaha-page="canvas"] .huahai-inspector-field {

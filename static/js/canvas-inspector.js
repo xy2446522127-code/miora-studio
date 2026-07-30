@@ -43,7 +43,7 @@
         inspector.setAttribute('aria-live','polite');
         inspector.innerHTML = `
             <header>
-                <strong>检查器</strong>
+                <strong id="huahaiInspectorHeading">检查器</strong>
                 <button id="huahaiInspectorClose" type="button" title="收起检查器">${icon('x')}</button>
             </header>
             <div class="huahai-inspector-body">
@@ -212,7 +212,30 @@
 
     const titleEl = document.getElementById('huahaiInspectorTitle');
     const bodyEl = document.getElementById('huahaiInspectorFields');
+    const headingEl = document.getElementById('huahaiInspectorHeading');
     let renderQueued = false;
+
+    function renderBatchInspector(selected){
+        const count = selected.length;
+        if(headingEl) headingEl.textContent = '批量选择';
+        titleEl.textContent = `已选择 ${count} 个节点`;
+        bodyEl.innerHTML = `
+            <div class="huahai-batch-summary" aria-label="批量连接状态">
+                <div><span>可连接</span><strong>${count} ${icon('share-2')}</strong></div>
+                <div><span>冲突</span><strong class="safe">0 ${icon('badge-check')}</strong></div>
+            </div>
+            <div class="huahai-batch-actions">
+                <button type="button" data-hh-batch-action="duplicate">${icon('copy')}<span>复制</span><kbd>Ctrl D</kbd></button>
+                <button type="button" data-hh-batch-action="group">${icon('layers-3')}<span>分组</span><kbd>Ctrl G</kbd></button>
+                <button type="button" data-hh-batch-action="arrange">${icon('align-left')}<span>对齐</span><i data-lucide="chevron-right"></i></button>
+            </div>
+            <p class="huahai-batch-note">从选区右侧代理端口拖动，可将所选节点一次连接到目标节点。</p>
+        `;
+        bodyEl.querySelector('[data-hh-batch-action="duplicate"]')?.addEventListener('click', () => window.huahaiCanvasDuplicateSelected?.());
+        bodyEl.querySelector('[data-hh-batch-action="group"]')?.addEventListener('click', () => window.huahaiCanvasGroupSelected?.());
+        bodyEl.querySelector('[data-hh-batch-action="arrange"]')?.addEventListener('click', () => window.huahaiCanvasArrangeSelected?.());
+        window.lucide?.createIcons();
+    }
 
     function labelFor(control, index){
         const explicit = control.closest('label')?.querySelector('span,strong')?.textContent?.trim();
@@ -259,13 +282,21 @@
         renderQueued = false;
         const selected = selectedElements();
         chrome.history.querySelector('[data-hh-history="delete"]').disabled = !selected.length;
-        if(selected.length !== 1){
-            titleEl.textContent = selected.length ? `已选择 ${selected.length} 个节点` : '未选择节点';
-            bodyEl.innerHTML = `<p>${selected.length ? '多选状态下可拖动、分组或复制节点。' : '选择一个节点后，可在这里快速调整参数。'}</p>`;
+        if(selected.length > 1){
+            renderBatchInspector(selected);
             chrome.run.disabled = true;
-            chrome.run.title = selected.length ? '请只选择一个可运行节点' : '选择一个可运行节点';
+            chrome.run.title = '请只选择一个可运行节点';
             return;
         }
+        if(selected.length !== 1){
+            if(headingEl) headingEl.textContent = '检查器';
+            titleEl.textContent = '未选择节点';
+            bodyEl.innerHTML = '<p>选择一个节点后，可在这里快速调整参数。</p>';
+            chrome.run.disabled = true;
+            chrome.run.title = '选择一个可运行节点';
+            return;
+        }
+        if(headingEl) headingEl.textContent = '检查器';
         const node = selected[0];
         const nodeTitle = node.querySelector('.node-title')?.textContent?.trim() || '节点';
         const type = node.className.match(/\b([A-Za-z]+)-node\b/)?.[1] || '';
