@@ -193,7 +193,6 @@ MODELSCOPE_TREE_URL = "https://www.modelscope.ai/api/v1/studio/daniel8152/Infini
 async def startup_event():
     global GLOBAL_LOOP
     GLOBAL_LOOP = asyncio.get_running_loop()
-    sync_static_html_versions()
     # 启动时整理资产库：给所有图片分组（含默认角色/场景）建好文件夹，并把根目录里的旧素材归整进去。
     try:
         await asyncio.to_thread(migrate_asset_library_into_dirs)
@@ -1451,7 +1450,32 @@ os.makedirs(WORKFLOW_DIR, exist_ok=True)
 os.makedirs(CONVERSATION_DIR, exist_ok=True)
 os.makedirs(CANVAS_DIR, exist_ok=True)
 
-app.mount("/static", StaticFiles(directory=STATIC_DIR), name="static")
+class VersionedHtmlStaticFiles(StaticFiles):
+    """Serve cache-busted HTML without rewriting repository source files."""
+
+    async def get_response(self, path: str, scope):
+        response = await super().get_response(path, scope)
+        if not path.lower().endswith(".html") or not isinstance(response, FileResponse):
+            return response
+        try:
+            with open(response.path, "r", encoding="utf-8") as source:
+                html = versioned_static_html(source.read())
+        except (OSError, UnicodeError):
+            return response
+        headers = dict(response.headers)
+        headers.pop("content-length", None)
+        headers.pop("etag", None)
+        headers["cache-control"] = "no-cache"
+        content = "" if scope.get("method") == "HEAD" else html
+        return Response(
+            content=content,
+            media_type="text/html",
+            headers=headers,
+            status_code=response.status_code,
+        )
+
+
+app.mount("/static", VersionedHtmlStaticFiles(directory=STATIC_DIR), name="static")
 app.mount("/output", StaticFiles(directory=OUTPUT_DIR), name="output")
 app.mount("/assets", StaticFiles(directory=ASSETS_DIR), name="assets")
 
@@ -1593,6 +1617,9 @@ def versioned_static_html(html: str) -> str:
     return pattern.sub(replace, html)
 
 def sync_static_html_versions():
+    """Compatibility no-op; HTML versioning is applied while serving responses."""
+    return None
+
     version = current_app_version()
     if not version:
         return
