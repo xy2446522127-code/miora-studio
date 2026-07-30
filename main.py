@@ -178,6 +178,7 @@ GITHUB_REPO_URL = "https://github.com/xy2446522127-code/miora-studio"
 GITHUB_VERSION_URL = "https://raw.githubusercontent.com/xy2446522127-code/miora-studio/main/VERSION"
 GITHUB_TREE_URL = "https://api.github.com/repos/xy2446522127-code/miora-studio/git/trees/main?recursive=1"
 GITHUB_RAW_ROOT = "https://raw.githubusercontent.com/xy2446522127-code/miora-studio/main"
+GITHUB_ARCHIVE_URL = "https://codeload.github.com/xy2446522127-code/miora-studio/zip/refs/heads/main"
 GITHUB_UPDATE_NOTES_URL = GITHUB_RAW_ROOT + "/static/update-notes.json"
 MODELSCOPE_REPO_URL = "https://modelscope.ai/studios/daniel8152/Infinite-Canvas"
 MODELSCOPE_RAW_ROOT = "https://www.modelscope.ai/studios/daniel8152/Infinite-Canvas/raw/main"
@@ -1754,6 +1755,7 @@ def app_info():
                 "repo_url": GITHUB_REPO_URL,
                 "version_url": GITHUB_VERSION_URL,
                 "tree_url": GITHUB_TREE_URL,
+                "archive_url": GITHUB_ARCHIVE_URL,
                 "update_notes_url": GITHUB_UPDATE_NOTES_URL,
             },
             "upstream": {
@@ -1799,8 +1801,9 @@ def connectivity_probe(name: str, url: str, timeout: float = 5.0) -> Dict[str, A
 
 def update_connectivity_targets() -> List[Tuple[str, str, str, bool]]:
     return [
-        ("花海画布 GitHub 更新列表", GITHUB_TREE_URL, "github", True),
+        ("花海画布 GitHub 更新包", GITHUB_ARCHIVE_URL, "github", True),
         ("花海画布 GitHub 版本文件", GITHUB_VERSION_URL, "github", True),
+        ("花海画布 GitHub 更新列表", GITHUB_TREE_URL, "github", False),
         ("GitHub 主页", "https://github.com/", "github", False),
         ("Google 连通性", "https://www.google.com/generate_204", "reference", False),
     ]
@@ -1911,7 +1914,31 @@ def update_allowed_file(path: str) -> bool:
     path = str(path or "").replace("\\", "/").lstrip("/")
     if not path or any(part in {"", ".", ".."} for part in path.split("/")):
         return False
-    return path in {"main.py", "VERSION"} or path.startswith("static/")
+    root_files = {
+        "main.py",
+        "plugin_runtime.py",
+        "VERSION",
+        "requirements.txt",
+        "README.md",
+        "NOTICE.md",
+        "Start-Huahai.ps1",
+        "Start-MIORA.ps1",
+        "Create-Huahai-Shortcut.ps1",
+        "run.bat",
+    }
+    if path in root_files or path.startswith("static/"):
+        return True
+    if not path.startswith("plugins/"):
+        return False
+    parts = path.split("/")
+    if len(parts) < 3 or any(
+        part.lower() in {".env", "data", "output", "downloads", "__pycache__"}
+        for part in parts
+    ):
+        return False
+    return os.path.splitext(path)[1].lower() in {
+        ".py", ".js", ".mjs", ".json", ".md", ".txt"
+    }
 
 # 缓存 GitHub Tree API 响应（含 ETag），减少 60 次/h 限流压力
 GITHUB_TREE_CACHE: Dict[str, Any] = {"etag": "", "data": None, "expires_at": 0.0}
@@ -1975,6 +2002,37 @@ def download_github_update_files(files: List[str], staging_root: str) -> None:
         os.makedirs(os.path.dirname(stage_path), exist_ok=True)
         with open(stage_path, "wb") as f:
             f.write(data)
+
+def download_github_archive(staging_root: str) -> Tuple[List[str], List[str], List[str]]:
+    """Download the repository ZIP without using GitHub's rate-limited Tree API."""
+    payload = github_bytes(GITHUB_ARCHIVE_URL)
+    staging_root_abs = os.path.abspath(staging_root)
+    total_size = 0
+    with zipfile.ZipFile(BytesIO(payload)) as archive:
+        for info in archive.infolist():
+            raw_name = str(info.filename or "").replace("\\", "/")
+            if info.is_dir() or "/" not in raw_name:
+                continue
+            rel = raw_name.split("/", 1)[1].lstrip("/")
+            if not update_allowed_file(rel):
+                continue
+            unix_mode = (info.external_attr >> 16) & 0o170000
+            if unix_mode == 0o120000:
+                continue
+            if info.file_size > 128 * 1024 * 1024:
+                raise RuntimeError(f"GitHub 更新包文件过大：{rel}")
+            total_size += max(0, int(info.file_size or 0))
+            if total_size > 768 * 1024 * 1024:
+                raise RuntimeError("GitHub 更新包超过安全大小限制")
+            stage_path = os.path.abspath(
+                os.path.join(staging_root_abs, *rel.split("/"))
+            )
+            if os.path.commonpath([staging_root_abs, stage_path]) != staging_root_abs:
+                raise ValueError(f"更新暂存路径不安全：{rel}")
+            os.makedirs(os.path.dirname(stage_path), exist_ok=True)
+            with archive.open(info, "r") as source, open(stage_path, "wb") as target:
+                shutil.copyfileobj(source, target, length=1024 * 1024)
+    return staged_update_file_list(staging_root_abs)
 
 def modelscope_update_file_list() -> List[str]:
     """通过 ModelScope 仓库文件 API 列出所有允许更新的文件（不依赖 git）。"""
@@ -2171,9 +2229,16 @@ def stage_update_from_source(source: str, staging_root: str) -> Tuple[List[str],
     if source == "modelscope":
         download_modelscope_update_files(staging_root)
         return staged_update_file_list(staging_root)
-    root_files, static_files, files = github_update_file_list()
-    download_github_update_files(files, staging_root)
-    return root_files, static_files, files
+    try:
+        root_files, static_files, files = github_update_file_list()
+        download_github_update_files(files, staging_root)
+        return root_files, static_files, files
+    except Exception as exc:
+        logging.warning(
+            "GitHub Tree/raw update failed; using codeload archive fallback: %s",
+            exc,
+        )
+        return download_github_archive(staging_root)
 
 @app.post("/api/update-from-github")
 def update_from_github(req: UpdateRequest = UpdateRequest()):
