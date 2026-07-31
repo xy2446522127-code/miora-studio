@@ -171,7 +171,7 @@ class ConnectionManager:
 
 manager = ConnectionManager()
 GLOBAL_LOOP = None
-APP_VERSION = "2026.08.01.1"
+APP_VERSION = "2026.08.01.2"
 BRAND_NAME = "花海画布"
 BRAND_AUTHOR = "xy2446522127-code"
 UPSTREAM_REPO_URL = "https://github.com/hero8152/Infinite-Canvas"
@@ -181,14 +181,6 @@ GITHUB_RAW_ROOT = "https://raw.githubusercontent.com/xy2446522127-code/miora-stu
 GITHUB_VERSION_URL = GITHUB_RAW_ROOT + "/VERSION"
 GITHUB_ARCHIVE_URL = "https://codeload.github.com/xy2446522127-code/miora-studio/zip/refs/heads/main"
 GITHUB_UPDATE_NOTES_URL = GITHUB_RAW_ROOT + "/static/update-notes.json"
-MODELSCOPE_REPO_URL = "https://modelscope.ai/studios/daniel8152/Infinite-Canvas"
-MODELSCOPE_RAW_ROOT = "https://www.modelscope.ai/studios/daniel8152/Infinite-Canvas/raw/main"
-# ModelScope 仓库默认分支为 master；raw 网页路径会返回 HTML，必须用仓库文件 API 才能拿到纯文本
-# 注意：.ai 站命名空间为小写 daniel8152，API 路径大小写敏感（推送/文件 API 用大写会 404/拒绝）
-MODELSCOPE_FILE_API_ROOT = "https://www.modelscope.ai/api/v1/studio/daniel8152/Infinite-Canvas/repo?Revision=master&FilePath="
-MODELSCOPE_VERSION_URL = MODELSCOPE_FILE_API_ROOT + "VERSION"
-MODELSCOPE_UPDATE_NOTES_URL = MODELSCOPE_FILE_API_ROOT + "static/update-notes.json"
-MODELSCOPE_TREE_URL = "https://www.modelscope.ai/api/v1/studio/daniel8152/Infinite-Canvas/repo/files?Revision=master&Recursive=true"
 
 @app.on_event("startup")
 async def startup_event():
@@ -1576,32 +1568,11 @@ def fetch_remote_update_notes(url: str, version: str = "", timeout: float = 5.0)
     return info
 
 def fetch_update_notes_with_fallback(preferred_source: str, version: str, timeout: float = 3.0) -> Tuple[Dict[str, Any], Dict[str, Any]]:
-    urls = {
-        "github": GITHUB_UPDATE_NOTES_URL,
-        "modelscope": MODELSCOPE_UPDATE_NOTES_URL,
-    }
-    preferred = preferred_source if preferred_source in urls else "github"
-    order = [preferred, "modelscope" if preferred == "github" else "github"]
-    notes_by_source: Dict[str, Any] = {}
-    best_notes: Dict[str, Any] = {"version": version, "items": []}
-    for source in order:
-        notes = fetch_remote_update_notes(urls[source], version, timeout=timeout)
-        notes["source"] = source
-        notes_by_source[source] = notes
-        if notes.get("ok") and (notes.get("items") or []):
-            best_notes = notes
-            break
-    for source, url in urls.items():
-        if source not in notes_by_source:
-            notes_by_source[source] = {
-                "ok": False,
-                "error": "未尝试：已有更新说明可用" if best_notes.get("items") else "未尝试",
-                "url": url,
-                "source": source,
-                "version": version,
-                "items": [],
-            }
-    return best_notes, notes_by_source
+    """只从花海画布自己的 GitHub 仓库读取更新说明。"""
+    notes = fetch_remote_update_notes(GITHUB_UPDATE_NOTES_URL, version, timeout=timeout)
+    notes["source"] = "github"
+    best_notes = notes if notes.get("ok") else {"version": version, "items": []}
+    return best_notes, {"github": notes}
 
 def versioned_static_html(html: str) -> str:
     version = current_app_version()
@@ -1876,7 +1847,7 @@ def update_connectivity():
         "results": results,
         "sources": sources,
         "required": sources["github"]["required"],
-        "optional": ["GitHub 主页", "ModelScope 空间页面", "ModelScope 主页", "Google 连通性"],
+        "optional": ["GitHub 主页", "Google 连通性"],
     }
 
 def fetch_remote_version(url: str, timeout: float = 5.0) -> Dict[str, Any]:
@@ -1924,7 +1895,6 @@ def check_update():
     current = current_app_version()
     github = fetch_remote_version(GITHUB_VERSION_URL, timeout=5.0)
     github["source"] = "github"
-    modelscope = {"version": "", "ok": False, "error": "disabled for 花海画布", "url": "", "source": "modelscope"}
     best: Dict[str, Any] = (
         {"source": "github", "version": github["version"]}
         if github["ok"] and github["version"]
@@ -1938,7 +1908,6 @@ def check_update():
     return {
         "current": current,
         "github": github,
-        "modelscope": modelscope,
         "latest": best,
         "update_notes": best.get("update_notes") if best else {},
         "update_notes_sources": notes_by_source,
@@ -2069,49 +2038,6 @@ def download_github_archive(staging_root: str) -> Tuple[List[str], List[str], Li
             with archive.open(info, "r") as source, open(stage_path, "wb") as target:
                 shutil.copyfileobj(source, target, length=1024 * 1024)
     return staged_update_file_list(staging_root_abs)
-
-def modelscope_update_file_list() -> List[str]:
-    """通过 ModelScope 仓库文件 API 列出所有允许更新的文件（不依赖 git）。"""
-    resp = github_get(MODELSCOPE_TREE_URL, headers={"User-Agent": "Infinite-Canvas-Updater"}, timeout=30)
-    payload = json.loads(resp.content.decode("utf-8", errors="replace"))
-    files_node = ((payload.get("Data") or {}).get("Files")) or []
-    out: List[str] = []
-    for entry in files_node:
-        if not isinstance(entry, dict):
-            continue
-        if entry.get("Type") != "blob":
-            continue
-        path = str(entry.get("Path") or "").replace("\\", "/")
-        if update_allowed_file(path):
-            out.append(path)
-    return sorted(set(out))
-
-def modelscope_file_bytes(rel: str) -> bytes:
-    url = MODELSCOPE_FILE_API_ROOT + urllib.parse.quote(rel, safe="/")
-    resp = github_get(url, headers={"User-Agent": "Infinite-Canvas-Updater"}, timeout=60)
-    return resp.content
-
-def download_modelscope_update_files(staging_root: str) -> List[str]:
-    # 用 HTTP 仓库文件 API 下载（与 GitHub raw 同样思路），不依赖本机安装 Git。
-    # 之前用 git clone 会要求目标机装 Git for Windows，很多用户没装 → 一键更新失败。
-    files = modelscope_update_file_list()
-    if not files:
-        raise RuntimeError("ModelScope 未返回任何文件")
-    if "main.py" not in files or "VERSION" not in files:
-        raise RuntimeError("ModelScope 更新源缺少 main.py 或 VERSION")
-    if not any(f.startswith("static/") for f in files):
-        raise RuntimeError("ModelScope 未返回 static 文件，已取消更新")
-    staging_root_abs = os.path.abspath(staging_root)
-    for rel in files:
-        safe_update_target(rel)
-        data = modelscope_file_bytes(rel)
-        stage_path = os.path.abspath(os.path.join(staging_root_abs, *rel.split("/")))
-        if os.path.commonpath([staging_root_abs, stage_path]) != staging_root_abs:
-            raise ValueError(f"更新暂存路径不安全：{rel}")
-        os.makedirs(os.path.dirname(stage_path), exist_ok=True)
-        with open(stage_path, "wb") as f:
-            f.write(data)
-    return files
 
 def safe_update_target(path: str) -> str:
     rel = str(path or "").replace("\\", "/").lstrip("/")
@@ -2261,10 +2187,7 @@ def normalize_update_source(value: str) -> str:
     return "github"
 
 def stage_update_from_source(source: str, staging_root: str) -> Tuple[List[str], List[str], List[str]]:
-    """下载指定源的更新文件到 staging，返回 (root_files, static_files, files)。失败抛异常。"""
-    if source == "modelscope":
-        download_modelscope_update_files(staging_root)
-        return staged_update_file_list(staging_root)
+    """只从花海画布 GitHub 仓库下载更新文件到 staging。"""
     try:
         root_files, static_files, files = github_update_file_list()
         download_github_update_files(files, staging_root)

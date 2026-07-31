@@ -11,7 +11,9 @@ from pathlib import Path
 
 
 BASE = "http://127.0.0.1:3000"
-REPORT = Path(__file__).resolve().parents[1] / "docs" / "screenshots" / "2026.08.01.1" / "release-smoke.json"
+PROJECT_ROOT = Path(__file__).resolve().parents[1]
+EXPECTED_VERSION = (PROJECT_ROOT / "VERSION").read_text(encoding="utf-8").strip()
+REPORT = PROJECT_ROOT / "docs" / "screenshots" / "2026.08.01.1" / "release-smoke.json"
 
 
 def request(path: str, method: str = "GET", payload: dict | None = None) -> tuple[int, bytes, dict[str, str]]:
@@ -48,7 +50,7 @@ def main() -> int:
             "app-info",
             status == 200
             and info.get("brand") == "花海画布"
-            and info.get("version") == "2026.08.01.1"
+            and info.get("version") == EXPECTED_VERSION
             and "xy2446522127-code/miora-studio" in str(info.get("project_repo_url", "")),
             f"status={status}, version={info.get('version', '')}",
         )
