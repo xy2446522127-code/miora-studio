@@ -11,7 +11,8 @@
   "requiresAccount": true,
   "mediaKinds": ["image"],
   "models": ["ChatGPT Web"],
-  "capabilities": ["image", "browserLogin", "downloadCapture", "submitTask", "pollTask", "fetchArtifacts"],
+  "maxReferenceImages": 4,
+  "capabilities": ["image", "browserLogin", "browserReferenceUpload", "promptPassthrough", "downloadCapture", "submitTask", "pollTask", "fetchArtifacts"],
   "permissions": {
     "network": ["https://chatgpt.com", "https://auth.openai.com"],
     "filesystem": ["assets/output"],

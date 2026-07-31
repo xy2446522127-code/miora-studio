@@ -171,7 +171,7 @@ class ConnectionManager:
 
 manager = ConnectionManager()
 GLOBAL_LOOP = None
-APP_VERSION = "2026.08.01.3"
+APP_VERSION = "2026.08.01.4"
 BRAND_NAME = "花海画布"
 BRAND_AUTHOR = "xy2446522127-code"
 UPSTREAM_REPO_URL = "https://github.com/hero8152/Infinite-Canvas"
@@ -15230,6 +15230,153 @@ def plugin_local_asset(asset: Dict[str, Any]) -> Dict[str, Any]:
             item["local_path"] = os.path.abspath(local_path)
     return item
 
+BROWSER_PLUGIN_REFERENCE_MAX = 4
+BROWSER_PLUGIN_AUTO_HANDOFF_IDS = {"gemini-creator", "gpt-creator"}
+
+def browser_plugin_handoff_root() -> str:
+    """Return the ignored, project-local directory used for one browser handoff."""
+    root = os.path.realpath(os.path.join(BASE_DIR, "data", "local", "browser-plugin-handoff"))
+    local_root = os.path.realpath(os.path.join(BASE_DIR, "data", "local"))
+    try:
+        if os.path.commonpath([root, local_root]) != local_root:
+            raise ValueError("handoff directory escaped local data root")
+    except ValueError as exc:
+        raise HTTPException(status_code=500, detail="浏览器接力临时目录无效") from exc
+    os.makedirs(root, exist_ok=True)
+    return root
+
+def stage_browser_plugin_references(plugin_id: str, job_id: str, assets: List[Dict[str, Any]]) -> Tuple[str, List[str]]:
+    """Copy up to four app-owned image files into a disposable browser handoff folder.
+
+    Browser-assisted plugins deliberately receive ordinary files instead of app
+    URLs.  Every URL is resolved through the same local media mapping used by
+    the application; arbitrary filesystem paths and remote URLs are rejected.
+    """
+    image_assets = [
+        item for item in (assets or [])
+        if isinstance(item, dict) and str(item.get("kind") or "image").strip().lower() == "image"
+    ]
+    if len(image_assets) > BROWSER_PLUGIN_REFERENCE_MAX:
+        raise HTTPException(status_code=400, detail=f"参考图最多 {BROWSER_PLUGIN_REFERENCE_MAX} 张")
+    root = browser_plugin_handoff_root()
+    safe_job = re.sub(r"[^a-zA-Z0-9_-]+", "-", str(job_id or "")).strip("-") or uuid.uuid4().hex
+    job_dir = os.path.realpath(os.path.join(root, safe_job))
+    try:
+        if os.path.commonpath([root, job_dir]) != root:
+            raise ValueError("invalid job directory")
+    except ValueError as exc:
+        raise HTTPException(status_code=500, detail="浏览器接力任务目录无效") from exc
+    os.makedirs(job_dir, exist_ok=False)
+    staged = []
+    try:
+        for index, asset in enumerate(image_assets, 1):
+            url = str(asset.get("url") or "").strip()
+            try:
+                source = local_media_path_from_url(url)
+            except (HTTPException, OSError, ValueError):
+                source = None
+            if not source or not os.path.isfile(source):
+                raise HTTPException(
+                    status_code=400,
+                    detail=f"参考图 {index} 不是可读取的画布本地文件，请重新拖入画布后再运行插件",
+                )
+            content_type = content_type_for_path(source)
+            if not content_type.startswith("image/"):
+                raise HTTPException(status_code=400, detail=f"参考素材 {index} 不是图片文件")
+            if os.path.getsize(source) > 30 * 1024 * 1024:
+                raise HTTPException(status_code=413, detail=f"参考图 {index} 超过 30MB，未上传到官网")
+            try:
+                with Image.open(source) as probe:
+                    probe.verify()
+            except Exception as exc:
+                raise HTTPException(status_code=400, detail=f"参考图 {index} 无法解码，请换一张有效图片") from exc
+            extension = os.path.splitext(source)[1].lower()
+            if extension not in {".png", ".jpg", ".jpeg", ".webp", ".gif", ".bmp", ".tif", ".tiff"}:
+                extension = ".png"
+            target = os.path.join(job_dir, f"huahai-reference-{index:02d}{extension}")
+            shutil.copy2(source, target)
+            staged.append(os.path.abspath(target))
+        return job_dir, staged
+    except Exception:
+        shutil.rmtree(job_dir, ignore_errors=True)
+        raise
+
+async def run_browser_plugin_handoff(
+    plugin_id: str,
+    job_id: str,
+    prompt: str,
+    assets: List[Dict[str, Any]],
+) -> Dict[str, Any]:
+    """Upload staged references and the exact prompt through the visible Edge UI."""
+    if os.name != "nt":
+        raise HTTPException(status_code=501, detail="浏览器自动附件接力目前仅支持 Windows")
+    prompt = str(prompt or "")
+    if not prompt.strip():
+        raise HTTPException(status_code=400, detail="请先填写提示词")
+    stage_dir, staged_files = stage_browser_plugin_references(plugin_id, job_id, assets)
+    request_path = os.path.join(stage_dir, "handoff.json")
+    helper_path = os.path.abspath(os.path.join(BASE_DIR, "scripts", "browser-plugin-handoff.ps1"))
+    if not os.path.isfile(helper_path):
+        shutil.rmtree(stage_dir, ignore_errors=True)
+        raise HTTPException(status_code=500, detail="浏览器附件接力脚本缺失，请重新更新花海画布")
+    request_body = {
+        "pluginId": plugin_id,
+        "jobId": job_id,
+        "prompt": prompt,
+        "files": staged_files,
+        "expectedAttachmentCount": len(staged_files),
+    }
+    with open(request_path, "w", encoding="utf-8") as handle:
+        json.dump(request_body, handle, ensure_ascii=False)
+    powershell = shutil.which("powershell.exe") or shutil.which("powershell")
+    if not powershell:
+        shutil.rmtree(stage_dir, ignore_errors=True)
+        raise HTTPException(status_code=500, detail="未找到 Windows PowerShell，无法上传参考图")
+    creationflags = getattr(subprocess, "CREATE_NO_WINDOW", 0)
+    try:
+        process = await asyncio.create_subprocess_exec(
+            powershell,
+            "-STA",
+            "-NoProfile",
+            "-ExecutionPolicy",
+            "Bypass",
+            "-File",
+            helper_path,
+            "-RequestPath",
+            request_path,
+            cwd=BASE_DIR,
+            stdout=asyncio.subprocess.PIPE,
+            stderr=asyncio.subprocess.PIPE,
+            creationflags=creationflags,
+        )
+        try:
+            stdout, stderr = await asyncio.wait_for(process.communicate(), timeout=240)
+        except asyncio.TimeoutError as exc:
+            if process.returncode is None:
+                process.kill()
+                await process.communicate()
+            raise HTTPException(status_code=504, detail="等待官网确认参考图超时，未提交提示词") from exc
+        output = stdout.decode("utf-8-sig", errors="replace").strip()
+        result = {}
+        for line in reversed(output.splitlines()):
+            try:
+                candidate = json.loads(line)
+            except ValueError:
+                continue
+            if isinstance(candidate, dict):
+                result = candidate
+                break
+        if process.returncode != 0 or not result.get("ok"):
+            detail = str(result.get("message") or stderr.decode("utf-8", errors="replace") or "浏览器附件接力失败").strip()
+            raise HTTPException(status_code=409, detail=detail[:1200])
+        if int(result.get("attachmentCount") or 0) != len(staged_files):
+            raise HTTPException(status_code=409, detail="官网确认的参考图数量不一致，已停止提交")
+        if not result.get("promptVerified") or not result.get("submitted"):
+            raise HTTPException(status_code=409, detail="官网未确认原提示词，已停止提交")
+        return result
+    finally:
+        shutil.rmtree(stage_dir, ignore_errors=True)
+
 async def run_python_external_video_plugin(
     plugin_id: str,
     manifest: Dict[str, Any],
@@ -15488,6 +15635,54 @@ async def run_plugin_media(plugin_id: str, payload: PluginJobRequest, request: R
         opened = bool(webbrowser.open(target, new=2))
         if not opened:
             raise HTTPException(status_code=500, detail="系统浏览器没有接受打开请求")
+        auto_handoff = (
+            plugin_id in BROWSER_PLUGIN_AUTO_HANDOFF_IDS
+            and "browserReferenceUpload" in capabilities
+        )
+        if auto_handoff:
+            PLUGIN_RUNTIME.update_job(
+                plugin_id,
+                job["id"],
+                status="preparing_browser",
+                message=f"正在向官网上传 {len(payload.assets or [])} 张参考图并校验原提示词",
+            )
+            try:
+                handoff = await run_browser_plugin_handoff(
+                    plugin_id,
+                    job["id"],
+                    payload.prompt,
+                    payload.assets or [],
+                )
+            except HTTPException as exc:
+                PLUGIN_RUNTIME.update_job(
+                    plugin_id,
+                    job["id"],
+                    status="failed",
+                    error=str(exc.detail),
+                    attachmentCount=0,
+                    submitted=False,
+                )
+                raise
+            attachment_count = int(handoff.get("attachmentCount") or 0)
+            updated = PLUGIN_RUNTIME.update_job(
+                plugin_id,
+                job["id"],
+                status="awaiting_download",
+                message=f"官网已确认 {attachment_count} 张参考图和原提示词；正在等待生成结果下载",
+                attachmentCount=attachment_count,
+                expectedAttachmentCount=attachment_count,
+                promptVerified=True,
+                submitted=True,
+            )
+            return {
+                "job": updated or job,
+                "action_required": True,
+                "action_url": target,
+                "browser_handoff": handoff,
+                "message": f"已向官网提交 {attachment_count} 张参考图和你的原提示词；生成并下载后会自动接入画布。",
+                "images": [],
+                "videos": [],
+            }
         updated = PLUGIN_RUNTIME.update_job(
             plugin_id,
             job["id"],
@@ -15513,8 +15708,29 @@ def browser_plugin_download_dirs() -> List[str]:
     candidates.append(os.path.join(os.path.expanduser("~"), "Downloads"))
     username = str(os.getenv("USERNAME") or os.path.basename(os.path.expanduser("~")) or "").strip()
     if os.name == "nt" and username:
+        # Respect the Windows Known Folder redirection used by Explorer.  This is
+        # intentionally read from the shell registry rather than a browser
+        # profile, so browser cookies, sessions and preferences remain private.
+        try:
+            import winreg
+
+            shell_key = r"Software\Microsoft\Windows\CurrentVersion\Explorer\User Shell Folders"
+            with winreg.OpenKey(winreg.HKEY_CURRENT_USER, shell_key) as key:
+                redirected, _ = winreg.QueryValueEx(
+                    key,
+                    "{374DE290-123F-4565-9164-39C4925E467B}",
+                )
+                if redirected:
+                    candidates.append(str(redirected))
+        except (ImportError, OSError):
+            pass
         for drive in ("C:", "D:", "E:", "F:"):
             candidates.append(os.path.join(drive + os.sep, "Users", username, "Downloads"))
+            # A common Windows convention is a dedicated browser download
+            # directory at the drive root.  Include only these explicit folder
+            # names; never crawl an entire drive looking for user media.
+            candidates.append(os.path.join(drive + os.sep, "浏览器下载"))
+            candidates.append(os.path.join(drive + os.sep, "Browser Downloads"))
     result = []
     seen = set()
     for raw in candidates:

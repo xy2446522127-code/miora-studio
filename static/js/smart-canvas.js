@@ -21,7 +21,10 @@ const inputThumbsRow = document.getElementById('inputThumbsRow');
 // 都保持与设计稿一致的可读尺寸，也避免缩小时毛玻璃被二次栅格化而发虚。
 if(composer && shell && composer.parentElement === world) shell.appendChild(composer);
 const SMART_UPLOAD_MAX = 20;
-const SMART_REFERENCE_IMAGE_MAX = 20;
+// Gemini / ChatGPT browser plugins must receive each reference as an original
+// attachment.  Keep the product-wide reference set at four so the thumbnails,
+// request payload and official website always agree on the exact same files.
+const SMART_REFERENCE_IMAGE_MAX = 4;
 const inputPromptPreview = document.getElementById('inputPromptPreview');
 const minimap = document.getElementById('minimap');
 const minimapContent = document.getElementById('minimapContent');
@@ -3071,6 +3074,11 @@ function renderPluginParams(){
     }
     const models = smartPluginModels(plugin);
     const currentModel = kind === 'video' ? settings.videoModel : settings.pluginModel;
+    const browserPluginHelp = plugin.runtime === 'browser-assisted'
+        ? (kind === 'image' && Number(plugin.maxReferenceImages || 0) > 0
+            ? `自动逐张上传最多 ${Number(plugin.maxReferenceImages)} 张参考图并原样提交提示词；下载成果后自动接回画布`
+            : '运行后打开官网并提交任务；下载成果后自动接回画布')
+        : '插件已就绪，可直接运行';
     dynamicParams.innerHTML = `
         <div class="smart-control provider-control">
             <button class="smart-pill" type="button"><i data-lucide="puzzle"></i><span class="sub">${escapeHtml(plugin.name || plugin.id)}</span></button>
@@ -3090,7 +3098,7 @@ function renderPluginParams(){
         </div>
         <div class="smart-plugin-status">
             <span><i data-lucide="${plugin.runtime === 'browser-assisted' ? 'monitor-up' : 'circle-check'}"></i>${plugin.runtime === 'browser-assisted' ? '浏览器辅助插件' : '本地运行插件'}</span>
-            <small>${plugin.runtime === 'browser-assisted' ? '运行后打开官网，等待你确认并自动接收下载结果' : '插件已就绪，可直接运行'}</small>
+            <small>${escapeHtml(browserPluginHelp)}</small>
         </div>
         ${kind === 'video'
             ? `${renderVideoResolutionControl()}${renderVideoAspectControl()}${renderVideoDurationControl()}${renderVideoToggleControl('videoGenerateAudio', tr('smart.videoGenerateAudio'))}`
@@ -13464,10 +13472,14 @@ function collectMentionedImagesFromPrompt(){
 function uniqueReferenceImages(images){
     const refs = [];
     const seen = new Set();
+    let imageCount = 0;
     (images || []).forEach((img, index) => {
         if(!img?.url || seen.has(img.url)) return;
+        if(refs.length >= SMART_UPLOAD_MAX) return;
+        const kind = mediaKindForItem(img);
+        if(kind === 'image' && imageCount >= SMART_REFERENCE_IMAGE_MAX) return;
         seen.add(img.url);
-        if(refs.length >= SMART_REFERENCE_IMAGE_MAX) return;
+        if(kind === 'image') imageCount += 1;
         refs.push({
             ...img,
             name:img.name || `图${refs.length + 1}`,
@@ -13706,6 +13718,11 @@ function addManualReferenceToSelectedNode(img){
         closeMentionPicker();
         return;
     }
+    if(kind === 'image' && visibleReferenceImagesFor(node).filter(item => mediaKindForItem(item) === 'image').length >= SMART_REFERENCE_IMAGE_MAX){
+        closeMentionPicker();
+        toast(`参考图最多 ${SMART_REFERENCE_IMAGE_MAX} 张；请先移除一张再添加`);
+        return;
+    }
     pushUndo();
     refs.push(ref);
     node.manualInputRefs = refs;
@@ -13894,7 +13911,7 @@ function buildPromptRequest(node, overrideDefaultImages=null, consumeDefault=fal
             return;
         }
         if(!refMap.has(part.url)){
-            if(refs.length >= SMART_REFERENCE_IMAGE_MAX){
+            if(refs.filter(ref => mediaKindForItem(ref) === 'image').length >= SMART_REFERENCE_IMAGE_MAX){
                 body += `@${part.name || '图片'}`;
                 return;
             }
@@ -15427,7 +15444,11 @@ async function runGeneration(){
             return;
         }
         if(settings.engine === 'plugin'){
-            const outImages = await runPluginImageGeneration(prompt, refs, settings);
+            // Browser plugins receive the exact text the user typed.  The
+            // reference-map prompt used by API engines must never be injected
+            // into Gemini or ChatGPT because all references are real uploads.
+            const pluginPrompt = String(request.displayPrompt || prompt || '').trim();
+            const outImages = await runPluginImageGeneration(pluginPrompt, refs, settings);
             if(!outImages.length) throw new Error('插件没有返回图片成果');
             finalizePendingNode(pendingNode, outImages, pendingMeta, 'image');
             if(sourceVisualState) restoreSourceVisualState(node, sourceVisualState);
@@ -15529,7 +15550,7 @@ async function runPluginImageGeneration(prompt, refs, runSettings=settings){
                 resolution:runSettings.resolution || '',
                 quality:runSettings.quality || 'auto'
             },
-            assets:imageRefsOnly(refs).map(item => ({url:item.url, kind:'image'}))
+            assets:imageRefsOnly(refs).slice(0, SMART_REFERENCE_IMAGE_MAX).map(item => ({url:item.url, kind:'image'}))
         })
     }).then(async response => {
         const body = await response.json().catch(() => ({}));
@@ -15539,9 +15560,10 @@ async function runPluginImageGeneration(prompt, refs, runSettings=settings){
     if(response.action_required){
         const jobId = String(response.job?.id || '').trim();
         if(!jobId) throw new Error(response.message || '插件需要浏览器操作，但未返回任务编号');
-        toast('已打开官方网页；完成生成并下载后，成果会自动接入当前画布');
-        // 浏览器插件不读取 Cookie，也不自动点击账号页面。用户完成登录/验证码/生成并
-        // 下载后，后端仅扫描本次任务开始后的 Downloads 媒体文件并安全复制到输出目录。
+        const confirmed = Number(response.browser_handoff?.attachmentCount || response.job?.attachmentCount || 0);
+        toast(`官网已确认 ${confirmed} 张参考图和原提示词；完成下载后成果会自动接入画布`);
+        // 登录态只由用户当前可见的 Edge 保存；应用不读取 Cookie 或浏览器配置。
+        // 后端仅操作官网可见控件，并扫描本次任务开始后的下载媒体文件。
         for(let attempt = 0; attempt < 30; attempt += 1){
             const captured = await fetch(`/api/plugins/${encodeURIComponent(plugin.id)}/jobs/${encodeURIComponent(jobId)}/capture`, {
                 method:'POST',

@@ -11,7 +11,8 @@
   "requiresAccount": true,
   "mediaKinds": ["image"],
   "models": ["Gemini Web"],
-  "capabilities": ["image", "browserLogin", "downloadCapture", "submitTask", "pollTask", "fetchArtifacts"],
+  "maxReferenceImages": 4,
+  "capabilities": ["image", "browserLogin", "browserReferenceUpload", "promptPassthrough", "downloadCapture", "submitTask", "pollTask", "fetchArtifacts"],
   "permissions": {
     "network": ["https://gemini.google.com", "https://accounts.google.com"],
     "filesystem": ["assets/output"],
