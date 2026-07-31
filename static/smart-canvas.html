@@ -29,17 +29,45 @@
             <img src="/static/images/huahai-logo.png" alt="花海">
             <strong>花海画布</strong>
         </div>
+        <header class="smart-commandbar" aria-label="画布命令栏">
+            <div class="smart-product-title">
+                <strong>花海画布</strong>
+                <button type="button" title="当前工作区" aria-label="当前工作区"><i data-lucide="chevron-down"></i></button>
+            </div>
+            <div class="smart-command-actions">
+                <div class="smart-command-group" aria-label="撤销与恢复">
+                    <button id="smartHeaderUndo" type="button" title="撤销（Ctrl+Z）" aria-label="撤销"><i data-lucide="undo-2"></i></button>
+                    <button id="smartHeaderRedo" type="button" title="恢复（Ctrl+Shift+Z）" aria-label="恢复"><i data-lucide="redo-2"></i></button>
+                </div>
+                <div class="smart-command-group smart-command-zoom" aria-label="画布缩放">
+                    <button id="smartHeaderZoomOut" type="button" title="缩小画布" aria-label="缩小画布"><i data-lucide="zoom-out"></i></button>
+                    <button id="smartHeaderZoomPercent" type="button" title="点击重置到 100%" aria-label="当前画布缩放 100%">100%</button>
+                    <button id="smartHeaderZoomIn" type="button" title="放大画布" aria-label="放大画布"><i data-lucide="zoom-in"></i></button>
+                </div>
+                <button id="smartHeaderPreview" class="smart-command-wide" type="button" title="适应全部节点"><i data-lucide="play"></i><span>预览</span></button>
+                <button id="smartHeaderExport" class="smart-command-wide primary" type="button" title="导入或导出工作流"><i data-lucide="upload"></i><span>导出</span></button>
+            </div>
+        </header>
+        <nav class="smart-designer-rail" aria-label="智能画布工具">
+            <button class="active" type="button" data-smart-rail-action="select" title="选择"><i data-lucide="mouse-pointer-2"></i><span>选择</span></button>
+            <button type="button" data-smart-rail-action="connect" title="连接"><i data-lucide="brackets"></i><span>连接</span></button>
+            <button type="button" data-smart-rail-action="upload" title="上传素材"><i data-lucide="image-plus"></i><span>图片</span></button>
+            <button type="button" data-smart-rail-action="prompt" title="创建提示词"><i data-lucide="text-cursor-input"></i><span>提示词</span></button>
+            <button type="button" data-smart-rail-action="generate" title="打开生成设置"><i data-lucide="wand-sparkles"></i><span>生成</span></button>
+            <button type="button" data-smart-rail-action="output" title="查看生成成果"><i data-lucide="circle-dot"></i><span>输出</span></button>
+        </nav>
         <div id="world" class="world">
             <div id="composer" class="composer">
                 <div class="composer-card">
                     <div class="composer-head">
                         <div class="composer-head-left">
-                            <select id="engineSelect" class="engine-select">
-                                <option value="api" data-i18n="smart.engineApi">API生成</option>
-                                <option value="volcengine" data-i18n="smart.engineVolcengine">火山引擎</option>
-                                <option value="modelscope" data-i18n="smart.engineMs">MS生成</option>
-                                <option value="comfy" data-i18n="smart.engineComfy">ComfyUI生成</option>
-                                <option value="runninghub" data-i18n="smart.engineRh">RunningHub</option>
+                            <div id="engineModeToggle" class="engine-mode-toggle" role="tablist" aria-label="生成方式">
+                                <button type="button" role="tab" data-engine-mode="api" class="active" aria-selected="true">API生成</button>
+                                <button type="button" role="tab" data-engine-mode="plugin" aria-selected="false">插件生成</button>
+                            </div>
+                            <select id="engineSelect" class="engine-select composer-native-select" aria-label="生成方式" tabindex="-1">
+                                <option value="api">API生成</option>
+                                <option value="plugin">插件生成</option>
                             </select>
                             <div id="apiKindToggle" class="kind-toggle" style="display:none">
                                 <button type="button" data-kind="image" class="active"><i data-lucide="image"></i><span data-i18n="smart.kindImage">图片</span></button>

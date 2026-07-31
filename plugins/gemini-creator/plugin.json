@@ -1,0 +1,21 @@
+{
+  "id": "gemini-creator",
+  "name": "Gemini 创作助手",
+  "version": "1.0.0",
+  "description": "打开 Gemini 官方网页，复用用户自己的浏览器登录状态并接入下载成果。",
+  "type": "browser-media-provider",
+  "runtime": "browser-assisted",
+  "entry": "backend/runner.py",
+  "loginUrl": "https://gemini.google.com/app",
+  "enabled": true,
+  "requiresAccount": true,
+  "mediaKinds": ["image"],
+  "models": ["Gemini Web"],
+  "capabilities": ["image", "browserLogin", "downloadCapture", "submitTask", "pollTask", "fetchArtifacts"],
+  "permissions": {
+    "network": ["https://gemini.google.com", "https://accounts.google.com"],
+    "filesystem": ["assets/output"],
+    "browserProfile": true,
+    "secrets": []
+  }
+}

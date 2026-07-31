@@ -1,10 +1,16 @@
 (function(){
     const stateEl = document.getElementById('serviceState');
+    const versionEl = document.getElementById('versionState');
     const recentEl = document.getElementById('recentCanvases');
     const promptEl = document.getElementById('homePrompt');
-    const kindEl = document.getElementById('homeCanvasKind');
+    const promptCountEl = document.getElementById('homePromptCount');
     const startBtn = document.getElementById('startCreateBtn');
+    const continueBtn = document.getElementById('continueCanvasBtn');
     const projectsBtn = document.getElementById('openProjectsBtn');
+    const lastCanvasButton = document.getElementById('lastCanvasButton');
+    const lastCanvasTitle = document.getElementById('lastCanvasTitle');
+    const lastCanvasTime = document.getElementById('lastCanvasTime');
+    let recentItems = [];
 
     function escapeHtml(value){
         return String(value == null ? '' : value).replace(/[&<>"']/g, char => ({
@@ -18,7 +24,10 @@
         const time = number < 10000000000 ? number * 1000 : number;
         const date = new Date(time);
         if(Number.isNaN(date.getTime())) return '最近更新';
-        return date.toLocaleString('zh-CN', {month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit'});
+        return date.toLocaleString('zh-CN', {
+            month:'2-digit', day:'2-digit', hour:'2-digit', minute:'2-digit',
+            hour12:false
+        });
     }
 
     function switchParentPage(id){
@@ -34,10 +43,10 @@
     }
 
     function openCanvas(canvas){
+        if(!canvas?.id) return;
         const id = encodeURIComponent(canvas.id);
         const project = encodeURIComponent(canvas.project || 'default');
-        const page = canvas.kind === 'smart' ? 'smart-canvas' : 'canvas';
-        window.location.href = `/static/${page}.html?id=${id}&project=${project}`;
+        window.location.href = `/static/smart-canvas.html?id=${id}&project=${project}`;
     }
 
     async function loadService(){
@@ -46,11 +55,26 @@
             if(!response.ok) throw new Error('offline');
             const info = await response.json();
             stateEl.classList.remove('is-offline');
-            stateEl.querySelector('span').textContent = `服务在线 · ${info.version || ''}`.trim();
+            stateEl.querySelector('b').textContent = '服务在线';
+            versionEl.textContent = `v${info.version || '—'}`;
         } catch(error){
             stateEl.classList.add('is-offline');
-            stateEl.querySelector('span').textContent = '服务暂不可用';
+            stateEl.querySelector('b').textContent = '服务暂不可用';
+            versionEl.textContent = 'v—';
         }
+    }
+
+    function recentCard(item){
+        return `
+            <button class="hh-recent-card" type="button" data-canvas-id="${escapeHtml(item.id)}">
+                <img src="/static/images/huahai-home-preview.png" alt="">
+                <span class="hh-recent-meta">
+                    <b>${escapeHtml(item.title || '未命名画布')}</b>
+                    <small>${escapeHtml(formatTime(item.updated_at || item.created_at))}</small>
+                </span>
+                <i data-lucide="more-vertical" aria-hidden="true"></i>
+            </button>
+        `;
     }
 
     async function loadRecent(){
@@ -58,27 +82,32 @@
             const response = await fetch('/api/canvases', {cache:'no-store'});
             if(!response.ok) throw new Error('load failed');
             const data = await response.json();
-            const items = (data.canvases || [])
+            recentItems = (data.canvases || [])
                 .slice()
-                .sort((a,b) => Number(b.updated_at || 0) - Number(a.updated_at || 0))
-                .slice(0,5);
+                .sort((a,b) => Number(b.updated_at || b.created_at || 0) - Number(a.updated_at || a.created_at || 0));
+            const latest = recentItems[0];
+            if(latest){
+                lastCanvasButton.disabled = false;
+                lastCanvasTitle.textContent = latest.title || '未命名画布';
+                lastCanvasTime.textContent = formatTime(latest.updated_at || latest.created_at);
+                continueBtn.disabled = false;
+            } else {
+                continueBtn.disabled = true;
+            }
+
+            const items = recentItems.slice(0,4);
             if(!items.length){
-                recentEl.innerHTML = '<div class="huahai-home-empty">还没有画布，从上方创建第一块吧。</div>';
+                recentEl.innerHTML = '<div class="hh-home-empty">还没有画布，从上方创建第一块吧。</div>';
                 return;
             }
-            recentEl.innerHTML = items.map(item => `
-                <button class="huahai-recent-card" type="button" data-canvas-id="${escapeHtml(item.id)}">
-                    <small>${escapeHtml(item.kind === 'smart' ? '智能画布' : '花海画布')}</small>
-                    <strong>${escapeHtml(item.title || '未命名画布')}</strong>
-                    <small>${escapeHtml(formatTime(item.updated_at))}</small>
-                </button>
-            `).join('');
+            recentEl.innerHTML = items.map(recentCard).join('');
             recentEl.querySelectorAll('[data-canvas-id]').forEach(button => {
                 const item = items.find(entry => String(entry.id) === button.dataset.canvasId);
                 if(item) button.addEventListener('click', () => openCanvas(item));
             });
+            if(window.lucide) lucide.createIcons();
         } catch(error){
-            recentEl.innerHTML = '<div class="huahai-home-empty">最近画布读取失败，请稍后重试。</div>';
+            recentEl.innerHTML = '<div class="hh-home-empty">最近画布读取失败，请稍后重试。</div>';
         }
     }
 
@@ -93,7 +122,7 @@
                 body:JSON.stringify({
                     title,
                     icon:'layers',
-                    kind:kindEl.value,
+                    kind:'smart',
                     project:'default'
                 })
             });
@@ -109,13 +138,18 @@
         }
     }
 
+    promptEl.addEventListener('input', () => {
+        promptCountEl.textContent = `${promptEl.value.length} / 1000`;
+    });
+    promptEl.addEventListener('keydown', event => {
+        if((event.ctrlKey || event.metaKey) && event.key === 'Enter') createCanvas();
+    });
     projectsBtn.addEventListener('click', () => {
         if(!switchParentPage('canvas')) window.location.href = '/static/canvas-list.html';
     });
     startBtn.addEventListener('click', createCanvas);
-    promptEl.addEventListener('keydown', event => {
-        if((event.ctrlKey || event.metaKey) && event.key === 'Enter') createCanvas();
-    });
+    continueBtn.addEventListener('click', () => openCanvas(recentItems[0]));
+    lastCanvasButton.addEventListener('click', () => openCanvas(recentItems[0]));
 
     loadService();
     loadRecent();

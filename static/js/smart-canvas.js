@@ -10,12 +10,16 @@ const promptInput = document.getElementById('promptInput');
 const mentionPicker = document.getElementById('mentionPicker');
 const mentionPreview = document.getElementById('mentionPreview');
 const engineSelect = document.getElementById('engineSelect');
+const engineModeToggle = document.getElementById('engineModeToggle');
 const dynamicParams = document.getElementById('dynamicParams');
 const runBtn = document.getElementById('runBtn');
 const cascadeRunBtn = document.getElementById('cascadeRunBtn');
 const fileInput = document.getElementById('fileInput');
 const apiKindToggle = document.getElementById('apiKindToggle');
 const inputThumbsRow = document.getElementById('inputThumbsRow');
+// 生成设置属于屏幕级工具，而不是画布内容。将它移出缩放 world，保证在任何画布缩放比例下
+// 都保持与设计稿一致的可读尺寸，也避免缩小时毛玻璃被二次栅格化而发虚。
+if(composer && shell && composer.parentElement === world) shell.appendChild(composer);
 const SMART_UPLOAD_MAX = 20;
 const SMART_REFERENCE_IMAGE_MAX = 20;
 const inputPromptPreview = document.getElementById('inputPromptPreview');
@@ -177,6 +181,7 @@ let suppressNodeClickUntil = 0;
 let textSelectionGuard = null;
 const UNDO_LIMIT = 40;
 const undoStack = [];
+const redoStack = [];
 let undoSuppressed = false;
 let pendingUndoSnapshot = null;
 let runningHubWorkflowCache = {};
@@ -209,6 +214,7 @@ function commitPendingUndo(){
     if(pendingUndoSnapshot){
         undoStack.push(pendingUndoSnapshot);
         if(undoStack.length > UNDO_LIMIT) undoStack.shift();
+        redoStack.length = 0;
         pendingUndoSnapshot = null;
     }
 }
@@ -227,10 +233,10 @@ function pushUndo(){
     if(!canvas) return;
     undoStack.push(snapshotForUndo());
     if(undoStack.length > UNDO_LIMIT) undoStack.shift();
+    redoStack.length = 0;
 }
-function performUndo(){
-    if(!undoStack.length){ toast(tr('smart.toastNoUndo')); return; }
-    const snap = undoStack.pop();
+function restoreUndoSnapshot(snap){
+    if(!snap) return;
     undoSuppressed = true;
     nodes = snap.nodes;
     if(canvas) canvas.connections = snap.connections;
@@ -242,7 +248,21 @@ function performUndo(){
     render();
     scheduleSave();
     undoSuppressed = false;
+}
+function performUndo(){
+    if(!undoStack.length){ toast(tr('smart.toastNoUndo')); return; }
+    redoStack.push(snapshotForUndo());
+    if(redoStack.length > UNDO_LIMIT) redoStack.shift();
+    const snap = undoStack.pop();
+    restoreUndoSnapshot(snap);
     toast(tr('smart.toastUndone'));
+}
+function performRedo(){
+    if(!redoStack.length){ toast('没有可恢复的操作'); return; }
+    undoStack.push(snapshotForUndo());
+    if(undoStack.length > UNDO_LIMIT) undoStack.shift();
+    restoreUndoSnapshot(redoStack.pop());
+    toast('已恢复操作');
 }
 let comfyWorkflowCache = {};
 let cropState = null;
@@ -708,7 +728,7 @@ function normalizeSmartVideoModeSettings(target, preferMultimodal=false){
     return target;
 }
 function isApiLikeEngine(engine){
-    return ['api', 'volcengine'].includes(String(engine || '').toLowerCase());
+    return ['api', 'plugin'].includes(String(engine || '').toLowerCase());
 }
 function smartLoopRoundSettings(runSettings, ctx=smartLoopContext){
     const next = {...(runSettings || {})};
@@ -970,12 +990,9 @@ const initialSmartSettings = cloneSmartSettings(settings);
 let canvasDefaultSmartSettings = cloneSmartSettings(settings);
 let recentSmartSettingsByMode = {};
 function smartSettingsModeKey(source=settings){
-    const engine = ['api','volcengine','modelscope','comfy','runninghub'].includes(source?.engine) ? source.engine : 'api';
+    const engine = ['api','plugin'].includes(source?.engine) ? source.engine : 'api';
     if(engine === 'api') return `api:${source?.apiKind === 'video' ? 'video' : 'image'}`;
-    if(engine === 'volcengine') return `volcengine:${source?.apiKind === 'video' ? 'video' : 'image'}`;
-    if(engine === 'comfy') return `comfy:${['text','enhance','edit','custom'].includes(source?.comfyMode) ? source.comfyMode : 'text'}`;
-    if(engine === 'runninghub') return 'runninghub';
-    return 'modelscope';
+    return `plugin:${source?.apiKind === 'video' ? 'video' : 'image'}`;
 }
 function loadRecentSmartSettings(){
     try {
@@ -1010,7 +1027,7 @@ function rememberRecentSmartSettings(source=settings, node=null){
     saveRecentSmartSettings();
 }
 function applyRecentSmartSettingsForCurrentMode(){
-    const requestedEngine = ['api','volcengine','modelscope','comfy','runninghub'].includes(settings.engine) ? settings.engine : 'api';
+    const requestedEngine = ['api','plugin'].includes(settings.engine) ? settings.engine : 'api';
     const requestedApiKind = settings.apiKind === 'video' ? 'video' : 'image';
     const key = smartSettingsModeKey(settings);
     const saved = recentSmartSettingsForMode(key);
@@ -2132,14 +2149,37 @@ function applyViewport(){
         zoomLabel.title = `画布缩放 ${percent}% · 点击重置到 100%`;
         zoomLabel.setAttribute('aria-label', `当前智能画布缩放 ${percent}%，点击重置到 100%`);
     }
-    renderMinimap();
+    const headerZoomLabel = document.getElementById('smartHeaderZoomPercent');
+    if(headerZoomLabel){
+        const percent = smartViewportScalePercent();
+        headerZoomLabel.textContent = `${percent}%`;
+        headerZoomLabel.title = `画布缩放 ${percent}% · 点击重置到 100%`;
+        headerZoomLabel.setAttribute('aria-label', `当前智能画布缩放 ${percent}%，点击重置到 100%`);
+    }
+    // 平移/触控板/滚轮期间不再逐事件重建小地图 DOM。高频 wheel/pointermove
+    // 在部分 Windows 触控板上可超过 100Hz，原实现会反复 innerHTML，抢占画布主线程。
+    scheduleMinimapRefresh();
     renderSmartSelectionHub();
     scheduleSmartImageResolutionSync(world, 120);
+    if(composer?.classList.contains('open')){
+        cancelAnimationFrame(applyViewport.composerFrame || 0);
+        applyViewport.composerFrame = requestAnimationFrame(() => {
+            const active = selectedNode();
+            if(active) positionComposerForNode(active);
+        });
+    }
 }
 document.querySelector('[data-smart-zoom-out]')?.addEventListener('click', () => window.huahaiSmartCanvasZoomBy(-.1));
 document.querySelector('[data-smart-zoom-in]')?.addEventListener('click', () => window.huahaiSmartCanvasZoomBy(.1));
 document.querySelector('[data-smart-zoom-fit]')?.addEventListener('click', () => fitAllNodesViewport());
 document.getElementById('smartCanvasZoomPercent')?.addEventListener('click', () => window.huahaiSmartCanvasResetZoom());
+document.getElementById('smartHeaderUndo')?.addEventListener('click', performUndo);
+document.getElementById('smartHeaderRedo')?.addEventListener('click', performRedo);
+document.getElementById('smartHeaderZoomOut')?.addEventListener('click', () => window.huahaiSmartCanvasZoomBy(-.1));
+document.getElementById('smartHeaderZoomPercent')?.addEventListener('click', () => window.huahaiSmartCanvasResetZoom());
+document.getElementById('smartHeaderZoomIn')?.addEventListener('click', () => window.huahaiSmartCanvasZoomBy(.1));
+document.getElementById('smartHeaderPreview')?.addEventListener('click', () => fitAllNodesViewport());
+document.getElementById('smartHeaderExport')?.addEventListener('click', () => document.getElementById('smartWorkflowToggle')?.click());
 function screenToWorld(event){
     const rect = shell.getBoundingClientRect();
     return {
@@ -2192,6 +2232,33 @@ function renderMinimap(){
     const view = project({x:viewX, y:viewY, width:viewW, height:viewH});
     minimapContent.innerHTML = `${nodeHtml}<div id="minimapViewport" class="smart-minimap-viewport" style="left:${view.left}px;top:${view.top}px;width:${view.width}px;height:${view.height}px"></div>`;
     minimapViewport = document.getElementById('minimapViewport');
+}
+let smartMinimapRefreshTimer = 0;
+let smartMinimapRefreshRaf = 0;
+let smartMinimapLastRefreshAt = 0;
+function scheduleMinimapRefresh({immediate=false}={}){
+    if(!minimapContent || !minimapViewport) return;
+    const flush = () => {
+        smartMinimapRefreshTimer = 0;
+        if(smartMinimapRefreshRaf) return;
+        smartMinimapRefreshRaf = requestAnimationFrame(() => {
+            smartMinimapRefreshRaf = 0;
+            smartMinimapLastRefreshAt = performance.now();
+            renderMinimap();
+        });
+    };
+    if(immediate){
+        if(smartMinimapRefreshTimer){
+            clearTimeout(smartMinimapRefreshTimer);
+            smartMinimapRefreshTimer = 0;
+        }
+        flush();
+        return;
+    }
+    if(smartMinimapRefreshTimer || smartMinimapRefreshRaf) return;
+    // 12.5fps 足以表达视口位置，同时避免小地图重排拖慢节点拖动。
+    const wait = Math.max(0, 80 - (performance.now() - smartMinimapLastRefreshAt));
+    smartMinimapRefreshTimer = window.setTimeout(flush, wait);
 }
 let smartPostRenderMediaTimer = 0;
 let smartPostRenderMediaIdle = 0;
@@ -2613,6 +2680,30 @@ function smartVideoProviderPlugins(){
         && required.every(capability => (plugin.capabilities || []).includes(capability))
     );
 }
+function smartMediaPlugins(kind=settings.apiKind || 'image'){
+    const normalizedKind = kind === 'video' ? 'video' : 'image';
+    return (videoPlugins || []).filter(plugin => {
+        if(plugin?.enabled === false || plugin?.runtime_ready === false) return false;
+        const capabilities = new Set(plugin.capabilities || []);
+        const kinds = Array.isArray(plugin.mediaKinds) ? plugin.mediaKinds : [];
+        if(normalizedKind === 'video'){
+            return kinds.includes('video') || capabilities.has('video') || capabilities.has('videoGeneration') || plugin.type === 'video-provider';
+        }
+        return kinds.includes('image') || capabilities.has('image') || capabilities.has('imageGeneration');
+    });
+}
+function selectedSmartMediaPlugin(kind=settings.apiKind || 'image'){
+    const plugins = smartMediaPlugins(kind);
+    const preferred = kind === 'video' ? settings.videoPluginId : settings.pluginId;
+    return plugins.find(plugin => plugin.id === preferred) || plugins[0] || null;
+}
+function smartPluginModels(plugin){
+    const manifestModels = Array.isArray(plugin?.models) ? plugin.models : [];
+    const schemaModels = Array.isArray(plugin?.taskSchema?.properties?.model?.enum)
+        ? plugin.taskSchema.properties.model.enum : [];
+    const models = [...new Set([...manifestModels, ...schemaModels].filter(Boolean))];
+    return models.length ? models : ['default'];
+}
 function smartVideoPluginById(pluginId){
     return smartVideoProviderPlugins().find(plugin => plugin.id === pluginId) || null;
 }
@@ -2936,12 +3027,13 @@ function renderDynamicParams(options={}){
     if(!dynamicParams) return;
     const keepOpen = openControlState();
     const scrollState = dynamicParamsScrollSnapshot();
-    settings.engine = ['api','volcengine','modelscope','comfy','runninghub'].includes(settings.engine) ? settings.engine : 'api';
+    settings.engine = ['api','plugin'].includes(settings.engine) ? settings.engine : 'api';
     settings.apiKind = settings.apiKind === 'video' ? 'video' : 'image';
     clearVolcengineSelectionOutsideVolcengine(settings);
     const renderKey = dynamicParamsStateKey();
     if(!options.force && dynamicParamsRenderKey === renderKey && dynamicParams.children.length){
         engineSelect.value = settings.engine;
+        syncEngineModeToggle();
         syncApiKindToggleVisibility();
         updatePromptPlaceholder();
         persistActiveSmartSettings();
@@ -2949,24 +3041,72 @@ function renderDynamicParams(options={}){
     }
     dynamicParamsRenderKey = renderKey;
     engineSelect.value = settings.engine;
+    syncEngineModeToggle();
     syncApiKindToggleVisibility();
     if(settings.engine === 'api'){
         if(settings.apiKind === 'video') renderApiVideoParams();
         else renderApiParams();
     }
-    else if(settings.engine === 'volcengine'){
-        if(settings.apiKind === 'video') renderVolcengineVideoParams();
-        else renderVolcengineParams();
-    }
-    else if(settings.engine === 'modelscope') renderMsParams();
-    else if(settings.engine === 'runninghub') renderRunningHubParams();
-    else renderComfyParams();
+    else renderPluginParams();
     bindDynamicParams();
     restoreOpenControl(keepOpen);
     restoreDynamicParamsScroll(scrollState);
     updatePromptPlaceholder();
     persistActiveSmartSettings();
     if(window.lucide) lucide.createIcons();
+    requestAnimationFrame(() => {
+        const active = selectedNode();
+        if(active && composer?.classList.contains('open')) positionComposerForNode(active);
+    });
+}
+function renderPluginParams(){
+    const kind = settings.apiKind === 'video' ? 'video' : 'image';
+    const plugins = smartMediaPlugins(kind);
+    const plugin = selectedSmartMediaPlugin(kind);
+    if(kind === 'video') {
+        settings.videoSource = 'plugin';
+        settings.videoPluginId = plugin?.id || '';
+        const models = smartPluginModels(plugin);
+        if(!models.includes(settings.videoModel)) settings.videoModel = models[0] || 'default';
+    } else {
+        settings.pluginId = plugin?.id || '';
+        const models = smartPluginModels(plugin);
+        if(!models.includes(settings.pluginModel)) settings.pluginModel = models[0] || 'default';
+    }
+    if(!plugin){
+        dynamicParams.innerHTML = `<div class="smart-plugin-empty">
+            <span>没有可用于${kind === 'video' ? '视频' : '图片'}生成的插件</span>
+            <button type="button" data-open-plugin-center>前往插件中心</button>
+        </div>`;
+        return;
+    }
+    const models = smartPluginModels(plugin);
+    const currentModel = kind === 'video' ? settings.videoModel : settings.pluginModel;
+    dynamicParams.innerHTML = `
+        <div class="smart-control provider-control">
+            <button class="smart-pill" type="button"><i data-lucide="puzzle"></i><span class="sub">${escapeHtml(plugin.name || plugin.id)}</span></button>
+            <div class="smart-popover compact-popover">
+                <div class="smart-popover-title">选择${kind === 'video' ? '视频' : '图片'}插件</div>
+                <div class="model-list">
+                    ${plugins.map(item => `<button type="button" class="direct-option ${item.id === plugin.id ? 'active' : ''}" data-smart-param="pluginChoice" data-smart-value="${escapeHtml(item.id)}"><span>${escapeHtml(item.name || item.id)}</span><small>${item.requiresAccount === false ? '使用 API 设置' : '浏览器账号'}</small></button>`).join('')}
+                </div>
+            </div>
+        </div>
+        <div class="smart-control model-control">
+            <button class="smart-pill" type="button"><i data-lucide="box"></i><span class="sub">${escapeHtml(currentModel || 'default')}</span></button>
+            <div class="smart-popover compact-popover">
+                <div class="smart-popover-title">模型</div>
+                <div class="model-list">${models.map(model => `<button type="button" class="direct-option ${model === currentModel ? 'active' : ''}" data-smart-param="pluginModelChoice" data-smart-value="${escapeHtml(model)}"><span>${escapeHtml(model)}</span></button>`).join('')}</div>
+            </div>
+        </div>
+        <div class="smart-plugin-status">
+            <span><i data-lucide="${plugin.runtime === 'browser-assisted' ? 'monitor-up' : 'circle-check'}"></i>${plugin.runtime === 'browser-assisted' ? '浏览器辅助插件' : '本地运行插件'}</span>
+            <small>${plugin.runtime === 'browser-assisted' ? '运行后打开官网，等待你确认并自动接收下载结果' : '插件已就绪，可直接运行'}</small>
+        </div>
+        ${kind === 'video'
+            ? `${renderVideoResolutionControl()}${renderVideoAspectControl()}${renderVideoDurationControl()}${renderVideoToggleControl('videoGenerateAudio', tr('smart.videoGenerateAudio'))}`
+            : `${renderSizePickerControl('', true)}${renderQualityControl()}${renderCountVisualControl()}`}
+    `;
 }
 function renderApiParams(){
     const providers = imageProviders();
@@ -4092,6 +4232,28 @@ function smartComfyRandomValue(field){
 function setDynamicSetting(key, value){
     const numericKeys = new Set(['count','width','height','videoDuration','enhanceStrength','enhanceUpscaleRes','editUpscaleRes','customRatioWidth','customRatioHeight','customWidth','customHeight','msCustomRatioWidth','msCustomRatioHeight','msCustomWidth','msCustomHeight']);
     const layoutKeys = new Set(['provider_id','model','resolution','ratio','msgenModel','msCustomModel','msResolution','msRatio','videoProvider','videoModel','videoAspect','videoResolution','comfyMode','comfyWorkflow','quality','count','enhanceUpscaleRes','editUpscaleRes','jimengUpscaleRes','rhConfigKey','rhPayment','rhInstanceType']);
+    if(key === 'pluginChoice'){
+        if(settings.apiKind === 'video'){
+            settings.videoSource = 'plugin';
+            settings.videoPluginId = String(value || '');
+            settings.videoModel = '';
+        } else {
+            settings.pluginId = String(value || '');
+            settings.pluginModel = '';
+        }
+        persistActiveSmartSettings();
+        renderDynamicParams({force:true});
+        scheduleSave();
+        return;
+    }
+    if(key === 'pluginModelChoice'){
+        if(settings.apiKind === 'video') settings.videoModel = String(value || '');
+        else settings.pluginModel = String(value || '');
+        persistActiveSmartSettings();
+        renderDynamicParams({force:true});
+        scheduleSave();
+        return;
+    }
     if(key === 'videoProviderChoice'){
         const [source, id] = String(value || '').split(':');
         settings.videoSource = source === 'plugin' ? 'plugin' : 'api';
@@ -4166,6 +4328,10 @@ function markControlInteracting(el){
     if(ctrl && !ctrl.classList.contains('pinned')) ctrl.classList.add('interacting');
 }
 function bindDynamicParams(){
+    dynamicParams.querySelector('[data-open-plugin-center]')?.addEventListener('click', event => {
+        event.preventDefault();
+        window.location.href = '/static/plugin-center.html';
+    });
     dynamicParams.querySelectorAll('.smart-control').forEach(ctrl => {
         // 悬浮态的多选：鼠标移出整个控件（含上方弹层，弹层是 DOM 子节点）才解除，途中点参数不收起。
         ctrl.onmouseleave = () => ctrl.classList.remove('interacting');
@@ -6501,15 +6667,25 @@ function scheduleConnectionLayerRefresh(){
     connectionLayerRaf = requestAnimationFrame(refreshConnectionLayer);
 }
 let interactionLayerRaf = 0;
+let interactionLayerTimer = 0;
+let interactionConnectionLastRefreshAt = 0;
 // 拖动/缩放节点时，每个 mousemove 都全量重建连线 SVG + 小地图会掉帧；
-// 用 requestAnimationFrame 把它们合并成每帧最多刷新一次（节点本身的位移仍是即时的）。
+// 节点本身仍逐指针事件即时移动；连线限制到约 30fps，小地图由独立的 12.5fps
+// 调度器刷新。这样保留“输液式流动”与关系高亮，同时释放主线程给拖动手势。
 function scheduleInteractionLayerRefresh(){
-    if(interactionLayerRaf) return;
-    interactionLayerRaf = requestAnimationFrame(() => {
-        interactionLayerRaf = 0;
-        refreshConnectionLayer();
-        renderMinimap();
-    });
+    if(interactionLayerRaf || interactionLayerTimer) return;
+    const flush = () => {
+        interactionLayerTimer = 0;
+        interactionLayerRaf = requestAnimationFrame(() => {
+            interactionLayerRaf = 0;
+            interactionConnectionLastRefreshAt = performance.now();
+            refreshConnectionLayer();
+            scheduleMinimapRefresh();
+        });
+    };
+    const wait = Math.max(0, 34 - (performance.now() - interactionConnectionLastRefreshAt));
+    if(wait <= 1) flush();
+    else interactionLayerTimer = window.setTimeout(flush, wait);
 }
 function moveNodeElementsDuringDrag(){
     if(!dragState) return;
@@ -8123,13 +8299,12 @@ function render(){
     });
     const keepEls = new Set();
     reusableNodes.forEach(el => keepEls.add(el));
-    if(composerEl) keepEls.add(composerEl);
     [...world.childNodes].forEach(child => {
         if(!keepEls.has(child)) child.remove();
     });
     // 用户正在提示词框输入时不要移动 composer:移动 DOM 会打断输入法合成、中断输入。
     // composer 已在 keepEls 中(未被移除),不重排也不影响显示(z-index 固定)。
-    if(composerEl && !promptHadFocus) world.appendChild(composerEl);
+    if(composerEl && composerEl.parentElement !== shell) shell.appendChild(composerEl);
     world.insertAdjacentHTML('beforeend', renderConnections());
     nodeHtmlEntries.forEach(entry => {
         const fresh = renderedNodeEls.get(entry.node.id);
@@ -8152,7 +8327,7 @@ function render(){
     refreshRunTimerPills();
     return;
     world.innerHTML = '';
-    if(composerEl) world.appendChild(composerEl);
+    if(composerEl && composerEl.parentElement !== shell) shell.appendChild(composerEl);
     world.insertAdjacentHTML('beforeend', renderConnections());
     const nodesHtml = nodes.map(node => {
         const imgs = node.images || [];
@@ -12019,12 +12194,31 @@ function loadPromptDraft(subject){
 }
 function positionComposerForNode(node){
     if(!node) return;
-    const rect = nodeRect(node);
+    const shellRect = shell.getBoundingClientRect();
+    const nodeElement = [...world.querySelectorAll('.image-node[data-id]')].find(element => element.dataset.id === String(node.id));
+    const nodeScreenRect = nodeElement?.getBoundingClientRect();
     const gap = 14;
-    const cardW = 540;
+    const cardW = 500;
+    const shellW = shell?.clientWidth || window.innerWidth || 1680;
+    const shellH = shell?.clientHeight || window.innerHeight || 942;
+    const cardH = Math.max(420, composer.offsetHeight || 680);
+    const safeLeft = 148;
+    const safeRight = shellW - 96;
+    const safeTop = 92;
+    const safeBottom = shellH - 76;
+    const nodeLeft = nodeScreenRect ? nodeScreenRect.left - shellRect.left : shellW / 2;
+    const nodeTop = nodeScreenRect ? nodeScreenRect.top - shellRect.top : shellH / 2;
+    const nodeWidth = nodeScreenRect?.width || 0;
+    const nodeHeight = nodeScreenRect?.height || 0;
+    let left = nodeLeft + nodeWidth / 2 - cardW / 2;
+    let top = nodeTop + nodeHeight + gap;
+    if(top + cardH > safeBottom) top = nodeTop - cardH - gap;
+    if(top < safeTop || top + cardH > safeBottom) top = safeTop;
+    if(cardH >= 520) top = safeTop;
+    left = Math.max(safeLeft, Math.min(left, safeRight - cardW));
     composer.style.width = `${cardW}px`;
-    composer.style.left = `${rect.x + rect.width / 2 - cardW / 2}px`;
-    composer.style.top = `${rect.y + rect.height + gap}px`;
+    composer.style.left = `${left}px`;
+    composer.style.top = `${top}px`;
 }
 let composerUpdateTimer = 0;
 let composerUpdateSeq = 0;
@@ -12119,7 +12313,7 @@ function renderInputThumbsRow(node){
     if(!node){ inputThumbsRow.innerHTML = ''; return; }
     const addButton = `<button class="input-thumb-add ${addActive ? 'active' : ''}" type="button" data-input-add-reference title="${escapeHtml(addActive ? '收起参考图' : '添加参考图')}" aria-label="${escapeHtml(addActive ? '收起参考图' : '添加参考图')}"><i data-lucide="image-plus"></i></button>`;
     if(!dedup.length){
-        inputThumbsRow.innerHTML = `<div class="input-thumb-list empty"></div><div class="input-thumb-actions">${addButton}</div>`;
+        inputThumbsRow.innerHTML = `<div class="input-thumb-list empty"><span class="input-thumb-empty-copy">拖入图片、视频或点击右侧添加参考素材</span></div><div class="input-thumb-actions">${addButton}</div>`;
         bindInputThumbReferenceActions();
         refreshIcons();
         return;
@@ -15215,6 +15409,17 @@ async function runGeneration(){
             scheduleSave();
             return;
         }
+        if(settings.engine === 'plugin'){
+            const outImages = await runPluginImageGeneration(prompt, refs, settings);
+            if(!outImages.length) throw new Error('插件没有返回图片成果');
+            finalizePendingNode(pendingNode, outImages, pendingMeta, 'image');
+            if(sourceVisualState) restoreSourceVisualState(node, sourceVisualState);
+            addSmartGenerationLog({run:runLog, outputs:outImages, runMs:nowMs() - runLogStart});
+            clearPromptInput({preserveDraft:true});
+            settings = previousSettings;
+            scheduleSave();
+            return;
+        }
         const rhModelMode = settings.engine === 'runninghub' && Boolean(runningHubSelectedModel(settings));
         const outImages = rhModelMode
             ? await runApiGeneration(prompt, refs, runningHubModelApiSettings(settings))
@@ -15291,6 +15496,51 @@ async function runGeneration(){
         }
         render();
     }
+}
+async function runPluginImageGeneration(prompt, refs, runSettings=settings){
+    const plugin = selectedSmartMediaPlugin('image');
+    if(!plugin) throw new Error('请先在插件中心安装可用的图片插件');
+    const response = await fetch(`/api/plugins/${encodeURIComponent(plugin.id)}/media`, {
+        method:'POST',
+        headers:{'Content-Type':'application/json'},
+        body:JSON.stringify({
+            model:runSettings.pluginModel || smartPluginModels(plugin)[0] || 'default',
+            kind:'image',
+            prompt,
+            parameters:{
+                aspectRatio:runSettings.ratio || '',
+                resolution:runSettings.resolution || '',
+                quality:runSettings.quality || 'auto'
+            },
+            assets:imageRefsOnly(refs).map(item => ({url:item.url, kind:'image'}))
+        })
+    }).then(async response => {
+        const body = await response.json().catch(() => ({}));
+        if(!response.ok) throw new Error(body.detail || '插件生成失败');
+        return body;
+    });
+    if(response.action_required){
+        const jobId = String(response.job?.id || '').trim();
+        if(!jobId) throw new Error(response.message || '插件需要浏览器操作，但未返回任务编号');
+        toast('已打开官方网页；完成生成并下载后，成果会自动接入当前画布');
+        // 浏览器插件不读取 Cookie，也不自动点击账号页面。用户完成登录/验证码/生成并
+        // 下载后，后端仅扫描本次任务开始后的 Downloads 媒体文件并安全复制到输出目录。
+        for(let attempt = 0; attempt < 30; attempt += 1){
+            const captured = await fetch(`/api/plugins/${encodeURIComponent(plugin.id)}/jobs/${encodeURIComponent(jobId)}/capture`, {
+                method:'POST',
+                headers:{'Content-Type':'application/json'},
+                body:JSON.stringify({waitMs:20000})
+            }).then(async captureResponse => {
+                const body = await captureResponse.json().catch(() => ({}));
+                if(!captureResponse.ok) throw new Error(body.detail || '插件下载接入失败');
+                return body;
+            });
+            const media = resultMediaUrls(captured);
+            if(captured.captured && media.length) return media;
+        }
+        throw new Error('等待插件下载超时。请重新运行该节点，或把已下载的图片拖入画布。');
+    }
+    return resultMediaUrls(response);
 }
 async function runPromptLLMNode(nodeId){
     const node = nodes.find(n => n.id === nodeId);
@@ -17140,6 +17390,11 @@ window.addEventListener('keydown', e => {
         closeImageEditor();
         return;
     }
+    if((e.ctrlKey || e.metaKey) && e.shiftKey && key === 'z' && !isEditableTarget(e.target)){
+        e.preventDefault();
+        performRedo();
+        return;
+    }
     if((e.ctrlKey || e.metaKey) && key === 'z' && !isEditableTarget(e.target)){
         e.preventDefault();
         performUndo();
@@ -17182,7 +17437,29 @@ function syncApiKindToggleVisibility(){
     if(!apiKindToggle) return;
     apiKindToggle.style.display = isApiLikeEngine(settings.engine) ? 'inline-flex' : 'none';
     apiKindToggle.querySelectorAll('[data-kind]').forEach(btn => btn.classList.toggle('active', btn.dataset.kind === (settings.apiKind || 'image')));
+    if(composer){
+        composer.dataset.engine = settings.engine;
+        composer.dataset.kind = settings.apiKind || 'image';
+    }
 }
+function syncEngineModeToggle(){
+    if(!engineModeToggle) return;
+    engineModeToggle.querySelectorAll('[data-engine-mode]').forEach(btn => {
+        const active = btn.dataset.engineMode === settings.engine;
+        btn.classList.toggle('active', active);
+        btn.setAttribute('aria-selected', active ? 'true' : 'false');
+    });
+}
+engineModeToggle?.querySelectorAll('[data-engine-mode]').forEach(btn => {
+    btn.addEventListener('click', event => {
+        event.preventDefault();
+        event.stopPropagation();
+        const mode = btn.dataset.engineMode;
+        if(!['api', 'plugin'].includes(mode) || mode === settings.engine) return;
+        engineSelect.value = mode;
+        engineSelect.dispatchEvent(new Event('change', {bubbles:true}));
+    });
+});
 if(apiKindToggle){
     apiKindToggle.querySelectorAll('[data-kind]').forEach(btn => {
         btn.onclick = e => {
@@ -17951,6 +18228,45 @@ window.addEventListener('studio-lang-change', () => {
     if(promptTemplatePanel?.classList?.contains('open')) renderPromptTemplatePanel();
     render();
 });
+function setupSmartDesignerRail(){
+    document.querySelectorAll('[data-smart-rail-action]').forEach(button => {
+        button.addEventListener('click', () => {
+            const action = button.dataset.smartRailAction;
+            document.querySelectorAll('[data-smart-rail-action]').forEach(item => item.classList.toggle('active', item === button));
+            if(action === 'select') return;
+            if(action === 'connect'){
+                toast('从节点的输出端口拖向另一个节点的输入端口即可连接');
+                return;
+            }
+            if(action === 'upload'){
+                fileInput?.click();
+                return;
+            }
+            if(action === 'prompt'){
+                const rect = shell.getBoundingClientRect();
+                shell.dispatchEvent(new MouseEvent('dblclick', {
+                    bubbles:true,
+                    clientX:rect.left + rect.width * .42,
+                    clientY:rect.top + rect.height * .46
+                }));
+                requestAnimationFrame(() => document.querySelector('[data-create-type="prompt"]')?.click());
+                return;
+            }
+            if(action === 'generate'){
+                const node = selectedNode();
+                if(!node){
+                    toast('请先选择要生成或编辑的节点');
+                    return;
+                }
+                updateComposer();
+                return;
+            }
+            if(action === 'output'){
+                document.querySelector('[data-smart-results-kind="all"]')?.click();
+            }
+        });
+    });
+}
 window.onload = async () => {
     applyTheme(localStorage.getItem('studio_theme') || localStorage.getItem('canvas_theme') || 'light');
     loadPromptPresets();
@@ -17959,6 +18275,7 @@ window.onload = async () => {
     await loadPromptTemplates();
     if(window.StudioI18n) window.StudioI18n.apply();
     if(window.lucide) lucide.createIcons();
+    setupSmartDesignerRail();
     connectAssetLibrarySyncSocket();
     await loadConfig();
     await loadAssetLibrary();

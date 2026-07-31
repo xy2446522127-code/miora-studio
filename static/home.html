@@ -14,79 +14,76 @@
             } catch(e) {}
         })();
     </script>
-    <script src="/static/vendor/js/lucide.js?v=2026.07.30.1.1785236257"></script>
-    <script src="/static/js/theme.js?v=2026.07.30.1.1785432067"></script>
+    <script src="/static/vendor/js/lucide.js"></script>
+    <script src="/static/js/theme.js"></script>
+    <link rel="stylesheet" href="/static/css/huahai.css">
+    <link rel="stylesheet" href="/static/css/huahai-product.css">
 </head>
-<body>
-    <main class="huahai-home">
-        <header class="huahai-home-head">
+<body data-huaha-page="home" class="huahai-product-page">
+    <main class="hh-home">
+        <header class="hh-home-header">
             <div>
                 <h1>花海画布</h1>
                 <p>让灵感像潮汐一样自然流动</p>
             </div>
-            <div class="huahai-service-pill" id="serviceState" role="status">
-                <i aria-hidden="true"></i>
-                <span>正在连接服务</span>
+            <div class="hh-home-status">
+                <span id="serviceState" class="hh-service-pill" role="status">
+                    <i aria-hidden="true"></i>
+                    <b>正在连接服务</b>
+                </span>
+                <span id="versionState" class="hh-version-pill">v—</span>
             </div>
         </header>
 
-        <section class="huahai-hero-grid" aria-label="快捷创作">
-            <div class="huahai-inspiration-strip" aria-label="创作灵感">
-                <button type="button" data-prompt="海面上的花海与晨雾">
-                    <img src="/static/images/huahai-home-preview.png" alt="">
-                    <span>潮汐花海</span>
-                </button>
-                <button type="button" data-prompt="深海蓝调的未来城市">
-                    <img src="/static/images/huahai-home-preview.png" alt="">
-                    <span>深海蓝调</span>
-                </button>
-                <button type="button" data-prompt="月光照亮安静的海岸">
-                    <img src="/static/images/huahai-home-preview.png" alt="">
-                    <span>月映海岸</span>
-                </button>
-            </div>
-            <article class="huahai-glass huahai-create">
+        <section class="hh-home-hero" aria-label="创作启动台">
+            <article class="hh-glass hh-create-station">
                 <h2>今天想创作什么？</h2>
-                <textarea id="homePrompt" maxlength="2000" placeholder="描述你想创作的画面…"></textarea>
-                <div class="huahai-create-actions">
-                    <select id="homeCanvasKind" class="huahai-select" aria-label="画布类型">
-                        <option value="classic">无限画布</option>
-                        <option value="smart">智能画布</option>
-                    </select>
-                    <button id="openProjectsBtn" class="huahai-btn" type="button">
-                        <i data-lucide="folder-open"></i>
-                        查看项目
+                <div class="hh-prompt-shell">
+                    <textarea id="homePrompt" maxlength="1000" placeholder="描述你想创作的画面…"></textarea>
+                    <span id="homePromptCount">0 / 1000</span>
+                </div>
+                <div class="hh-create-actions">
+                    <div class="hh-mode-chip" aria-label="画布模式">
+                        <i data-lucide="git-branch"></i>
+                        <span>智能画布</span>
+                    </div>
+                    <button id="continueCanvasBtn" class="hh-btn hh-btn-secondary" type="button">
+                        <i data-lucide="history"></i>
+                        <span>继续上次画布</span>
                     </button>
-                    <button id="startCreateBtn" class="huahai-btn primary" type="button">
-                        进入画布
+                    <button id="startCreateBtn" class="hh-btn hh-btn-primary" type="button">
+                        <span>开始创作</span>
                         <i data-lucide="arrow-right"></i>
                     </button>
                 </div>
             </article>
 
-            <article class="huahai-glass huahai-preview">
-                <h3>画布预览</h3>
-                <img src="/static/images/huahai-home-preview.png" alt="蓝色山湖创作预览">
+            <article id="lastCanvasCard" class="hh-glass hh-last-canvas" aria-label="最近画布">
+                <h2>最近画布</h2>
+                <button id="lastCanvasButton" class="hh-last-preview" type="button" disabled>
+                    <img src="/static/images/huahai-home-preview.png" alt="最近画布预览">
+                    <span>
+                        <b id="lastCanvasTitle">尚无画布</b>
+                        <small id="lastCanvasTime">创建第一块智能画布</small>
+                    </span>
+                </button>
             </article>
         </section>
 
-        <section class="huahai-recent" aria-labelledby="recentTitle">
-            <h2 id="recentTitle">最近项目</h2>
-            <div id="recentCanvases" class="huahai-recent-grid">
-                <div class="huahai-home-empty">正在读取最近画布…</div>
+        <section class="hh-home-recent" aria-labelledby="recentTitle">
+            <div class="hh-section-head">
+                <h2 id="recentTitle">最近项目</h2>
+                <button id="openProjectsBtn" class="hh-link-btn" type="button">
+                    查看全部
+                    <i data-lucide="arrow-right"></i>
+                </button>
+            </div>
+            <div id="recentCanvases" class="hh-recent-grid">
+                <div class="hh-home-empty">正在读取最近画布…</div>
             </div>
         </section>
     </main>
-    <script src="/static/js/home.js?v=2026.07.30.1.1785253455"></script>
-    <script>
-        document.querySelectorAll('.huahai-inspiration-strip [data-prompt]').forEach(function(card){
-            card.addEventListener('click', function(){
-                var prompt = document.getElementById('homePrompt');
-                prompt.value = card.dataset.prompt || '';
-                prompt.focus();
-                prompt.dispatchEvent(new Event('input', {bubbles:true}));
-            });
-        });
-    </script>
+    <script src="/static/js/huahai-interactions.js"></script>
+    <script src="/static/js/home.js"></script>
 </body>
 </html>

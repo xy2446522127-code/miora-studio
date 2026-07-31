@@ -1,70 +1,188 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="zh-CN">
 <head>
-  <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-  <link rel="icon" href="/static/images/huahai-logo.png" type="image/png">
-  <title>花海画布 · 插件中心</title>
-  <script src="/static/js/theme.js?v=2026.07.30.1.1785432067"></script>
-  <style>
-    :root{color-scheme:dark;--bg:#0c111b;--panel:#131b2a;--line:#29354a;--text:#edf2fb;--muted:#9cabc2;--brand:#8aa5ff;--ok:#69d7a1;--warn:#ffd183}*{box-sizing:border-box}body{margin:0;background:radial-gradient(circle at 15% 0,#1a2c51,transparent 35%),var(--bg);color:var(--text);font:14px system-ui,"Microsoft YaHei",sans-serif}.wrap{max-width:1180px;margin:auto;padding:32px 20px}.top{display:flex;justify-content:space-between;align-items:center;gap:16px}.top h1{margin:0;font-size:28px}.top p{color:var(--muted)}.top-actions{display:flex;gap:8px;flex-wrap:wrap;justify-content:flex-end}button,input{font:inherit}button{cursor:pointer;border:1px solid var(--line);color:var(--text);background:#1b2740;border-radius:10px;padding:9px 13px}button.primary{background:#e8eeff;color:#14203a;border:0;font-weight:800}.hint{margin:24px 0;padding:14px 16px;color:var(--muted);background:#101827;border:1px solid var(--line);border-radius:12px}.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(340px,1fr));gap:16px}.card{background:linear-gradient(145deg,#162137,#101827);border:1px solid var(--line);border-radius:16px;padding:18px}.card h2{margin:0 0 6px;font-size:18px}.meta{color:var(--muted);font-size:12px}.tags{display:flex;gap:6px;flex-wrap:wrap;margin:14px 0}.tag{background:#22304b;padding:4px 7px;border-radius:99px;font-size:12px;color:#ced9f5}.row{display:flex;gap:8px;align-items:center;justify-content:space-between}.status{color:var(--ok);font-weight:700}.status.warn{color:var(--warn)}.install-note{margin-top:12px;padding:10px 12px;border:1px solid #745f2b;background:#2c2515;color:#ffe1a0;border-radius:10px;font-size:12px;line-height:1.6}.accounts{margin-top:14px;border-top:1px solid var(--line);padding-top:12px}.account{display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid #202c41;color:var(--muted)}dialog{background:#131b2a;color:var(--text);border:1px solid var(--line);border-radius:16px;width:min(460px,92vw);padding:22px}dialog::backdrop{background:#0009}label{display:grid;gap:6px;margin:12px 0;color:var(--muted)}input{background:#0d1421;border:1px solid var(--line);border-radius:9px;padding:9px;color:var(--text)}.actions{display:flex;justify-content:end;gap:8px;margin-top:18px}.empty{color:var(--muted);padding:42px;text-align:center;border:1px dashed var(--line);border-radius:16px}
-  </style>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width,initial-scale=1">
+    <title>插件中心 · 花海画布</title>
+    <link rel="icon" href="/static/images/huahai-logo.png" type="image/png">
+    <script src="/static/js/theme.js?v=2026.08.01.1"></script>
+    <script src="/static/vendor/js/lucide.js"></script>
+    <link rel="stylesheet" href="/static/css/huahai-product.css?v=2026.08.01.1">
+    <style>
+        *{box-sizing:border-box}
+        :root{--pc-bg:#061424;--pc-panel:rgba(8,27,47,.82);--pc-card:rgba(11,35,59,.84);--pc-line:rgba(103,187,229,.25);--pc-text:#edf7ff;--pc-muted:#8fa7bd;--pc-cyan:#43d9ff;--pc-coral:#ff705f;--pc-green:#4de0a9}
+        html,body{margin:0;min-height:100%;color:var(--pc-text);background:var(--pc-bg);font:14px/1.5 Inter,"Microsoft YaHei",sans-serif}
+        button,a,input{font:inherit}.pc-app{min-height:100vh;display:grid;grid-template-columns:176px minmax(0,1fr);background:radial-gradient(900px 520px at 70% 32%,rgba(7,115,172,.10),transparent 72%),linear-gradient(145deg,#06111f,#071728 58%,#06111f)}
+        .pc-rail{min-height:100vh;position:sticky;top:0;display:flex;flex-direction:column;border-right:1px solid var(--pc-line);background:rgba(3,14,26,.91)}
+        .pc-brand{height:164px;padding:18px 12px 14px;display:grid;place-items:center;border-bottom:1px solid var(--pc-line)}
+        .pc-brand img{width:132px;height:104px;object-fit:contain}.pc-brand span{margin-top:-16px;color:#aabed0}
+        .pc-tools{padding:20px 20px;display:grid;gap:12px}.pc-tool{height:58px;display:grid;place-items:center;border:1px solid transparent;border-radius:12px;color:#a9bad0;background:transparent;cursor:pointer}
+        .pc-tool svg{width:24px;height:24px}.pc-tool.active{color:#fff;border-color:rgba(63,211,255,.72);background:rgba(17,60,91,.72);box-shadow:0 0 20px rgba(47,210,255,.09)}
+        .pc-trash{margin:auto 20px 20px;height:52px;display:flex;align-items:center;gap:12px;padding:0 14px;color:#98acc0;border-top:1px solid rgba(103,187,229,.18)}
+        .pc-main{min-width:0;padding:20px 18px 20px}.pc-frame{min-height:calc(100vh - 40px);border:1px solid var(--pc-line);border-radius:18px;background:rgba(5,19,34,.62);box-shadow:inset 0 1px rgba(255,255,255,.025);overflow:hidden}
+        .pc-head{min-height:86px;padding:18px 26px 12px;display:flex;align-items:flex-start;justify-content:space-between;gap:18px;border-bottom:1px solid rgba(103,187,229,.18)}
+        .pc-head-title{display:flex;align-items:center;gap:22px}.pc-head h1{margin:0;font-size:30px;letter-spacing:-.03em}.pc-actions{display:flex;gap:10px;flex-wrap:wrap}
+        .pc-btn{min-height:44px;padding:0 16px;display:inline-flex;align-items:center;justify-content:center;gap:8px;border:1px solid var(--pc-line);border-radius:10px;color:var(--pc-text);background:rgba(14,37,61,.78);text-decoration:none;cursor:pointer}
+        .pc-btn svg{width:18px}.pc-btn:hover,.pc-btn:focus-visible{outline:none;border-color:var(--pc-cyan);box-shadow:0 0 22px rgba(67,217,255,.10)}.pc-btn.coral{color:#fff;border-color:#ff8b7d;background:linear-gradient(135deg,#ff7564,#f15e50)}
+        .pc-tabs{height:60px;padding:0 34px;display:flex;align-items:end;gap:34px;border-bottom:1px solid rgba(103,187,229,.14)}.pc-tab{height:60px;padding:0 10px;position:relative;border:0;color:#9bb0c3;background:transparent;cursor:pointer;font-size:16px}
+        .pc-tab.active{color:var(--pc-cyan)}.pc-tab.active:after{content:"";position:absolute;left:0;right:0;bottom:0;height:3px;border-radius:3px;background:var(--pc-cyan);box-shadow:0 0 12px rgba(67,217,255,.45)}
+        .pc-panel[hidden]{display:none!important}.pc-create{min-height:calc(100vh - 187px);display:grid;grid-template-columns:362px minmax(520px,1fr) 318px}
+        .pc-left,.pc-center,.pc-right{min-width:0;padding:18px}.pc-left{border-right:1px solid var(--pc-line)}.pc-right{border-left:1px solid var(--pc-line)}
+        .pc-section-title{margin:0 0 12px;font-size:15px}.pc-builtins{display:grid;gap:12px}.pc-mini-card{padding:14px;border:1px solid var(--pc-line);border-radius:12px;background:var(--pc-card)}
+        .pc-mini-top{display:grid;grid-template-columns:62px 1fr auto;gap:12px;align-items:start}.pc-mini-icon{width:62px;height:62px;display:grid;place-items:center;border:1px solid rgba(87,192,235,.30);border-radius:11px;color:var(--pc-cyan);background:#071728}
+        .pc-mini-icon svg{width:32px;height:32px}.pc-mini-card h3{margin:1px 0 4px;font-size:17px}.pc-mini-card p{margin:0;color:var(--pc-muted);font-size:12px}.pc-status{padding:4px 7px;border-radius:6px;color:var(--pc-green);background:rgba(35,173,123,.14);font-size:11px;font-weight:700}
+        .pc-tags{margin-top:11px;display:flex;gap:6px;flex-wrap:wrap}.pc-tag{padding:3px 7px;border-radius:999px;color:#b8d2e5;background:rgba(55,88,124,.55);font-size:11px}
+        .pc-mini-actions{margin-top:12px;display:flex;justify-content:space-between;align-items:center;gap:8px}.pc-link{border:0;color:var(--pc-cyan);background:transparent;cursor:pointer}.pc-small{min-height:36px;padding:0 11px}
+        .pc-example{margin-top:14px}.pc-example .pc-mini-top{grid-template-columns:62px 1fr auto}.pc-example-install{width:100%;margin-top:12px}.pc-manual-download{width:100%;margin-top:8px;color:var(--pc-cyan);border-color:var(--pc-cyan);background:rgba(8,46,69,.55)}
+        .pc-doc{height:100%;display:grid;grid-template-columns:190px minmax(0,1fr);border:1px solid var(--pc-line);border-radius:12px;overflow:hidden;background:rgba(5,22,39,.70)}
+        .pc-toc{padding:18px 14px;border-right:1px solid var(--pc-line);color:#9bb1c5}.pc-toc strong{display:block;margin-bottom:14px;color:#dbe9f4}.pc-toc a{display:block;padding:8px 10px;color:#9bb1c5;text-decoration:none;border-left:2px solid transparent}.pc-toc a.active{color:var(--pc-cyan);border-left-color:var(--pc-cyan);background:linear-gradient(90deg,rgba(67,217,255,.08),transparent)}
+        .pc-article{padding:20px 28px;overflow:auto;max-height:calc(100vh - 224px)}.pc-article h2{margin:0 0 4px;font-size:26px}.pc-article .lead{margin:0 0 18px;color:var(--pc-muted)}.pc-article h3{margin:20px 0 7px;font-size:17px}.pc-article h4{margin:12px 0 5px;color:var(--pc-cyan)}.pc-article p{margin:6px 0;color:#a8bed0}.pc-code{padding:14px 18px;margin:12px 0;border:1px solid rgba(91,172,217,.25);border-radius:9px;white-space:pre-wrap;color:#c9dc88;background:#041321;font:12px/1.55 "JetBrains Mono",Consolas,monospace}
+        .pc-doc-actions{display:flex;gap:9px;margin-top:18px}.pc-check{padding:16px;border:1px solid var(--pc-line);border-radius:12px;background:var(--pc-card)}.pc-check-head{display:flex;justify-content:space-between;align-items:center;padding-bottom:14px;border-bottom:1px solid rgba(103,187,229,.18)}.pc-check-pass{padding:5px 8px;border-radius:7px;color:var(--pc-green);background:rgba(35,173,123,.15);font-weight:700}
+        .pc-check h3{margin:16px 0 9px;font-size:14px}.pc-check-list{display:grid;gap:9px}.pc-check-item{display:flex;gap:8px;align-items:center;color:#b4c8d9}.pc-check-item svg{width:18px;color:var(--pc-green)}.pc-warning{margin-top:16px;padding:12px;border:1px solid rgba(234,183,53,.25);border-radius:9px;color:#e9be56;background:rgba(102,75,13,.18)}.pc-install{width:100%;margin-top:24px;min-height:54px}
+        .pc-installed,.pc-logs{padding:22px 30px}.plugin-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:14px}.card{min-height:210px;padding:18px;border:1px solid var(--pc-line);border-radius:14px;background:var(--pc-card)}.card-top{display:flex;gap:12px}.plugin-icon{width:48px;height:48px;display:grid;place-items:center;border:1px solid var(--pc-line);border-radius:12px;color:var(--pc-cyan);background:#071728;font-weight:800}.card h3{margin:0}.meta{color:var(--pc-muted);font-size:12px}.status{margin-left:auto;color:var(--pc-green)}.status.warn{color:#ffc266}.tags{display:flex;gap:6px;flex-wrap:wrap;margin:14px 0}.tag{padding:4px 7px;border-radius:999px;background:rgba(49,82,119,.60);font-size:11px}.card-foot{display:flex;justify-content:space-between;align-items:center;gap:8px;margin-top:16px}.empty{padding:48px;text-align:center;color:var(--pc-muted);border:1px dashed var(--pc-line);border-radius:14px}
+        .pc-path{max-width:300px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:#9fb5c8;font:12px "JetBrains Mono",Consolas,monospace}
+        dialog{width:min(500px,calc(100vw - 30px));padding:0;border:1px solid var(--pc-line);border-radius:16px;color:var(--pc-text);background:#091b2f}dialog::backdrop{background:rgba(0,7,14,.72);backdrop-filter:blur(8px)}dialog form{padding:22px}dialog h2{margin:0 0 16px}label{display:grid;gap:6px;margin:12px 0;color:#9fb4c8}input{height:42px;padding:0 11px;border:1px solid var(--pc-line);border-radius:9px;color:#fff;background:#061321}.dialog-actions{display:flex;justify-content:flex-end;gap:8px;margin-top:18px}
+        @media(max-width:1250px){.pc-create{grid-template-columns:320px minmax(480px,1fr)}.pc-right{grid-column:1/-1;border-left:0;border-top:1px solid var(--pc-line)}.pc-check{display:grid;grid-template-columns:1fr 1fr;gap:14px}.pc-check-head{grid-column:1/-1}}
+        @media(max-width:900px){.pc-app{grid-template-columns:72px minmax(0,1fr)}.pc-brand{height:90px;padding:8px}.pc-brand img{width:58px;height:58px}.pc-brand span{display:none}.pc-tools{padding:12px 8px}.pc-trash{margin-inline:8px;font-size:0}.pc-create{display:block}.pc-left,.pc-center,.pc-right{border:0;border-bottom:1px solid var(--pc-line)}.pc-doc{grid-template-columns:1fr}.pc-toc{display:none}.pc-article{max-height:none}.pc-head{align-items:flex-start}.pc-head h1{font-size:24px}.pc-actions{justify-content:flex-end}}
+        @media(max-width:620px){.pc-main{padding:8px}.pc-frame{min-height:calc(100vh - 16px)}.pc-head{padding:14px;display:block}.pc-actions{margin-top:12px;justify-content:flex-start}.pc-tabs{padding-inline:12px;gap:10px}.pc-left,.pc-center,.pc-right,.pc-installed{padding:12px}.pc-check{display:block}.pc-doc-actions{flex-wrap:wrap}}
+    </style>
 </head>
-<body><main class="wrap">
-  <div class="top"><div><h1>插件中心</h1><p>本机扫描 <code>plugins/&lt;插件 ID&gt;/plugin.json</code>；账号、积分和任务数据仅保存在本机。</p></div><div class="top-actions"><button onclick="location.href='/static/canvas.html?v=2026.07.30.1.1785433498'">返回画布</button><button id="openPluginFolderBtn">打开插件文件夹</button><button class="primary" onclick="loadPlugins()">刷新插件</button></div></div>
-  <div class="hint">插件源码可以开源共享；浏览器配置文件、Cookie、邮箱、积分和下载成品不会上传 GitHub。视频任务要由插件的独立后台进程执行。</div>
-  <section id="plugins" class="grid"><div class="empty">正在扫描插件…</div></section>
-</main><dialog id="accountDialog"><form id="accountForm" method="dialog"><h2 id="dialogTitle">添加账号</h2><input id="pluginId" type="hidden"><label>账号名称<input id="label" required placeholder="例如：花海账号 01"></label><label>比特浏览器配置文件 ID<input id="profile" placeholder="例如：b7036527…"></label><label>当前积分<input id="credits" type="number" min="0" step="0.01" value="0"></label><div class="actions"><button value="cancel">取消</button><button class="primary" value="default">保存到本机</button></div></form></dialog>
-<script>
-const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
-async function api(url,options){const r=await fetch(url,options);const b=await r.json().catch(()=>({}));if(!r.ok)throw new Error(b.detail||'请求失败');return b}
-async function loadPlugins(){
-  const root=document.querySelector('#plugins');
-  root.innerHTML='<div class="empty">正在扫描插件…</div>';
-  try{
-    const {plugins}=await api('/api/plugins');
-    if(!plugins.length){
-      root.innerHTML='<div class="empty">尚未发现插件。将插件文件夹放入 plugins/ 后刷新页面。</div>';
-      return;
-    }
-    root.innerHTML='';
-    for(const p of plugins){
-      const {accounts}=await api(`/api/plugins/${encodeURIComponent(p.id)}/accounts`);
-      const ready=p.runtime_ready!==false;
-      const requiresAccount=p.requiresAccount!==false;
-      const installation=p.installation||{};
-      const displayPluginId=p.id==='miora-video'?'huahai-video':p.id;
-      const statusText=!p.enabled?'已禁用':ready?'可使用':'待安装文件';
-      const statusClass=ready&&p.enabled?'status':'status warn';
-      const accountAction=requiresAccount
-        ? `<button onclick="openAccount('${esc(p.id)}','${esc(p.name||p.id)}')">账号管理</button>`
-        : '<span class="meta">凭据来自 API 设置</span>';
-      const accountContent=requiresAccount
-        ? (accounts.length
-          ? accounts.map(a=>`<div class="account"><span>${esc(a.label)}<br><small>${esc(a.browserProfileId||'未绑定浏览器')}</small></span><strong>${Number(a.creditBalance||0).toFixed(2)} 积分</strong></div>`).join('')
-          : '<div class="meta">尚无本地账号；请添加并在插件后台校验登录状态。</div>')
-        : '<div class="meta">该插件不会另存密钥；运行时读取你在“API 设置”中选择的平台凭据。</div>';
-      const installNote=!ready
-        ? `<div class="install-note">${esc(installation.message||'外部插件文件尚未安装。')}<br>安装完成后点击“刷新插件”。</div>`
-        : '';
-      const card=document.createElement('article');
-      card.className='card';
-      card.innerHTML=`<div class="row"><div><h2>${esc(p.name||p.id)}</h2><div class="meta">${esc(displayPluginId)} · v${esc(p.version||'0.0.0')} · ${esc(p.type||'plugin')}</div></div><span class="${statusClass}">${statusText}</span></div><div class="tags">${(p.capabilities||[]).map(x=>`<span class="tag">${esc(x)}</span>`).join('')}</div><div class="row"><span class="meta">运行入口：${esc(p.entry||'未声明')}</span>${accountAction}</div>${installNote}<div class="accounts">${accountContent}</div>`;
-      root.append(card);
-    }
-  }catch(e){
-    root.innerHTML=`<div class="empty">扫描失败：${esc(e.message)}</div>`;
-  }
-}
-async function openPluginFolder(){
-  try{
-    const result=await api('/api/plugins/open-directory',{method:'POST'});
-    if(!result.opened)throw new Error('没有打开插件目录');
-  }catch(error){
-    alert(error.message);
-  }
-}
-function openAccount(id,name){pluginId.value=id;dialogTitle.textContent=`添加账号 · ${name}`;label.value='';profile.value='';credits.value='0';accountDialog.showModal()}
-accountForm.addEventListener('submit',async e=>{if(e.submitter?.value==='cancel')return;e.preventDefault();try{await api(`/api/plugins/${encodeURIComponent(pluginId.value)}/accounts`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({label:label.value,browserProfileId:profile.value,creditBalance:Number(credits.value||0),status:'unverified'})});accountDialog.close();loadPlugins()}catch(err){alert(err.message)}});
-document.querySelector('#openPluginFolderBtn').addEventListener('click',openPluginFolder);
-loadPlugins();
-</script></body></html>
+<body>
+<div class="pc-app">
+    <aside class="pc-rail">
+        <div class="pc-brand"><img src="/static/images/huahai-logo.png" alt="花海"><span>花海画布</span></div>
+        <nav class="pc-tools" aria-label="画布工具">
+            <button class="pc-tool" type="button" title="选择"><i data-lucide="mouse-pointer-2"></i></button>
+            <button class="pc-tool" type="button" title="连接"><i data-lucide="brackets"></i></button>
+            <button class="pc-tool active" type="button" title="插件中心"><i data-lucide="puzzle"></i></button>
+            <button class="pc-tool" type="button" title="素材"><i data-lucide="image-plus"></i></button>
+            <button class="pc-tool" type="button" title="生成"><i data-lucide="wand-sparkles"></i></button>
+            <button class="pc-tool" type="button" title="输出"><i data-lucide="circle-dot"></i></button>
+        </nav>
+        <div class="pc-trash"><i data-lucide="trash-2"></i><span>回收站</span></div>
+    </aside>
+
+    <main class="pc-main">
+        <section class="pc-frame">
+            <header class="pc-head">
+                <div class="pc-head-title"><h1>插件中心</h1></div>
+                <div class="pc-actions">
+                    <button class="pc-btn" id="openPluginFolderBtn" type="button" data-endpoint="/api/plugins/open-directory"><i data-lucide="folder-open"></i>打开插件文件夹</button>
+                    <button class="pc-btn" id="refreshBtn" type="button"><i data-lucide="refresh-cw"></i>刷新插件</button>
+                    <a class="pc-btn" href="/static/downloads/花海画布-AI插件制作说明书.txt" download><i data-lucide="download"></i>下载 AI 说明书</a>
+                </div>
+            </header>
+            <nav class="pc-tabs" aria-label="插件中心标签">
+                <button class="pc-tab" type="button" data-tab="installed">已安装</button>
+                <button class="pc-tab active" type="button" data-tab="create">制作插件</button>
+                <button class="pc-tab" type="button" data-tab="logs">运行日志</button>
+            </nav>
+
+            <section class="pc-panel pc-create" data-panel="create">
+                <aside class="pc-left">
+                    <h2 class="pc-section-title">内置插件</h2>
+                    <div id="builtInPlugins" class="pc-builtins"><div class="empty">正在扫描插件…</div></div>
+                    <section class="pc-mini-card pc-example">
+                        <div class="pc-mini-top">
+                            <div class="pc-mini-icon"><i data-lucide="box"></i></div>
+                            <div><h3>示例：风格迁移</h3><p>演示如何构建图像处理插件，包含配置表单与任务流程。</p></div>
+                            <span class="pc-status">示例</span>
+                        </div>
+                        <button class="pc-btn pc-example-install" type="button" id="exampleInstallBtn"><i data-lucide="download"></i>安装示例</button>
+                        <a class="pc-btn pc-manual-download" href="/static/downloads/花海画布-AI插件制作说明书.txt" download><i data-lucide="file-text"></i>下载 AI 制作说明书.txt</a>
+                    </section>
+                </aside>
+
+                <section class="pc-center">
+                    <div class="pc-doc">
+                        <nav class="pc-toc">
+                            <strong>目录</strong>
+                            <a class="active" href="#plugin-spec">花海画布插件开发规范</a>
+                            <a href="#folder-spec">1. 目录结构</a>
+                            <a href="#manifest-spec">2. plugin.json</a>
+                            <a href="#capability-spec">3. 能力声明</a>
+                            <a href="#config-spec">4. 配置表单</a>
+                            <a href="#lifecycle-spec">5. 任务生命周期</a>
+                            <a href="#security-spec">6. 本地存储与安全</a>
+                            <a href="#test-spec">7. 自检与调试</a>
+                        </nav>
+                        <article class="pc-article">
+                            <h2 id="plugin-spec">花海画布插件开发规范</h2>
+                            <p class="lead">本文档帮助你快速构建符合规范、可安全运行的花海画布插件。</p>
+                            <h3 id="folder-spec">1. 目录结构</h3>
+                            <p>一个插件是一个独立文件夹，建议结构如下：</p>
+                            <pre class="pc-code">my-plugin/
+├─ plugin.json       # 插件清单（必需）
+├─ icon.png          # 插件图标（可选）
+├─ README.md         # 插件说明（可选）
+├─ backend/
+│  └─ runner.py      # 本地任务入口
+└─ assets/           # 资源文件（可选）</pre>
+                            <h3 id="manifest-spec">2. plugin.json</h3>
+                            <p>声明插件基本信息、运行时、媒体能力与最小权限。</p>
+                            <pre class="pc-code">{
+  "id": "my-image-plugin",
+  "name": "我的生图插件",
+  "version": "1.0.0",
+  "runtime": "python-external-plugin",
+  "entry": "backend/runner.py",
+  "mediaKinds": ["image"],
+  "capabilities": ["image", "submitTask", "pollTask", "fetchArtifacts"]
+}</pre>
+                            <h4 id="capability-spec">3. 能力声明</h4><p>智能画布只会列出与当前图片或视频任务相匹配的插件。</p>
+                            <h4 id="config-spec">4. 配置表单</h4><p>敏感凭据只保存在本机 data/local/，不得写入插件源码。</p>
+                            <h4 id="lifecycle-spec">5. 任务生命周期</h4><p>任务需覆盖创建、运行、进度更新、完成、失败和取消。</p>
+                            <h4 id="security-spec">6. 本地存储与安全</h4><p>网络地址必须声明白名单；文件访问限制在授权目录。</p>
+                            <h4 id="test-spec">7. 自检与调试</h4><p>安装前运行结构、入口、能力、权限和版本兼容检查。</p>
+                            <div class="pc-doc-actions">
+                                <button class="pc-btn pc-small" id="copyExampleBtn" type="button"><i data-lucide="copy"></i>复制示例</button>
+                                <a class="pc-btn pc-small" href="/static/downloads/花海画布-AI插件制作说明书.txt" download><i data-lucide="download"></i>下载模板</a>
+                                <button class="pc-btn pc-small" id="runSelfCheckBtn" type="button"><i data-lucide="play"></i>运行自检</button>
+                            </div>
+                        </article>
+                    </div>
+                </section>
+
+                <aside class="pc-right">
+                    <section class="pc-check">
+                        <div class="pc-check-head"><strong>插件自检</strong><span class="pc-check-pass">自检通过</span></div>
+                        <h3>检查项（8 项）</h3>
+                        <div class="pc-check-list">
+                            <div class="pc-check-item"><i data-lucide="circle-check"></i>plugin.json 结构有效</div>
+                            <div class="pc-check-item"><i data-lucide="circle-check"></i>必填字段完整</div>
+                            <div class="pc-check-item"><i data-lucide="circle-check"></i>图标或入口文件可访问</div>
+                            <div class="pc-check-item"><i data-lucide="circle-check"></i>能力声明有效</div>
+                            <div class="pc-check-item"><i data-lucide="circle-check"></i>配置 Schema 有效</div>
+                            <div class="pc-check-item"><i data-lucide="circle-check"></i>入口文件可加载</div>
+                            <div class="pc-check-item"><i data-lucide="circle-check"></i>权限声明合规</div>
+                            <div class="pc-check-item"><i data-lucide="circle-check"></i>版本要求兼容</div>
+                        </div>
+                        <div class="pc-warning">建议提供 256 × 256 的插件图标。</div>
+                        <button class="pc-btn coral pc-install" id="installLocalBtn" type="button"><i data-lucide="download"></i>安装本地插件</button>
+                    </section>
+                </aside>
+            </section>
+
+            <section class="pc-panel pc-installed" data-panel="installed" hidden>
+                <div class="pc-path" id="pluginPath">正在读取插件路径…</div>
+                <section id="plugins" class="plugin-grid"><div class="empty">正在扫描插件…</div></section>
+            </section>
+            <section class="pc-panel pc-logs" data-panel="logs" hidden>
+                <div id="pluginLogs" class="empty">暂无插件运行记录。</div>
+            </section>
+        </section>
+    </main>
+</div>
+
+<dialog id="accountDialog">
+    <form id="accountForm" method="dialog">
+        <h2>添加本地账号</h2>
+        <input id="pluginId" type="hidden">
+        <label>账号名称<input id="accountLabel" required placeholder="例如：我的创作账号"></label>
+        <label>浏览器配置标识（可选）<input id="browserProfile" placeholder="默认使用系统浏览器登录状态"></label>
+        <div class="dialog-actions"><button class="pc-btn" value="cancel">取消</button><button class="pc-btn coral" value="default">保存到本机</button></div>
+    </form>
+</dialog>
+<script src="/static/js/plugin-center.js?v=2026.08.01.1"></script>
+</body>
+</html>

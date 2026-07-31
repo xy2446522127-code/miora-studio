@@ -1,0 +1,21 @@
+{
+  "id": "gpt-creator",
+  "name": "GPT 图像助手",
+  "version": "1.0.0",
+  "description": "打开 ChatGPT 官方网页，复用用户自己的浏览器登录状态并接入下载成果。",
+  "type": "browser-media-provider",
+  "runtime": "browser-assisted",
+  "entry": "backend/runner.py",
+  "loginUrl": "https://chatgpt.com/",
+  "enabled": true,
+  "requiresAccount": true,
+  "mediaKinds": ["image"],
+  "models": ["ChatGPT Web"],
+  "capabilities": ["image", "browserLogin", "downloadCapture", "submitTask", "pollTask", "fetchArtifacts"],
+  "permissions": {
+    "network": ["https://chatgpt.com", "https://auth.openai.com"],
+    "filesystem": ["assets/output"],
+    "browserProfile": true,
+    "secrets": []
+  }
+}

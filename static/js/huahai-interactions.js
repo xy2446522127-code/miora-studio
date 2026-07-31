@@ -62,8 +62,7 @@
         'gpt-chat': ['AI 对话', '创作对话与上下文'],
         'asset-manager': ['素材库', '管理项目图像与工作流'],
         'api-settings': ['API 设置', '管理模型服务与连接状态'],
-        'comfyui-settings': ['工作流设置', '连接 ComfyUI 与配置节点'],
-        'plugin-center': ['插件中心', '扩展花海画布的创作能力']
+        'comfyui-settings': ['工作流设置', '连接 ComfyUI 与配置节点']
     };
 
     function installPageChrome(page){
@@ -114,24 +113,6 @@
                 diagnostics.querySelectorAll('dd').forEach((item, index) => {
                     item.textContent = index === 2 ? '检测中…' : '正在验证';
                 });
-            });
-        }
-        if(page === 'plugin-center'){
-            const detail = document.createElement('aside');
-            detail.className = 'huahai-plugin-detail';
-            detail.innerHTML = `
-                <header><strong>插件详情</strong><span>选择一个插件</span></header>
-                <div class="huahai-plugin-detail-icon"><i data-lucide="blocks"></i></div>
-                <h2>扩展创作能力</h2>
-                <p>点击左侧插件卡片，在这里查看版本、能力与账号配置。</p>
-            `;
-            document.body.appendChild(detail);
-            document.addEventListener('click', event => {
-                const card = event.target.closest('.card');
-                if(!card) return;
-                const name = card.querySelector('h2,h3,strong')?.textContent?.trim();
-                if(name) detail.querySelector('h2').textContent = name;
-                detail.querySelector('header span').textContent = '已选择';
             });
         }
         window.lucide?.createIcons?.();

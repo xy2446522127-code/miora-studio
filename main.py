@@ -26,6 +26,7 @@ import math
 import shlex
 import functools
 import html
+import webbrowser
 import xml.etree.ElementTree as ET
 from typing import List, Dict, Any, Optional, Tuple
 from threading import Lock, RLock, Thread
@@ -170,7 +171,7 @@ class ConnectionManager:
 
 manager = ConnectionManager()
 GLOBAL_LOOP = None
-APP_VERSION = "2026.07.31.2"
+APP_VERSION = "2026.08.01.1"
 BRAND_NAME = "花海画布"
 BRAND_AUTHOR = "xy2446522127-code"
 UPSTREAM_REPO_URL = "https://github.com/hero8152/Infinite-Canvas"
@@ -2616,6 +2617,9 @@ class PluginJobRequest(BaseModel):
     prompt: str = Field(default="", max_length=10000)
     parameters: Dict[str, Any] = {}
     assets: List[Dict[str, Any]] = []
+
+class PluginDownloadCaptureRequest(BaseModel):
+    waitMs: int = Field(default=0, ge=0, le=25000)
 
 class GeneratedAssetRevealRequest(BaseModel):
     url: str = ""
@@ -15163,8 +15167,16 @@ async def generate_grok_video(client, payload, provider, base_url, requested_mod
             status_code=400,
             detail="Grok 图生视频没有成功读取参考图：请使用本地图片、公网图片 URL 或 data:image;base64 图片，asset:// 认证素材不能直接提交给土豆 Grok。",
         )
-    headers = api_headers(json_body=False, provider=provider, model=model)
-    response = await client.post(submit_url, headers=headers, files=multipart_parts)
+    # OpenAI-compatible video gateways accept text-to-video as JSON, while
+    # image-to-video requires multipart input_reference fields. Sending an
+    # empty multipart request can be routed to the gateway's web application
+    # instead of the API and return HTML with status 200.
+    if reference_count:
+        headers = api_headers(json_body=False, provider=provider, model=model)
+        response = await client.post(submit_url, headers=headers, files=multipart_parts)
+    else:
+        headers = api_headers(json_body=True, provider=provider, model=model)
+        response = await client.post(submit_url, headers=headers, json=data)
     response.raise_for_status()
     try:
         raw = response.json()
@@ -15449,6 +15461,30 @@ def open_plugin_directory(request: Request):
         raise HTTPException(status_code=500, detail=f"无法打开插件目录：{exc}") from exc
     return {"opened": True, "path": path}
 
+@app.post("/api/plugins/{plugin_id}/open-browser")
+def open_plugin_browser(plugin_id: str, request: Request):
+    require_local_plugin_request(request)
+    manifest = PLUGIN_RUNTIME.plugin(plugin_id)
+    if not manifest:
+        raise HTTPException(status_code=404, detail="Plugin not found")
+    if "browserLogin" not in set(manifest.get("capabilities") or []):
+        raise HTTPException(status_code=400, detail="该插件不需要浏览器登录")
+    target = str(manifest.get("loginUrl") or "").strip()
+    parsed = urllib.parse.urlparse(target)
+    allowed_hosts = {
+        str(urllib.parse.urlparse(item).hostname or "").lower()
+        for item in ((manifest.get("permissions") or {}).get("network") or [])
+    }
+    if parsed.scheme != "https" or not parsed.hostname or parsed.hostname.lower() not in allowed_hosts:
+        raise HTTPException(status_code=400, detail="插件登录地址不在权限白名单内")
+    try:
+        opened = bool(webbrowser.open(target, new=2))
+    except Exception as exc:
+        raise HTTPException(status_code=500, detail=f"无法打开浏览器：{exc}") from exc
+    if not opened:
+        raise HTTPException(status_code=500, detail="系统浏览器没有接受打开请求")
+    return {"opened": True, "url": target}
+
 @app.post("/api/generated-assets/reveal")
 def reveal_generated_asset(payload: GeneratedAssetRevealRequest, request: Request):
     require_local_plugin_request(request)
@@ -15504,6 +15540,163 @@ def create_plugin_job(plugin_id: str, payload: PluginJobRequest):
     if not required.issubset(set(manifest.get("capabilities") or [])):
         raise HTTPException(status_code=400, detail="Plugin does not declare the required video task capabilities")
     return {"job": PLUGIN_RUNTIME.queue_job(plugin_id, payload.model_dump())}
+
+@app.post("/api/plugins/{plugin_id}/media")
+async def run_plugin_media(plugin_id: str, payload: PluginJobRequest, request: Request):
+    require_local_plugin_request(request)
+    manifest = PLUGIN_RUNTIME.plugin(plugin_id)
+    if not manifest:
+        raise HTTPException(status_code=404, detail="Plugin not found")
+    kind = "video" if payload.kind == "video" else "image"
+    capabilities = set(manifest.get("capabilities") or [])
+    media_kinds = set(manifest.get("mediaKinds") or [])
+    if kind not in media_kinds and kind not in capabilities and f"{kind}Generation" not in capabilities:
+        raise HTTPException(status_code=400, detail=f"该插件不支持{kind}")
+    job = PLUGIN_RUNTIME.queue_job(plugin_id, payload.model_dump())
+    if manifest.get("runtime") == "browser-assisted":
+        target = str(manifest.get("loginUrl") or "").strip()
+        parsed = urllib.parse.urlparse(target)
+        allowed_hosts = {
+            str(urllib.parse.urlparse(item).hostname or "").lower()
+            for item in ((manifest.get("permissions") or {}).get("network") or [])
+        }
+        if parsed.scheme != "https" or not parsed.hostname or parsed.hostname.lower() not in allowed_hosts:
+            raise HTTPException(status_code=400, detail="插件网页地址不在权限白名单内")
+        opened = bool(webbrowser.open(target, new=2))
+        if not opened:
+            raise HTTPException(status_code=500, detail="系统浏览器没有接受打开请求")
+        updated = PLUGIN_RUNTIME.update_job(
+            plugin_id,
+            job["id"],
+            status="awaiting_user",
+            message="已打开官方网页；请完成登录或生成并下载成果",
+        )
+        return {
+            "job": updated or job,
+            "action_required": True,
+            "action_url": target,
+            "message": "已打开插件网页。登录、验证码与生成确认需由你完成；下载成果后可拖入画布。",
+            "images": [],
+            "videos": [],
+        }
+    raise HTTPException(status_code=501, detail="该插件运行时尚未实现统一媒体入口")
+
+def browser_plugin_download_dirs() -> List[str]:
+    """Return local download folders without reading browser profiles or cookies."""
+    candidates = []
+    configured = str(os.getenv("HUAHAI_BROWSER_DOWNLOAD_DIR") or "").strip()
+    if configured:
+        candidates.append(configured)
+    candidates.append(os.path.join(os.path.expanduser("~"), "Downloads"))
+    username = str(os.getenv("USERNAME") or os.path.basename(os.path.expanduser("~")) or "").strip()
+    if os.name == "nt" and username:
+        for drive in ("C:", "D:", "E:", "F:"):
+            candidates.append(os.path.join(drive + os.sep, "Users", username, "Downloads"))
+    result = []
+    seen = set()
+    for raw in candidates:
+        path = os.path.abspath(os.path.expandvars(raw))
+        marker = os.path.normcase(path)
+        if marker in seen or not os.path.isdir(path):
+            continue
+        seen.add(marker)
+        result.append(path)
+    return result
+
+def browser_plugin_download_candidate(job: Dict[str, Any]) -> Optional[str]:
+    kind = "video" if str(job.get("kind") or "").lower() == "video" else "image"
+    allowed = (
+        {".mp4", ".mov", ".webm", ".mkv", ".avi"}
+        if kind == "video"
+        else {".png", ".jpg", ".jpeg", ".webp", ".gif", ".avif"}
+    )
+    created_at = max(0.0, float(job.get("createdAt") or 0) / 1000.0 - 2.0)
+    candidates = []
+    for folder in browser_plugin_download_dirs():
+        try:
+            for name in os.listdir(folder):
+                path = os.path.join(folder, name)
+                ext = os.path.splitext(name)[1].lower()
+                if ext not in allowed or not os.path.isfile(path):
+                    continue
+                stat = os.stat(path)
+                if stat.st_mtime < created_at or stat.st_size <= 0:
+                    continue
+                candidates.append((stat.st_mtime, stat.st_size, path))
+        except OSError:
+            continue
+    candidates.sort(reverse=True)
+    return candidates[0][2] if candidates else None
+
+def capture_browser_plugin_download(plugin_id: str, job: Dict[str, Any]) -> Dict[str, Any]:
+    existing = [
+        str(item or "").strip()
+        for item in (job.get("artifacts") or [])
+        if str(item or "").strip()
+    ]
+    if existing:
+        return {
+            "job": job,
+            "captured": True,
+            "images": existing if str(job.get("kind") or "") != "video" else [],
+            "videos": existing if str(job.get("kind") or "") == "video" else [],
+        }
+    source = browser_plugin_download_candidate(job)
+    if not source:
+        return {
+            "job": job,
+            "captured": False,
+            "images": [],
+            "videos": [],
+            "message": "尚未发现本次任务下载的成果；请在官方网页完成生成并下载。",
+        }
+    ext = os.path.splitext(source)[1].lower()
+    size = os.path.getsize(source)
+    max_bytes = 600 * 1024 * 1024 if str(job.get("kind") or "") == "video" else 80 * 1024 * 1024
+    if size > max_bytes:
+        raise HTTPException(status_code=413, detail="下载成果过大，未自动导入")
+    safe_plugin = re.sub(r"[^a-z0-9-]+", "-", plugin_id.lower()).strip("-") or "plugin"
+    filename = f"plugin_{safe_plugin}_{uuid.uuid4().hex[:12]}{ext}"
+    target = output_path_for(filename, "output")
+    shutil.copy2(source, target)
+    url = output_url_for(filename, "output")
+    updated = PLUGIN_RUNTIME.update_job(
+        plugin_id,
+        str(job.get("id") or ""),
+        status="done",
+        message="浏览器下载成果已接入画布",
+        artifacts=[url],
+        capturedSourceName=os.path.basename(source),
+    ) or job
+    return {
+        "job": updated,
+        "captured": True,
+        "images": [url] if str(job.get("kind") or "") != "video" else [],
+        "videos": [url] if str(job.get("kind") or "") == "video" else [],
+    }
+
+@app.post("/api/plugins/{plugin_id}/jobs/{job_id}/capture")
+async def capture_plugin_download(
+    plugin_id: str,
+    job_id: str,
+    payload: PluginDownloadCaptureRequest,
+    request: Request,
+):
+    require_local_plugin_request(request)
+    manifest = PLUGIN_RUNTIME.plugin(plugin_id)
+    if not manifest:
+        raise HTTPException(status_code=404, detail="Plugin not found")
+    if manifest.get("runtime") != "browser-assisted" or "downloadCapture" not in set(manifest.get("capabilities") or []):
+        raise HTTPException(status_code=400, detail="该插件不支持浏览器下载接入")
+    job = next((item for item in PLUGIN_RUNTIME.jobs(plugin_id) if str(item.get("id") or "") == job_id), None)
+    if not job:
+        raise HTTPException(status_code=404, detail="Plugin job not found")
+    deadline = time.monotonic() + (payload.waitMs / 1000.0)
+    while True:
+        result = await asyncio.to_thread(capture_browser_plugin_download, plugin_id, job)
+        if result.get("captured") or time.monotonic() >= deadline:
+            return result
+        await asyncio.sleep(0.8)
 
 @app.post("/api/plugins/{plugin_id}/video")
 async def run_plugin_video(plugin_id: str, payload: PluginJobRequest):

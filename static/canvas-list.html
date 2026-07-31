@@ -4,102 +4,111 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <link rel="icon" href="/static/images/huahai-logo.png" type="image/png">
-    <title>花海画布 · 项目工作台</title>
+    <title>花海画布 · 项目管理</title>
     <script>
         (function(){
             try {
                 var theme = localStorage.getItem('studio_theme') || localStorage.getItem('canvas_theme') || 'dark';
-                if(theme === 'dark') {
-                    document.documentElement.classList.add('studio-theme-dark');
-                    document.documentElement.classList.add('theme-dark');
-                }
+                document.documentElement.classList.add(theme === 'dark' ? 'theme-dark' : 'theme-light');
+                document.documentElement.classList.add(theme === 'dark' ? 'studio-theme-dark' : 'studio-theme-light');
             } catch(e) {}
         })();
     </script>
-    <script src="/static/vendor/js/tailwindcss-cdn.js?v=2026.07.30.1.1785236257"></script>
-    <script src="/static/vendor/js/lucide.js?v=2026.07.30.1.1785236257"></script>
-    <script src="/static/js/theme.js?v=2026.07.30.1.1785432067"></script>
-    <script src="/static/js/touch-mouse.js?v=2026.07.30.1.1785236257"></script>
-    <script src="/static/js/i18n.js?v=2026.07.30.1.1785236257"></script>
-    <link rel="stylesheet" href="/static/css/theme.css?v=2026.07.30.1.1785236257">
-    <link rel="stylesheet" href="/static/css/miora.css?v=2026.07.30.1.1785237538">
-    <link rel="stylesheet" href="/static/css/huahai.css?v=2026.07.30.1.1785432479">
-    <link rel="stylesheet" href="/static/css/canvas-list.css?v=2026.07.30.1.1785408451">
+    <script src="/static/vendor/js/lucide.js"></script>
+    <script src="/static/js/theme.js"></script>
+    <script src="/static/js/i18n.js"></script>
+    <link rel="stylesheet" href="/static/css/huahai.css">
+    <link rel="stylesheet" href="/static/css/huahai-product.css">
 </head>
-<body data-huaha-page="canvas-list">
-    <div id="workspace" class="workspace">
-        <!-- LEFT: project sidebar -->
-        <aside id="sidebar" class="ws-sidebar">
-            <div class="miora-workspace-brand">
+<body data-huaha-page="canvas-list" class="huahai-product-page">
+    <div class="hh-projects">
+        <aside class="hh-project-sidebar">
+            <div class="hh-project-brand">
                 <img src="/static/images/huahai-logo.png" alt="花海">
-                <div>
-                    <strong>花海画布</strong>
-                    <span>潮汐项目</span>
-                </div>
             </div>
-            <div class="ws-side-head">
-                <div class="ws-side-title">项目</div>
-                <button id="newProjectBtn" class="ws-side-add" type="button" title="新建项目" aria-label="新建项目">
-                    <i data-lucide="plus" class="w-4 h-4"></i>
+            <div class="hh-project-side-title">
+                <strong>项目管理</strong>
+                <button id="newProjectBtn" type="button" title="新建项目" aria-label="新建项目">
+                    <i data-lucide="plus"></i>
                 </button>
             </div>
-            <div id="newProjectRow" class="ws-newproj-row">
-                <input id="newProjectInput" class="ws-newproj-input" type="text" maxlength="60" placeholder="项目名称">
-                <button id="newProjectConfirm" class="ws-mini-btn primary" type="button" title="确定" aria-label="确定"><i data-lucide="check" class="w-3.5 h-3.5"></i></button>
-                <button id="newProjectCancel" class="ws-mini-btn" type="button" title="取消" aria-label="取消"><i data-lucide="x" class="w-3.5 h-3.5"></i></button>
-            </div>
-            <div id="projectList" class="ws-project-list"></div>
-            <div class="ws-side-foot">
-                <button id="trashEntry" class="ws-trash-entry" type="button">
-                    <i data-lucide="trash-2" class="w-4 h-4"></i>
-                    <span class="ws-trash-label">回收站</span>
-                    <span id="trashBadge" class="ws-trash-badge">0</span>
-                </button>
-            </div>
+            <form id="newProjectForm" class="hh-new-project" hidden>
+                <input id="newProjectInput" maxlength="60" placeholder="项目名称" autocomplete="off">
+                <button type="submit" title="保存"><i data-lucide="check"></i></button>
+                <button id="newProjectCancel" type="button" title="取消"><i data-lucide="x"></i></button>
+            </form>
+            <nav id="projectList" class="hh-project-list" aria-label="项目列表"></nav>
+            <button id="trashEntry" class="hh-trash-entry" type="button">
+                <i data-lucide="trash-2"></i>
+                <span>回收站</span>
+                <b id="trashBadge">0</b>
+            </button>
         </aside>
 
-        <!-- RIGHT: board -->
-        <main class="ws-main">
-            <div class="ws-topbar">
-                <div class="ws-topbar-left">
-                    <div id="boardProjectName" class="ws-board-name">默认项目</div>
-                    <span id="boardCanvasCount" class="ws-board-count">0</span>
+        <main class="hh-project-main">
+            <header class="hh-project-topbar">
+                <div>
+                    <h1 id="boardProjectName">默认项目</h1>
+                    <span id="boardCanvasCount">0</span>
                 </div>
-                <div class="ws-topbar-right">
-                    <button id="pasteCanvasBtn" class="ws-paste-btn" type="button" title="粘贴到此项目" style="display:none"><i data-lucide="clipboard-paste" class="w-4 h-4"></i><span>粘贴到此项目</span></button>
-                    <button id="boardResetView" class="ws-order-lock" type="button" title="按更新时间固定排序：从左到右，从上到下" aria-label="按更新时间固定排序"><i data-lucide="lock-keyhole" class="w-4 h-4"></i><span>更新时间：新 → 旧</span></button>
-                    <button id="boardRefresh" class="ws-icon-btn" type="button" title="刷新" aria-label="刷新"><i data-lucide="refresh-cw" class="w-4 h-4"></i></button>
-                    <button id="newCanvasBtn" class="ws-primary-btn" type="button"><i data-lucide="plus" class="w-4 h-4"></i><span>新建画布</span></button>
+                <div class="hh-project-actions">
+                    <span class="hh-order-lock" title="画布不可拖动">
+                        <i data-lucide="arrow-up-down"></i>
+                        更新时间：新 → 旧
+                        <i data-lucide="lock"></i>
+                    </span>
+                    <button id="boardResetViewBtn" class="hh-square-btn" type="button" title="回到第一张画布">
+                        <i data-lucide="locate-fixed"></i>
+                    </button>
+                    <button id="boardRefresh" class="hh-square-btn" type="button" title="刷新">
+                        <i data-lucide="refresh-cw"></i>
+                    </button>
+                    <button id="newCanvasBtn" class="hh-new-canvas-btn" type="button">
+                        <i data-lucide="plus"></i>
+                        新建画布
+                    </button>
                 </div>
-            </div>
+            </header>
 
-            <!-- Board (fixed chronological grid) -->
-            <div id="board" class="ws-board">
-                <div id="boardWorld" class="ws-board-world"></div>
-                <div id="boardEmptyHint" class="ws-board-empty">
-                    <div class="ws-board-empty-icon"><i data-lucide="mouse-pointer-click" class="w-7 h-7"></i></div>
-                    <div class="ws-board-empty-text">暂无画布</div>
-                    <div class="ws-board-empty-sub">为当前项目创建第一块画布</div>
-                    <div class="ws-board-empty-actions">
-                        <button id="emptyCreateCanvasBtn" class="ws-primary-btn" type="button"><i data-lucide="plus" class="w-4 h-4"></i><span>新建画布</span></button>
+            <section id="board" class="hh-project-board" aria-live="polite">
+                <div id="boardWorld" class="hh-project-grid"></div>
+                <div id="boardEmptyHint" class="hh-project-empty" hidden>
+                    <i data-lucide="layers"></i>
+                    <strong>暂无画布</strong>
+                    <span>为当前项目创建第一块智能画布</span>
+                    <button id="emptyCreateCanvasBtn" type="button">新建画布</button>
+                </div>
+            </section>
+
+            <section id="trashPanel" class="hh-trash-panel" hidden>
+                <div class="hh-trash-head">
+                    <div>
+                        <i data-lucide="trash-2"></i>
+                        <strong>回收站</strong>
                     </div>
+                    <button id="trashClose" type="button" title="关闭"><i data-lucide="x"></i></button>
                 </div>
-            </div>
-
-            <!-- Trash panel (overlay over the board area) -->
-            <div id="trashPanel" class="ws-trash-panel">
-                <div class="ws-trash-head">
-                    <div class="ws-trash-head-title"><i data-lucide="trash-2" class="w-4 h-4"></i><span>回收站</span></div>
-                    <button id="trashClose" class="ws-icon-btn" type="button" title="关闭" aria-label="关闭"><i data-lucide="x" class="w-4 h-4"></i></button>
-                </div>
-                <div class="ws-trash-note"><i data-lucide="info" class="w-3.5 h-3.5"></i><span>回收站中的画布会在 30 天后自动清理。</span></div>
-                <div id="trashList" class="ws-trash-list"></div>
-            </div>
-
-            <div id="boardStatus" class="ws-status"></div>
+                <p>回收站中的画布会在 30 天后自动清理。</p>
+                <div id="trashList" class="hh-trash-list"></div>
+            </section>
+            <div id="boardStatus" class="hh-status-toast" role="status"></div>
         </main>
     </div>
-    <script src="/static/js/huahai-interactions.js?v=2026.07.30.1.1785431146"></script>
-    <script src="/static/js/canvas-list.js?v=2026.07.30.1.1785406917"></script>
+
+    <dialog id="canvasNameDialog" class="hh-dialog">
+        <form method="dialog" id="canvasNameForm">
+            <h2 id="canvasDialogTitle">新建画布</h2>
+            <label>
+                画布名称
+                <input id="canvasNameInput" maxlength="80" autocomplete="off" placeholder="未命名画布">
+            </label>
+            <div>
+                <button value="cancel" class="hh-dialog-secondary">取消</button>
+                <button id="canvasDialogConfirm" value="default" class="hh-dialog-primary">确认</button>
+            </div>
+        </form>
+    </dialog>
+    <script src="/static/js/huahai-interactions.js"></script>
+    <script src="/static/js/canvas-list.js"></script>
 </body>
 </html>

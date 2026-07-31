@@ -1,0 +1,65 @@
+{
+  "generatedAt": "2026-07-31T00:08:05.324Z",
+  "viewport": "1280x720",
+  "browser": "visible Chrome via CDP",
+  "initial": {
+    "composerOpen": true,
+    "composerInShell": true,
+    "engine": "api",
+    "apiTabActive": true,
+    "references": 1,
+    "zoom": "82%",
+    "railOpacity": 0,
+    "normalFlow": 3,
+    "highlightedFlow": 3
+  },
+  "tabSwitch": {
+    "engine": "plugin",
+    "active": true,
+    "options": 2,
+    "ripple": 0,
+    "videoKind": "video",
+    "restoredKind": "image"
+  },
+  "zoom": {
+    "before": 0.82,
+    "after": {
+      "scale": 1.0936809799940364,
+      "label": "109%"
+    },
+    "composerWheelScale": 1.0936809799940364
+  },
+  "responsiveComposer": {
+    "exists": true,
+    "panelTop": 92,
+    "panelBottom": 691.34375,
+    "viewportBottom": 720,
+    "scrollable": false,
+    "runVisible": true
+  },
+  "batch": {
+    "hubOpen": true,
+    "count": "已选择 2 个节点",
+    "proxy": true
+  },
+  "reducedMotion": {
+    "media": true,
+    "ripple": 0,
+    "flowAnimation": "none"
+  },
+  "consoleErrors": [],
+  "assertions": {
+    "composerUsable": true,
+    "referencesVisible": true,
+    "dynamicPlugins": true,
+    "mediaKinds": true,
+    "explicitZoom": true,
+    "composerWheelIsolated": true,
+    "responsiveComposer": true,
+    "batchInterface": true,
+    "connectionStates": true,
+    "reducedMotion": true,
+    "noConsoleErrors": true
+  },
+  "passed": true
+}

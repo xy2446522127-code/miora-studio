@@ -1,1173 +1,382 @@
-// canvas-list.js — Project Workspace.
-// Two-pane: LEFT project list, RIGHT pannable/zoomable board of canvas cards.
-// Self-contained; relies only on global fetch / StudioI18n / lucide.
+(function(){
+    const projectListEl = document.getElementById('projectList');
+    const boardWorld = document.getElementById('boardWorld');
+    const boardEmpty = document.getElementById('boardEmptyHint');
+    const projectNameEl = document.getElementById('boardProjectName');
+    const canvasCountEl = document.getElementById('boardCanvasCount');
+    const trashPanel = document.getElementById('trashPanel');
+    const trashList = document.getElementById('trashList');
+    const trashBadge = document.getElementById('trashBadge');
+    const statusEl = document.getElementById('boardStatus');
+    const newProjectForm = document.getElementById('newProjectForm');
+    const newProjectInput = document.getElementById('newProjectInput');
+    const canvasDialog = document.getElementById('canvasNameDialog');
+    const canvasDialogTitle = document.getElementById('canvasDialogTitle');
+    const canvasNameInput = document.getElementById('canvasNameInput');
+    const boardResetViewBtn = document.getElementById('boardResetViewBtn');
 
-/* ===== Small helpers (copied from the previous gate file) ===== */
-function refreshIcons(){ if(window.lucide) lucide.createIcons(); }
-function tr(key){ return window.StudioI18n ? StudioI18n.t(key) : key; }
-function langIsEn(){ return window.StudioI18n?.lang?.() === 'en'; }
-function escapeHtml(str){ return String(str == null ? '' : str).replace(/[&<>"']/g, s => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[s])); }
-function escapeAttr(str){ return escapeHtml(str); }
-function L(zh, en){ return langIsEn() ? en : zh; }
-function compactLabel(fullZh, compactZh, en){ return window.innerWidth <= 760 ? L(compactZh, en) : L(fullZh, en); }
-const CANVAS_LIST_PROJECT_KEY = 'canvasListCurrentProjectId';
+    let projects = [];
+    let canvases = [];
+    let deletedCanvases = [];
+    let currentProjectId = localStorage.getItem('canvasListCurrentProjectId') || 'default';
+    let dialogMode = 'create';
+    let dialogCanvasId = '';
+    let statusTimer = 0;
 
-function rememberedProjectId(){
-    try {
-        return new URLSearchParams(window.location.search).get('project') || localStorage.getItem(CANVAS_LIST_PROJECT_KEY) || 'default';
-    } catch(e){
-        return 'default';
+    const escapeHtml = value => String(value == null ? '' : value).replace(/[&<>"']/g, char => ({
+        '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'
+    }[char]));
+
+    function setStatus(message, tone = ''){
+        clearTimeout(statusTimer);
+        statusEl.textContent = message;
+        statusEl.dataset.tone = tone;
+        statusEl.classList.add('show');
+        statusTimer = setTimeout(() => statusEl.classList.remove('show'), 2600);
     }
-}
 
-function rememberProjectId(pid){
-    if(!pid) return;
-    try { localStorage.setItem(CANVAS_LIST_PROJECT_KEY, pid); } catch(e){}
-}
-
-function formatCanvasTime(value){
-    if(!value) return '--';
-    const raw = Number(value);
-    const time = raw < 10000000000 ? raw * 1000 : raw;
-    const date = new Date(time);
-    if(Number.isNaN(date.getTime())) return '--';
-    return date.toLocaleString(langIsEn() ? 'en-US' : 'zh-CN', { month:'2-digit', day:'2-digit', hour:'2-digit', minute:'2-digit' });
-}
-
-function renderCanvasIcon(icon, size = 16){
-    if(!icon || icon === '🧩') return `<i data-lucide="layers" style="width:${size}px;height:${size}px"></i>`;
-    if(/[^\x00-\x7F]/.test(icon)) return escapeHtml(icon);
-    return `<i data-lucide="${escapeHtml(icon)}" style="width:${size}px;height:${size}px"></i>`;
-}
-
-/* ===== DOM refs ===== */
-const board = document.getElementById('board');
-const boardWorld = document.getElementById('boardWorld');
-const boardEmptyHint = document.getElementById('boardEmptyHint');
-const boardProjectName = document.getElementById('boardProjectName');
-const boardCanvasCount = document.getElementById('boardCanvasCount');
-const projectListEl = document.getElementById('projectList');
-const trashEntryBtn = document.getElementById('trashEntry');
-const trashBadge = document.getElementById('trashBadge');
-const trashPanel = document.getElementById('trashPanel');
-const trashListEl = document.getElementById('trashList');
-const trashCloseBtn = document.getElementById('trashClose');
-const newProjectBtn = document.getElementById('newProjectBtn');
-const newProjectRow = document.getElementById('newProjectRow');
-const newProjectInput = document.getElementById('newProjectInput');
-const newProjectConfirm = document.getElementById('newProjectConfirm');
-const newProjectCancel = document.getElementById('newProjectCancel');
-const newCanvasBtn = document.getElementById('newCanvasBtn');
-const boardRefreshBtn = document.getElementById('boardRefresh');
-const boardResetViewBtn = document.getElementById('boardResetView');
-const pasteCanvasBtn = document.getElementById('pasteCanvasBtn');
-const emptyCreateCanvasBtn = document.getElementById('emptyCreateCanvasBtn');
-const statusEl = document.getElementById('boardStatus');
-const workspaceBrand = document.querySelector('.miora-workspace-brand');
-
-/* ===== State ===== */
-let projects = [];
-let canvases = [];          // all canvases across projects
-let deletedCanvases = [];
-let currentProjectId = rememberedProjectId();
-let pendingDeleteProjectId = null;
-let statusTimer = null;
-let clipboardCanvasId = null;   // 剪切的画布（切到别的项目后粘贴）
-
-// board viewport (mirrors smart-canvas math)
-const viewport = { x: 0, y: 0, scale: 1 };
-const MIN_SCALE = 0.3, MAX_SCALE = 2;
-
-/* ===== Status toast ===== */
-function setStatus(text){
-    if(!statusEl) return;
-    if(!text){ statusEl.classList.remove('show'); return; }
-    statusEl.textContent = text;
-    statusEl.classList.add('show');
-    clearTimeout(statusTimer);
-    statusTimer = setTimeout(() => statusEl.classList.remove('show'), 2200);
-}
-
-/* ===== Viewport math (mirrors smart-canvas.js) ===== */
-function applyViewport(){
-    if(boardWorld.classList.contains('fixed-order')){
-        boardWorld.style.transform = 'none';
-        board.style.backgroundSize = '120px 120px, 120px 120px, 24px 24px';
-        board.style.backgroundPosition = '0 0, 0 0, 0 0';
-        return;
-    }
-    boardWorld.style.transform = `translate(${viewport.x}px, ${viewport.y}px) scale(${viewport.scale})`;
-    board.style.backgroundSize = `${120 * viewport.scale}px ${120 * viewport.scale}px, ${120 * viewport.scale}px ${120 * viewport.scale}px, ${24 * viewport.scale}px ${24 * viewport.scale}px`;
-    board.style.backgroundPosition = `${viewport.x}px ${viewport.y}px, ${viewport.x}px ${viewport.y}px, ${viewport.x}px ${viewport.y}px`;
-}
-function screenToWorld(clientX, clientY){
-    const rect = board.getBoundingClientRect();
-    return {
-        x: (clientX - rect.left - viewport.x) / viewport.scale,
-        y: (clientY - rect.top - viewport.y) / viewport.scale
-    };
-}
-function boardCenterWorld(){
-    return {
-        x: (board.clientWidth / 2 - viewport.x) / viewport.scale,
-        y: (board.clientHeight / 2 - viewport.y) / viewport.scale
-    };
-}
-function resetView(){
-    if(boardWorld.classList.contains('fixed-order')){
-        viewport.x = 0;
-        viewport.y = 0;
-        viewport.scale = 1;
-        applyViewport();
-        return;
-    }
-    const cards = Array.from(boardWorld.querySelectorAll('.ws-card'));
-    if(!cards.length){
-        viewport.x = 0; viewport.y = 0; viewport.scale = 1; applyViewport();
-        return;
-    }
-    const bounds = cards.reduce((acc, el) => {
-        const x = parseFloat(el.style.left) || 0;
-        const y = parseFloat(el.style.top) || 0;
-        const w = el.offsetWidth || 248;
-        const h = el.offsetHeight || 150;
-        acc.minX = Math.min(acc.minX, x);
-        acc.minY = Math.min(acc.minY, y);
-        acc.maxX = Math.max(acc.maxX, x + w);
-        acc.maxY = Math.max(acc.maxY, y + h);
-        return acc;
-    }, { minX: Infinity, minY: Infinity, maxX: -Infinity, maxY: -Infinity });
-    const padding = board.clientWidth < 640 ? 20 : 40;
-    const width = Math.max(1, bounds.maxX - bounds.minX);
-    const height = Math.max(1, bounds.maxY - bounds.minY);
-    const fitScale = Math.min(1, (board.clientWidth - padding * 2) / width, (board.clientHeight - padding * 2) / height);
-    viewport.scale = board.clientWidth < 640 ? 1 : Math.min(MAX_SCALE, Math.max(0.9, fitScale));
-    const fitsX = width * viewport.scale <= board.clientWidth - padding * 2;
-    const fitsY = height * viewport.scale <= board.clientHeight - padding * 2;
-    viewport.x = Math.round((fitsX ? (board.clientWidth - width * viewport.scale) / 2 : padding) - bounds.minX * viewport.scale);
-    viewport.y = Math.round((fitsY ? Math.max(padding, (board.clientHeight - height * viewport.scale) / 2) : padding) - bounds.minY * viewport.scale);
-    applyViewport();
-}
-
-/* ===== Board pan & zoom ===== */
-let panState = null;
-function onBoardPanStart(e){
-    if(e.button !== 0) return;
-    if(e.target.closest('.ws-card') || e.target.closest('.ws-create-card') || e.target.closest('.ws-card-pop') || e.target.closest('button,input,textarea,select')) return;
-    closeCardMenu();
-    panState = { startX: e.clientX, startY: e.clientY, ox: viewport.x, oy: viewport.y, moved: false };
-    board.classList.add('panning');
-}
-function onBoardPanMove(e){
-    if(!panState) return;
-    viewport.x = panState.ox + (e.clientX - panState.startX);
-    viewport.y = panState.oy + (e.clientY - panState.startY);
-    if(Math.abs(e.clientX - panState.startX) > 3 || Math.abs(e.clientY - panState.startY) > 3) panState.moved = true;
-    applyViewport();
-}
-function onBoardPanEnd(){
-    if(!panState) return;
-    panState = null;
-    board.classList.remove('panning');
-}
-function onBoardWheel(e){
-    e.preventDefault();
-    const rect = board.getBoundingClientRect();
-    const px = e.clientX - rect.left, py = e.clientY - rect.top;
-    // world point under cursor before zoom
-    const wx = (px - viewport.x) / viewport.scale;
-    const wy = (py - viewport.y) / viewport.scale;
-    const factor = e.deltaY < 0 ? 1.1 : 1 / 1.1;
-    const next = Math.min(MAX_SCALE, Math.max(MIN_SCALE, viewport.scale * factor));
-    viewport.scale = next;
-    // keep the same world point under the cursor
-    viewport.x = px - wx * next;
-    viewport.y = py - wy * next;
-    applyViewport();
-}
-
-/* ===== Data loading ===== */
-function currentProject(){ return projects.find(p => p.id === currentProjectId) || projects[0] || null; }
-function canvasesInProject(pid){ return canvases.filter(c => (c.project || 'default') === pid); }
-function chronologicalCanvasesInProject(pid){
-    return canvasesInProject(pid).slice().sort((a, b) => {
-        const updatedDiff = Number(b.updated_at || b.created_at || 0) - Number(a.updated_at || a.created_at || 0);
-        if(updatedDiff) return updatedDiff;
-        const createdDiff = Number(b.created_at || 0) - Number(a.created_at || 0);
-        if(createdDiff) return createdDiff;
-        return String(a.id || '').localeCompare(String(b.id || ''));
-    });
-}
-
-async function loadAll(){
-    try {
-        const [pRes, cRes] = await Promise.all([
-            fetch('/api/projects'),
-            fetch('/api/canvases')
-        ]);
-        const pData = pRes.ok ? await pRes.json() : { projects: [] };
-        const cData = cRes.ok ? await cRes.json() : { canvases: [] };
-        projects = (pData.projects || []).slice().sort((a, b) => (a.order || 0) - (b.order || 0));
-        if(!projects.length) projects = [{ id: 'default', name: L('默认项目','Default'), order: 0, canvas_count: 0 }];
-        canvases = cData.canvases || [];
-        // pick first project (prefer default / order 0)
-        if(!projects.find(p => p.id === currentProjectId)){
-            const def = projects.find(p => p.id === 'default') || projects.slice().sort((a, b) => (a.order || 0) - (b.order || 0))[0];
-            currentProjectId = def ? def.id : 'default';
-        }
-        rememberProjectId(currentProjectId);
-        renderProjects();
-        renderBoard();
-        resetView();
-        requestAnimationFrame(resetView);
-        setTimeout(resetView, 180);
-        refreshTrashCount();
-    } catch(e){
-        console.error(e);
-        setStatus(L('加载失败','Load failed'));
-    }
-}
-
-function projectCanvasCount(pid){
-    const p = projects.find(x => x.id === pid);
-    // prefer live count from canvases array; fall back to server count
-    const live = canvasesInProject(pid).length;
-    return canvases.length ? live : (p?.canvas_count || 0);
-}
-
-/* ===== Project sidebar rendering ===== */
-function renderProjects(){
-    projectListEl.innerHTML = '';
-    projects.forEach(p => {
-        if(pendingDeleteProjectId === p.id){
-            const box = document.createElement('div');
-            box.className = 'ws-project-confirm';
-            box.innerHTML = `
-                <div class="ws-project-confirm-title">${L('删除项目','Delete project')}「${escapeHtml(p.name)}」？${L('其画布将移回默认项目。','Canvases move back to Default.')}</div>
-                <div class="ws-project-confirm-actions">
-                    <button class="ws-confirm-btn" type="button">${L('删除','Delete')}</button>
-                    <button class="ws-cancel-btn" type="button">${L('取消','Cancel')}</button>
-                </div>`;
-            box.querySelector('.ws-confirm-btn').onclick = () => deleteProject(p.id);
-            box.querySelector('.ws-cancel-btn').onclick = () => { pendingDeleteProjectId = null; renderProjects(); };
-            projectListEl.appendChild(box);
-            return;
-        }
-        const row = document.createElement('div');
-        row.className = 'ws-project-row' + (p.id === currentProjectId ? ' active' : '');
-        row.dataset.projectId = p.id;
-        const count = projectCanvasCount(p.id);
-        const isDefault = p.id === 'default';
-        row.innerHTML = `
-            <span class="ws-project-icon"><i data-lucide="${isDefault ? 'folder' : 'folder-open'}" class="w-4 h-4"></i></span>
-            <span class="ws-project-name">${escapeHtml(p.name)}</span>
-            <span class="ws-project-count">${count}</span>
-            <span class="ws-project-actions">
-                <button class="ws-proj-act rename" type="button" title="${L('重命名','Rename')}" aria-label="${L('重命名','Rename')}"><i data-lucide="pencil" class="w-3.5 h-3.5"></i></button>
-                ${isDefault ? '' : `<button class="ws-proj-act del" type="button" title="${L('删除','Delete')}" aria-label="${L('删除','Delete')}"><i data-lucide="trash-2" class="w-3.5 h-3.5"></i></button>`}
-            </span>`;
-        row.onclick = e => {
-            if(e.target.closest('.ws-proj-act')) return;
-            selectProject(p.id);
-        };
-        const renameBtn = row.querySelector('.ws-proj-act.rename');
-        if(renameBtn) renameBtn.onclick = e => { e.stopPropagation(); startProjectRename(p.id, row); };
-        const delBtn = row.querySelector('.ws-proj-act.del');
-        if(delBtn) delBtn.onclick = e => { e.stopPropagation(); pendingDeleteProjectId = p.id; renderProjects(); };
-        projectListEl.appendChild(row);
-    });
-    refreshIcons();
-}
-
-function selectProject(pid){
-    if(pid === currentProjectId && !trashPanel.classList.contains('active')) return;
-    currentProjectId = pid;
-    rememberProjectId(pid);
-    closeTrashView();
-    renderProjects();
-    renderBoard();
-    resetView();
-}
-
-function startProjectRename(pid, row){
-    const p = projects.find(x => x.id === pid);
-    if(!p) return;
-    const nameEl = row.querySelector('.ws-project-name');
-    if(!nameEl || nameEl.querySelector('input')) return;
-    const input = document.createElement('input');
-    input.type = 'text'; input.maxLength = 60; input.value = p.name;
-    input.className = 'ws-project-name-input';
-    nameEl.replaceWith(input);
-    input.focus(); input.select();
-    input.onclick = e => e.stopPropagation();
-    let done = false;
-    const finish = commit => {
-        if(done) return; done = true;
-        const v = input.value.trim();
-        if(commit && v && v !== p.name) renameProject(pid, v);
-        else renderProjects();
-    };
-    input.onblur = () => finish(true);
-    input.onkeydown = e => {
-        e.stopPropagation();
-        if(e.key === 'Enter'){ e.preventDefault(); finish(true); }
-        if(e.key === 'Escape'){ e.preventDefault(); finish(false); }
-    };
-}
-
-/* ===== Project CRUD ===== */
-function openNewProject(){
-    newProjectRow.classList.add('active');
-    newProjectInput.value = '';
-    newProjectInput.focus();
-}
-function closeNewProject(){
-    newProjectRow.classList.remove('active');
-    newProjectInput.value = '';
-}
-async function createProject(){
-    const name = newProjectInput.value.trim() || L('新项目','New project');
-    closeNewProject();
-    try {
-        const res = await fetch('/api/projects', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ name })
+    function formatTime(value){
+        const raw = Number(value || 0);
+        if(!raw) return '--';
+        const date = new Date(raw < 10000000000 ? raw * 1000 : raw);
+        if(Number.isNaN(date.getTime())) return '--';
+        return date.toLocaleString('zh-CN', {
+            month:'2-digit', day:'2-digit', hour:'2-digit', minute:'2-digit', hour12:false
         });
-        if(!res.ok) throw new Error('create project failed');
-        const data = await res.json();
-        const proj = data.project;
-        if(proj){
-            projects.push(proj);
-            projects.sort((a, b) => (a.order || 0) - (b.order || 0));
-            selectProject(proj.id);
-            renderProjects();
-        }
-    } catch(e){
-        console.error(e); setStatus(L('创建项目失败','Create project failed'));
     }
-}
-async function renameProject(pid, name){
-    const p = projects.find(x => x.id === pid);
-    if(p) p.name = name;
-    renderProjects();
-    if(pid === currentProjectId) updateBoardHeader();
-    try {
-        const res = await fetch(`/api/projects/${encodeURIComponent(pid)}`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ name })
-        });
-        if(!res.ok) throw new Error('rename project failed');
-    } catch(e){ console.error(e); setStatus(L('重命名失败','Rename failed')); loadAll(); }
-}
-async function deleteProject(pid){
-    pendingDeleteProjectId = null;
-    try {
-        const res = await fetch(`/api/projects/${encodeURIComponent(pid)}`, { method: 'DELETE' });
-        if(!res.ok) throw new Error('delete project failed');
-        // canvases of deleted project move back to default
-        canvases.forEach(c => { if((c.project || 'default') === pid) c.project = 'default'; });
-        projects = projects.filter(p => p.id !== pid);
-        if(currentProjectId === pid) currentProjectId = 'default';
-        rememberProjectId(currentProjectId);
-        renderProjects();
-        renderBoard();
-    } catch(e){ console.error(e); setStatus(L('删除项目失败','Delete project failed')); loadAll(); }
-}
 
-/* ===== Board rendering ===== */
-function updateBoardHeader(){
-    const p = currentProject();
-    boardProjectName.textContent = p ? p.name : L('默认项目','Default');
-    boardCanvasCount.textContent = String(canvasesInProject(currentProjectId).length);
-}
+    function currentProject(){
+        return projects.find(item => item.id === currentProjectId) || projects[0] || null;
+    }
 
-function autoLayoutNulls(items){
-    // grid layout for cards with null board position; persist each once.
-    const X0 = 40, Y0 = 40, XSTRIDE = 276, YSTRIDE = 176, COLS = 4;
-    const positioned = items.filter(c => c.board_x != null && c.board_y != null);
-    const nulls = items.filter(c => c.board_x == null || c.board_y == null);
-    // start index after existing positioned grid slots to reduce overlap
-    let i = positioned.length;
-    nulls.forEach(c => {
-        const col = i % COLS, rowIdx = Math.floor(i / COLS);
-        c.board_x = X0 + col * XSTRIDE;
-        c.board_y = Y0 + rowIdx * YSTRIDE;
-        i++;
-        persistMeta(c.id, { board_x: c.board_x, board_y: c.board_y });
-    });
-}
+    function chronologicalCanvasesInProject(){
+        return canvases
+            .filter(item => (item.project || 'default') === currentProjectId)
+            .slice()
+            .sort((a,b) => {
+                const byUpdated = Number(b.updated_at || b.created_at || 0) - Number(a.updated_at || a.created_at || 0);
+                return byUpdated || String(a.id).localeCompare(String(b.id));
+            });
+    }
+    function sortedCanvases(){ return chronologicalCanvasesInProject(); }
+    function arrangeCurrentProjectDeck(){
+        document.getElementById('board')?.scrollTo({left:0, top:0, behavior:'smooth'});
+    }
+    function resetView(){ arrangeCurrentProjectDeck(); }
 
-function projectDeckStorageKey(projectId){
-    return `huahai_project_deck_v2_${String(projectId || 'default')}`;
-}
+    async function api(url, options){
+        const response = await fetch(url, options);
+        const body = await response.json().catch(() => ({}));
+        if(!response.ok) throw new Error(body.detail?.message || body.detail || '请求失败');
+        return body;
+    }
 
-function projectDeckSignature(items){
-    return items.map(item => String(item.id)).sort().join('|');
-}
+    function openCanvas(item){
+        const id = encodeURIComponent(item.id);
+        const project = encodeURIComponent(item.project || currentProjectId || 'default');
+        localStorage.setItem('canvasListCurrentProjectId', item.project || currentProjectId || 'default');
+        window.location.href = `/static/smart-canvas.html?id=${id}&project=${project}`;
+    }
 
-function arrangeProjectDeck(items, featuredId, { force = false } = {}){
-    if(!items.length) return false;
-    const storageKey = projectDeckStorageKey(currentProjectId);
-    const signature = projectDeckSignature(items);
-    if(!force && localStorage.getItem(storageKey) === signature) return false;
-
-    const featured = items.find(item => item.id === featuredId) || null;
-    const others = items
-        .filter(item => item.id !== featuredId)
-        .slice()
-        .sort((a, b) => Number(a.created_at || 0) - Number(b.created_at || 0));
-    const ordered = others.slice();
-    if(featured) ordered.splice(Math.ceil(ordered.length / 2), 0, featured);
-
-    let cursorX = 48;
-    const deckY = 172;
-    ordered.forEach(item => {
-        const nextX = Math.round(cursorX);
-        const nextY = deckY;
-        if(Number(item.board_x) !== nextX || Number(item.board_y) !== nextY){
-            item.board_x = nextX;
-            item.board_y = nextY;
-            persistMeta(item.id, { board_x: nextX, board_y: nextY });
-        }
-        cursorX += (item.id === featuredId ? 286 : 190) + 36;
-    });
-    localStorage.setItem(storageKey, signature);
-    return true;
-}
-
-function arrangeCurrentProjectDeck(){
-    renderBoard();
-    setStatus(L('已按更新时间固定排序','Locked by update time'));
-}
-
-function renderBoard(){
-    updateBoardHeader();
-    const items = chronologicalCanvasesInProject(currentProjectId);
-    const featuredId = items[0]?.id || '';
-    boardWorld.innerHTML = '';
-    boardWorld.classList.add('fixed-order');
-    items.forEach((c, index) => {
-        const card = buildCard(c);
-        if(c.id === featuredId) card.classList.add('featured');
-        const cell = document.createElement('div');
-        cell.className = 'ws-card-cell' + (c.id === featuredId ? ' featured' : '');
-        cell.dataset.order = String(index + 1);
-        cell.appendChild(card);
-        const reflection = card.cloneNode(true);
-        reflection.className = 'ws-card-reflection';
-        reflection.removeAttribute('data-canvas-id');
-        reflection.setAttribute('aria-hidden', 'true');
-        reflection.inert = true;
-        reflection.querySelectorAll('button,input,textarea,select').forEach(el => el.remove());
-        cell.appendChild(reflection);
-        boardWorld.appendChild(cell);
-    });
-    boardEmptyHint.classList.toggle('hidden', items.length > 0);
-    updatePasteBtn();
-    refreshIcons();
-}
-
-function buildCard(c){
-    const isSmart = (c.kind || 'classic') === 'smart';
-    const card = document.createElement('div');
-    card.className = 'ws-card'
-        + (String(c.color || '').trim() ? ' cc-marked' : '')
-        + (clipboardCanvasId === c.id ? ' cut' : '');
-    card.dataset.canvasId = c.id;
-    // 卡片布局：顶部=类型标签+更多按钮；中部=标题；底部=节点数·时间。已移除图标。
-    card.innerHTML = `
-        <div class="ws-card-top">
-            <span class="ws-card-kind ${isSmart ? 'smart' : 'classic'}">${isSmart ? compactLabel('智能画布','智能','Smart') : compactLabel('普通画布','普通','Classic')}</span>
-            <button class="ws-card-menu" type="button" title="${L('更多','More')}" aria-label="${L('更多','More')}"><i data-lucide="more-horizontal" class="w-4 h-4"></i></button>
-        </div>
-        <div class="ws-card-title">${escapeHtml(c.title)}</div>
-        <div class="ws-card-meta">
-            <span class="ws-card-nodes">${(c.node_count != null ? c.node_count : 0)} ${L('节点','nodes')}</span>
-            <span class="ws-card-meta-dot"></span>
-            <span class="ws-card-time">${formatCanvasTime(c.updated_at || c.created_at)}</span>
-        </div>
-        <div class="ws-card-focus-actions">
-            <button class="ws-card-continue" type="button"><span>${L('继续编辑','Continue')}</span><i data-lucide="arrow-right"></i></button>
-            <button class="ws-card-quick" type="button" data-card-action="rename"><i data-lucide="pencil"></i><span>${L('重命名','Rename')}</span></button>
-            <button class="ws-card-quick" type="button" data-card-action="duplicate"><i data-lucide="copy"></i><span>${L('复制','Duplicate')}</span></button>
-        </div>
-        <div class="ws-card-delete-confirm">
-            <div class="ws-card-delete-title">${L('移入回收站？','Move to trash?')}</div>
-            <div class="ws-card-delete-actions">
-                <button class="ws-card-delete-yes" type="button">${L('删除','Delete')}</button>
-                <button class="ws-card-delete-no" type="button">${L('取消','Cancel')}</button>
+    function projectRow(project){
+        const count = canvases.filter(item => (item.project || 'default') === project.id).length;
+        const active = project.id === currentProjectId && trashPanel.hidden;
+        const canDelete = project.id !== 'default';
+        return `
+            <div class="hh-project-row-wrap">
+                <button class="hh-project-row ${active ? 'active' : ''}" type="button" data-project-id="${escapeHtml(project.id)}">
+                    <i data-lucide="folder"></i>
+                    <span>${escapeHtml(project.name || '未命名项目')}</span>
+                    <b>${count}</b>
+                </button>
+                ${canDelete ? `<button class="hh-project-more" type="button" data-project-menu="${escapeHtml(project.id)}" title="项目操作"><i data-lucide="more-horizontal"></i></button>` : ''}
             </div>
-        </div>`;
-    card.addEventListener('click', e => {
-        if(e.target.closest('button,input,textarea,select,.ws-card-delete-confirm')) return;
-        openCanvas(c);
-    });
-    const menuBtn = card.querySelector('.ws-card-menu');
-    menuBtn.onmousedown = e => e.stopPropagation();
-    menuBtn.onclick = e => { e.stopPropagation(); openCardMenu(c.id, menuBtn); };
-    const focusActions = card.querySelector('.ws-card-focus-actions');
-    focusActions.onmousedown = e => e.stopPropagation();
-    card.querySelector('.ws-card-continue').onclick = e => { e.stopPropagation(); openCanvas(c); };
-    card.querySelector('[data-card-action="rename"]').onclick = e => { e.stopPropagation(); startCardRename(c.id); };
-    card.querySelector('[data-card-action="duplicate"]').onclick = e => { e.stopPropagation(); duplicateCanvas(c.id); };
-    card.querySelector('.ws-card-delete-confirm').onmousedown = e => e.stopPropagation();
-    card.querySelector('.ws-card-delete-yes').onclick = e => { e.stopPropagation(); deleteCanvas(c.id); };
-    card.querySelector('.ws-card-delete-no').onclick = e => { e.stopPropagation(); card.classList.remove('confirming-delete'); };
-    return card;
-}
+        `;
+    }
 
-async function duplicateCanvas(canvasId){
-    try {
-        const sourceRes = await fetch(`/api/canvases/${encodeURIComponent(canvasId)}`);
-        if(!sourceRes.ok) throw new Error(L('读取画布失败','Failed to read canvas'));
-        const sourceData = await sourceRes.json();
-        const source = sourceData.canvas || sourceData;
-        const title = `${source.title || L('未命名画布','Untitled')} ${L('副本','Copy')}`.slice(0,80);
-        const createRes = await fetch('/api/canvases', {
-            method:'POST',
-            headers:{'Content-Type':'application/json'},
-            body:JSON.stringify({
-                title,
-                icon:source.icon || 'layers',
-                kind:source.kind || 'classic',
-                project:source.project || currentProjectId || 'default',
-                board_x:Number(source.board_x || 0) + 32,
-                board_y:Number(source.board_y || 0) + 32
-            })
+    function renderProjects(){
+        projectListEl.innerHTML = projects.map(projectRow).join('');
+        projectListEl.querySelectorAll('[data-project-id]').forEach(button => {
+            button.addEventListener('click', () => {
+                currentProjectId = button.dataset.projectId;
+                localStorage.setItem('canvasListCurrentProjectId', currentProjectId);
+                trashPanel.hidden = true;
+                render();
+            });
         });
-        const createdData = await createRes.json().catch(() => ({}));
-        if(!createRes.ok || !createdData.canvas?.id) throw new Error(L('创建副本失败','Failed to create copy'));
-        const saveRes = await fetch(`/api/canvases/${encodeURIComponent(createdData.canvas.id)}`, {
-            method:'PUT',
-            headers:{'Content-Type':'application/json'},
-            body:JSON.stringify({
-                title,
-                icon:source.icon || 'layers',
-                nodes:source.nodes || [],
-                connections:source.connections || [],
-                viewport:source.viewport || {},
-                logs:source.logs || [],
-                settings:source.settings || {}
-            })
+        projectListEl.querySelectorAll('[data-project-menu]').forEach(button => {
+            button.addEventListener('click', async event => {
+                event.stopPropagation();
+                const id = button.dataset.projectMenu;
+                const item = projects.find(project => project.id === id);
+                if(!item) return;
+                const action = window.prompt('输入“重命名”或“删除”', '重命名');
+                if(action === '重命名'){
+                    const name = window.prompt('项目名称', item.name || '');
+                    if(name?.trim()) await renameProject(id, name.trim());
+                } else if(action === '删除'){
+                    if(window.confirm(`删除项目“${item.name}”？其中画布会移回默认项目。`)) await deleteProject(id);
+                }
+            });
         });
-        if(!saveRes.ok) throw new Error(L('保存副本失败','Failed to save copy'));
-        setStatus(L('画布已复制','Canvas duplicated'));
-        await loadAll();
-    } catch(error){
-        console.error(error);
-        setStatus(error.message || L('复制失败','Duplicate failed'));
     }
-}
 
-function openCanvas(c){
-    const enc = encodeURIComponent(c.id);
-    const project = encodeURIComponent(c.project || currentProjectId || 'default');
-    rememberProjectId(c.project || currentProjectId || 'default');
-    window.location.href = (c.kind === 'smart')
-        ? `/static/smart-canvas.html?id=${enc}&project=${project}&v=2026.07.03.4`
-        : `/static/canvas.html?id=${enc}&project=${project}&v=2026.07.03.4`;
-}
-
-/* ===== Card create flow ===== */
-let createCardEl = null;
-let createKind = 'classic';
-function closeCreateCard(){
-    createCardEl?.remove();
-    createCardEl = null;
-    boardEmptyHint?.classList.toggle('hidden', canvasesInProject(currentProjectId).length > 0);
-}
-function openCreateCard(worldPt){
-    closeCreateCard();
-    closeCardMenu();
-    createKind = 'classic';
-    const el = document.createElement('div');
-    el.className = 'ws-create-card';
-    el.style.left = worldPt.x + 'px';
-    el.style.top = worldPt.y + 'px';
-    el.innerHTML = `
-        <div class="ws-create-title">${L('新建画布','New canvas')}</div>
-        <input class="ws-create-input" type="text" maxlength="80" placeholder="${L('画布名称（可留空）','Canvas name (optional)')}">
-        <div class="ws-create-toggle">
-            <button class="ws-create-toggle-btn active" type="button" data-kind="classic">${L('普通画布','Classic')}</button>
-            <button class="ws-create-toggle-btn" type="button" data-kind="smart">${L('智能画布','Smart')}</button>
-        </div>
-        <div class="ws-create-actions">
-            <button class="ws-create-confirm" type="button">${L('创建','Create')}</button>
-            <button class="ws-create-cancel" type="button">${L('取消','Cancel')}</button>
-        </div>`;
-    if(boardWorld.classList.contains('fixed-order')) boardWorld.prepend(el);
-    else boardWorld.appendChild(el);
-    createCardEl = el;
-    boardEmptyHint?.classList.add('hidden');
-    el.addEventListener('mousedown', e => e.stopPropagation());
-    const input = el.querySelector('.ws-create-input');
-    input.focus();
-    el.querySelectorAll('.ws-create-toggle-btn').forEach(btn => {
-        btn.onclick = () => {
-            createKind = btn.dataset.kind;
-            el.querySelectorAll('.ws-create-toggle-btn').forEach(b => b.classList.toggle('active', b === btn));
-        };
-    });
-    const confirm = () => createCanvasOnBoard(input.value.trim(), createKind, worldPt);
-    el.querySelector('.ws-create-confirm').onclick = confirm;
-    el.querySelector('.ws-create-cancel').onclick = closeCreateCard;
-    input.onkeydown = e => {
-        e.stopPropagation();
-        if(e.key === 'Enter'){ e.preventDefault(); confirm(); }
-        if(e.key === 'Escape'){ e.preventDefault(); closeCreateCard(); }
-    };
-}
-
-async function createCanvasOnBoard(title, kind, worldPt){
-    const isSmart = kind === 'smart';
-    const base = isSmart ? L('智能画布','Smart canvas') : L('画布','Canvas');
-    const name = title || `${base} ${new Date().toLocaleTimeString(langIsEn() ? 'en-US' : 'zh-CN', { hour: '2-digit', minute: '2-digit' })}`;
-    closeCreateCard();
-    try {
-        const res = await fetch('/api/canvases', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-                title: name,
-                icon: isSmart ? 'sparkles' : '🧩',
-                kind: isSmart ? 'smart' : 'classic',
-                project: currentProjectId,
-                board_x: Math.round(worldPt.x),
-                board_y: Math.round(worldPt.y)
-            })
-        });
-        if(!res.ok) throw new Error('create canvas failed');
-        const data = await res.json();
-        const nc = data.canvas;
-        if(nc){
-            if(nc.project == null) nc.project = currentProjectId;
-            if(nc.board_x == null) nc.board_x = Math.round(worldPt.x);
-            if(nc.board_y == null) nc.board_y = Math.round(worldPt.y);
-            canvases.push(nc);
-            renderBoard();
-            renderProjects();
-        }
-    } catch(e){ console.error(e); setStatus(L('创建失败','Create failed')); }
-}
-
-/* ===== Card context menu (rename / delete / move) ===== */
-function closeCardMenu(){ document.querySelector('.ws-card-pop')?.remove(); }
-function openCardMenu(canvasId, anchorBtn){
-    closeCardMenu();
-    const c = canvases.find(x => x.id === canvasId);
-    if(!c) return;
-    const pop = document.createElement('div');
-    pop.className = 'ws-card-pop';
-    pop.innerHTML = `
-        <button class="ws-pop-item" data-act="rename"><i data-lucide="pencil" class="w-4 h-4"></i><span>${L('重命名','Rename')}</span></button>
-        <button class="ws-pop-item" data-act="export"><i data-lucide="download" class="w-4 h-4"></i><span>${L('导出画布','Export canvas')}</span></button>
-        <button class="ws-pop-item" data-act="export-assets"><i data-lucide="archive" class="w-4 h-4"></i><span>${L('导出画布 + 资源','Export with assets')}</span></button>
-        <button class="ws-pop-item" data-act="cut"><i data-lucide="scissors" class="w-4 h-4"></i><span>${L('剪切到其他项目','Cut to project')}</span></button>
-        <div class="ws-pop-sep"></div>
-        <button class="ws-pop-item danger" data-act="delete"><i data-lucide="trash-2" class="w-4 h-4"></i><span>${L('删除','Delete')}</span></button>`;
-    document.body.appendChild(pop);
-    const r = anchorBtn.getBoundingClientRect();
-    const w = pop.offsetWidth || 188, h = pop.offsetHeight || 120;
-    let left = Math.min(r.left, window.innerWidth - w - 12);
-    let top = r.bottom + 6;
-    if(top + h > window.innerHeight - 12) top = r.top - h - 6;
-    pop.style.left = Math.round(Math.max(12, left)) + 'px';
-    pop.style.top = Math.round(Math.max(12, top)) + 'px';
-    pop.querySelector('[data-act="rename"]').onclick = () => { closeCardMenu(); startCardRename(canvasId); };
-    pop.querySelector('[data-act="export"]').onclick = () => { closeCardMenu(); exportCanvas(canvasId); };
-    pop.querySelector('[data-act="export-assets"]').onclick = () => { closeCardMenu(); exportCanvasWithResources(canvasId); };
-    pop.querySelector('[data-act="cut"]').onclick = () => { closeCardMenu(); cutCanvas(canvasId); };
-    pop.querySelector('[data-act="delete"]').onclick = () => { closeCardMenu(); showCardDeleteConfirm(canvasId); };
-    refreshIcons();
-}
-
-function showCardDeleteConfirm(canvasId){
-    const card = boardWorld.querySelector(`.ws-card[data-canvas-id="${CSS.escape(canvasId)}"]`);
-    if(!card) return;
-    boardWorld.querySelectorAll('.ws-card.confirming-delete').forEach(el => {
-        if(el !== card) el.classList.remove('confirming-delete');
-    });
-    card.classList.add('confirming-delete');
-}
-
-/* ===== Export canvas (download the full canvas JSON) ===== */
-async function exportCanvas(id){
-    const c = canvases.find(x => x.id === id);
-    setStatus(L('正在导出...','Exporting...'));
-    try {
-        const res = await fetch(`/api/canvases/${encodeURIComponent(id)}`);
-        if(!res.ok) throw new Error('export failed');
-        const data = await res.json();
-        const cv = data.canvas || data;
-        const base = String((c?.title) || cv.title || 'canvas').replace(/[\\/:*?"<>|]+/g, '_').trim().slice(0, 60) || 'canvas';
-        const blob = new Blob([JSON.stringify(cv, null, 2)], { type: 'application/json' });
-        const url = URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = url; a.download = base + '.json';
-        document.body.appendChild(a); a.click(); a.remove();
-        setTimeout(() => URL.revokeObjectURL(url), 1500);
-        setStatus(L('已导出','Exported'));
-    } catch(e){ console.error(e); setStatus(L('导出失败','Export failed')); }
-}
-
-/* ===== Export canvas with referenced resources ===== */
-const ZIP_ENCODER = new TextEncoder();
-let ZIP_CRC_TABLE = null;
-
-function safeExportBase(name, fallback = 'canvas'){
-    return String(name || fallback).replace(/[\\/:*?"<>|]+/g, '_').trim().slice(0, 60) || fallback;
-}
-
-function collectCanvasResourceUrls(value, out = [], seen = new Set()){
-    if(value == null) return out;
-    if(typeof value === 'string'){
-        const text = value.trim();
-        if(isCanvasResourceUrl(text) && !seen.has(text)){
-            seen.add(text);
-            out.push(text);
-        }
-        return out;
-    }
-    if(Array.isArray(value)){
-        value.forEach(item => collectCanvasResourceUrls(item, out, seen));
-        return out;
-    }
-    if(typeof value === 'object'){
-        Object.values(value).forEach(item => collectCanvasResourceUrls(item, out, seen));
-    }
-    return out;
-}
-
-function isCanvasResourceUrl(url){
-    return url.startsWith('/assets/') || url.startsWith('/output/') || /^https?:\/\//i.test(url);
-}
-
-function exportResourceName(url, index, used){
-    let name = '';
-    try {
-        const parsed = new URL(url, location.origin);
-        name = decodeURIComponent(parsed.pathname.split('/').filter(Boolean).pop() || '');
-    } catch(e) {
-        name = String(url || '').split(/[?#]/)[0].split('/').pop() || '';
-    }
-    name = safeExportBase(name || `resource-${String(index + 1).padStart(3, '0')}`, `resource-${index + 1}`);
-    if(!/\.[a-z0-9]{1,8}$/i.test(name)) name += '.bin';
-    let finalName = `resources/${name}`;
-    const dot = finalName.lastIndexOf('.');
-    const stem = dot > 0 ? finalName.slice(0, dot) : finalName;
-    const ext = dot > 0 ? finalName.slice(dot) : '';
-    let suffix = 2;
-    while(used.has(finalName)){
-        finalName = `${stem}-${suffix}${ext}`;
-        suffix++;
-    }
-    used.add(finalName);
-    return finalName;
-}
-
-async function fetchResourceBytes(url){
-    const res = await fetch(url);
-    if(!res.ok) throw new Error(`HTTP ${res.status}`);
-    return new Uint8Array(await res.arrayBuffer());
-}
-
-function zipCrc32(bytes){
-    if(!ZIP_CRC_TABLE){
-        ZIP_CRC_TABLE = new Uint32Array(256);
-        for(let i = 0; i < 256; i++){
-            let c = i;
-            for(let k = 0; k < 8; k++) c = (c & 1) ? (0xedb88320 ^ (c >>> 1)) : (c >>> 1);
-            ZIP_CRC_TABLE[i] = c >>> 0;
-        }
-    }
-    let crc = 0xffffffff;
-    for(let i = 0; i < bytes.length; i++) crc = ZIP_CRC_TABLE[(crc ^ bytes[i]) & 0xff] ^ (crc >>> 8);
-    return (crc ^ 0xffffffff) >>> 0;
-}
-
-function zipDosTime(date = new Date()){
-    const time = (date.getHours() << 11) | (date.getMinutes() << 5) | Math.floor(date.getSeconds() / 2);
-    const year = Math.max(1980, date.getFullYear());
-    const day = ((year - 1980) << 9) | ((date.getMonth() + 1) << 5) | date.getDate();
-    return { time, day };
-}
-
-function zipHeader(signature, size){
-    const bytes = new Uint8Array(size);
-    const view = new DataView(bytes.buffer);
-    view.setUint32(0, signature, true);
-    return { bytes, view };
-}
-
-function createZipBlob(entries){
-    const now = zipDosTime();
-    const files = [];
-    const central = [];
-    let offset = 0;
-    entries.forEach(entry => {
-        const nameBytes = ZIP_ENCODER.encode(entry.name);
-        const data = entry.bytes instanceof Uint8Array ? entry.bytes : ZIP_ENCODER.encode(String(entry.bytes || ''));
-        const crc = zipCrc32(data);
-        const local = zipHeader(0x04034b50, 30 + nameBytes.length);
-        local.view.setUint16(4, 20, true);
-        local.view.setUint16(6, 0x0800, true);
-        local.view.setUint16(8, 0, true);
-        local.view.setUint16(10, now.time, true);
-        local.view.setUint16(12, now.day, true);
-        local.view.setUint32(14, crc, true);
-        local.view.setUint32(18, data.length, true);
-        local.view.setUint32(22, data.length, true);
-        local.view.setUint16(26, nameBytes.length, true);
-        local.bytes.set(nameBytes, 30);
-        files.push(local.bytes, data);
-
-        const cd = zipHeader(0x02014b50, 46 + nameBytes.length);
-        cd.view.setUint16(4, 20, true);
-        cd.view.setUint16(6, 20, true);
-        cd.view.setUint16(8, 0x0800, true);
-        cd.view.setUint16(10, 0, true);
-        cd.view.setUint16(12, now.time, true);
-        cd.view.setUint16(14, now.day, true);
-        cd.view.setUint32(16, crc, true);
-        cd.view.setUint32(20, data.length, true);
-        cd.view.setUint32(24, data.length, true);
-        cd.view.setUint16(28, nameBytes.length, true);
-        cd.view.setUint32(42, offset, true);
-        cd.bytes.set(nameBytes, 46);
-        central.push(cd.bytes);
-        offset += local.bytes.length + data.length;
-    });
-    const centralSize = central.reduce((sum, bytes) => sum + bytes.length, 0);
-    const end = zipHeader(0x06054b50, 22);
-    end.view.setUint16(8, entries.length, true);
-    end.view.setUint16(10, entries.length, true);
-    end.view.setUint32(12, centralSize, true);
-    end.view.setUint32(16, offset, true);
-    return new Blob([...files, ...central, end.bytes], { type:'application/zip' });
-}
-
-async function exportCanvasWithResources(id){
-    const c = canvases.find(x => x.id === id);
-    setStatus(L('正在收集资源...','Collecting assets...'));
-    try {
-        const res = await fetch(`/api/canvases/${encodeURIComponent(id)}`);
-        if(!res.ok) throw new Error('export failed');
-        const data = await res.json();
-        const cv = data.canvas || data;
-        const base = safeExportBase((c?.title) || cv.title || 'canvas');
-        const urls = collectCanvasResourceUrls(cv).slice(0, 1000);
-        const usedNames = new Set(['canvas.json', 'resources-manifest.json']);
-        const entries = [{ name:'canvas.json', bytes:ZIP_ENCODER.encode(JSON.stringify(cv, null, 2)) }];
-        const manifest = [];
-        let skipped = 0;
-        for(let i = 0; i < urls.length; i++){
-            const url = urls[i];
-            try {
-                const bytes = await fetchResourceBytes(url);
-                const name = exportResourceName(url, i, usedNames);
-                entries.push({ name, bytes });
-                manifest.push({ url, file:name, size:bytes.length });
-            } catch(e) {
-                skipped++;
-                manifest.push({ url, skipped:true, reason:String(e?.message || e || 'fetch failed').slice(0, 120) });
-            }
-        }
-        entries.push({ name:'resources-manifest.json', bytes:ZIP_ENCODER.encode(JSON.stringify({ canvas_id:id, resources:manifest }, null, 2)) });
-        const blob = createZipBlob(entries);
-        const href = URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = href;
-        a.download = `${base}.zip`;
-        document.body.appendChild(a); a.click(); a.remove();
-        setTimeout(() => URL.revokeObjectURL(href), 1500);
-        const included = Math.max(0, entries.length - 2);
-        setStatus(skipped
-            ? L(`已导出，跳过 ${skipped} 个资源`, `Exported, skipped ${skipped} assets`)
-            : L(`已导出 ${included} 个资源`, `Exported ${included} assets`));
-    } catch(e){ console.error(e); setStatus(L('导出失败','Export failed')); }
-}
-
-/* ===== Cut / paste a canvas across projects ===== */
-function cutCanvas(id){
-    clipboardCanvasId = id;
-    setStatus(L('已剪切，切换到目标项目后点“粘贴到此项目”','Cut — open another project, then Paste'));
-    renderBoard();
-}
-function updatePasteBtn(){
-    if(!pasteCanvasBtn) return;
-    const show = !!clipboardCanvasId && canvases.some(x => x.id === clipboardCanvasId);
-    pasteCanvasBtn.style.display = show ? 'inline-flex' : 'none';
-}
-async function pasteCanvas(){
-    if(!clipboardCanvasId) return;
-    const c = canvases.find(x => x.id === clipboardCanvasId);
-    const targetPid = currentProjectId;
-    clipboardCanvasId = null;
-    if(!c){ updatePasteBtn(); renderBoard(); return; }
-    if((c.project || 'default') === targetPid){ renderBoard(); setStatus(L('已在当前项目','Already in this project')); return; }
-    await moveCanvasToProject(c.id, targetPid);
-}
-
-function startCardRename(canvasId){
-    const card = boardWorld.querySelector(`.ws-card[data-canvas-id="${CSS.escape(canvasId)}"]`);
-    const c = canvases.find(x => x.id === canvasId);
-    if(!card || !c) return;
-    const titleEl = card.querySelector('.ws-card-title');
-    if(!titleEl || titleEl.querySelector('input')) return;
-    const input = document.createElement('input');
-    input.type = 'text'; input.maxLength = 80; input.value = c.title || '';
-    input.className = 'ws-card-title-input';
-    titleEl.innerHTML = ''; titleEl.appendChild(input);
-    input.onmousedown = e => e.stopPropagation();
-    input.onclick = e => e.stopPropagation();
-    input.focus(); input.select();
-    let done = false;
-    const finish = commit => {
-        if(done) return; done = true;
-        const v = input.value.trim();
-        if(commit && v && v !== c.title) setCanvasTitle(canvasId, v);
-        else renderBoard();
-    };
-    input.onblur = () => finish(true);
-    input.onkeydown = e => {
-        e.stopPropagation();
-        if(e.key === 'Enter'){ e.preventDefault(); finish(true); }
-        if(e.key === 'Escape'){ e.preventDefault(); finish(false); }
-    };
-}
-
-async function setCanvasTitle(id, title){
-    const c = canvases.find(x => x.id === id);
-    if(c) c.title = title;
-    await persistMeta(id, { title });
-    renderBoard();
-}
-
-async function moveCanvasToProject(id, projectId){
-    const c = canvases.find(x => x.id === id);
-    if(c) c.project = projectId;
-    renderBoard();
-    renderProjects();
-    setStatus(L('已移动','Moved'));
-    await persistMeta(id, { project: projectId });
-}
-
-/* ===== Card meta persist (POST /meta) ===== */
-async function persistMeta(id, patch){
-    try {
-        const res = await fetch(`/api/canvases/${encodeURIComponent(id)}/meta`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(patch)
-        });
-        if(!res.ok) throw new Error('meta save failed');
-        const data = await res.json();
-        if(data.canvas){
-            const idx = canvases.findIndex(x => x.id === id);
-            if(idx >= 0) canvases[idx] = { ...canvases[idx], ...data.canvas };
-        }
-    } catch(e){ console.error(e); setStatus(L('保存失败','Save failed')); }
-}
-
-/* ===== Delete canvas (soft -> trash, with confirm) ===== */
-async function deleteCanvas(id){
-    const c = canvases.find(x => x.id === id);
-    if(!c) return;
-    try {
-        const res = await fetch(`/api/canvases/${encodeURIComponent(id)}`, { method: 'DELETE' });
-        if(!res.ok) throw new Error('delete failed');
-        canvases = canvases.filter(x => x.id !== id);
-        renderBoard();
-        renderProjects();
-        refreshTrashCount();
-        setStatus(L('已移入回收站','Moved to trash'));
-    } catch(e){ console.error(e); setStatus(L('删除失败','Delete failed')); }
-}
-
-/* ===== Trash / recycle bin ===== */
-async function refreshTrashCount(){
-    try {
-        const res = await fetch('/api/canvases/trash');
-        if(!res.ok) return;
-        const data = await res.json();
-        deletedCanvases = data.canvases || [];
-        const n = deletedCanvases.length;
-        trashBadge.textContent = String(n);
-        trashBadge.classList.toggle('visible', n > 0);
-    } catch(e){}
-}
-async function openTrashView(){
-    trashEntryBtn.classList.add('active');
-    trashPanel.classList.add('active');
-    closeCardMenu(); closeCreateCard();
-    await loadTrash();
-}
-function closeTrashView(){
-    trashEntryBtn.classList.remove('active');
-    trashPanel.classList.remove('active');
-}
-async function loadTrash(){
-    try {
-        const res = await fetch('/api/canvases/trash');
-        if(!res.ok) throw new Error('trash load failed');
-        const data = await res.json();
-        deletedCanvases = data.canvases || [];
-        renderTrash();
-        const n = deletedCanvases.length;
-        trashBadge.textContent = String(n);
-        trashBadge.classList.toggle('visible', n > 0);
-    } catch(e){ console.error(e); setStatus(L('加载回收站失败','Load trash failed')); }
-}
-function renderTrash(){
-    trashListEl.innerHTML = '';
-    if(!deletedCanvases.length){
-        const empty = document.createElement('div');
-        empty.className = 'ws-trash-empty';
-        empty.textContent = L('回收站为空','Trash is empty');
-        trashListEl.appendChild(empty);
-        return;
-    }
-    deletedCanvases.forEach(c => {
-        const isSmart = (c.kind || 'classic') === 'smart';
-        const projName = (projects.find(p => p.id === (c.project || 'default')) || {}).name || L('默认项目','Default');
-        const card = document.createElement('div');
-        card.className = 'ws-trash-card';
-        card.dataset.canvasId = c.id;
-        card.innerHTML = `
-            <div class="ws-card-top">
-                <span class="ws-card-icon">${renderCanvasIcon(isSmart && /[^\x00-\x7F]/.test(c.icon || '') ? 'sparkles' : c.icon, 17)}</span>
-                <span class="ws-card-kind ${isSmart ? 'smart' : 'classic'}">${isSmart ? L('智能','Smart') : L('普通','Classic')}</span>
-            </div>
-            <div class="ws-card-title">${escapeHtml(c.title)}</div>
-            <div class="ws-card-meta"><span class="ws-card-nodes">${escapeHtml(projName)}</span><span class="ws-card-meta-dot"></span><span class="ws-card-time">${formatCanvasTime(c.deleted_at)}</span></div>
-            <div class="ws-card-actions">
-                <button class="ws-trash-act restore" type="button"><i data-lucide="rotate-ccw" class="w-3.5 h-3.5"></i><span>${L('恢复','Restore')}</span></button>
-                <button class="ws-trash-act purge" type="button"><i data-lucide="trash-2" class="w-3.5 h-3.5"></i><span>${L('彻底删除','Delete')}</span></button>
-            </div>
-            <div class="ws-trash-confirm">
-                <div class="ws-trash-confirm-title">${L('彻底删除？不可恢复','Delete permanently?')}</div>
-                <div class="ws-trash-confirm-actions">
-                    <button class="ws-trash-confirm-yes" type="button">${L('删除','Delete')}</button>
-                    <button class="ws-trash-confirm-no" type="button">${L('取消','Cancel')}</button>
+    function canvasCard(item, index){
+        const nodeCount = Array.isArray(item.nodes) ? item.nodes.length : Number(item.node_count || 0);
+        return `
+            <article class="hh-canvas-card ${index === 0 ? 'featured' : ''}" data-canvas-card="${escapeHtml(item.id)}">
+                <div class="hh-card-surface">
+                    <div class="hh-card-top">
+                        <span>花海画布</span>
+                        <button type="button" data-card-menu="${escapeHtml(item.id)}" title="更多操作"><i data-lucide="more-horizontal"></i></button>
+                    </div>
+                    <h2>${escapeHtml(item.title || '未命名画布')}</h2>
+                    <div class="hh-card-ripple" aria-hidden="true"><i></i><i></i><i></i></div>
+                    <div class="hh-card-meta">
+                        <span><i data-lucide="file"></i>${nodeCount} 节点</span>
+                        <time>${escapeHtml(formatTime(item.updated_at || item.created_at))}</time>
+                    </div>
+                    <div class="hh-card-actions ws-card-focus-actions">
+                        <button type="button" class="primary" data-card-open="${escapeHtml(item.id)}">继续编辑 <i data-lucide="arrow-right"></i></button>
+                        <button type="button" data-card-rename="${escapeHtml(item.id)}" title="重命名"><i data-lucide="pencil"></i></button>
+                        <button type="button" data-card-duplicate="${escapeHtml(item.id)}" title="复制"><i data-lucide="copy"></i></button>
+                    </div>
                 </div>
-            </div>`;
-        card.querySelector('.ws-trash-act.restore').onclick = () => restoreCanvas(c.id);
-        card.querySelector('.ws-trash-act.purge').onclick = () => card.classList.add('confirming');
-        card.querySelector('.ws-trash-confirm-yes').onclick = () => purgeCanvas(c.id);
-        card.querySelector('.ws-trash-confirm-no').onclick = () => card.classList.remove('confirming');
-        trashListEl.appendChild(card);
-    });
-    refreshIcons();
-}
-async function restoreCanvas(id){
-    try {
-        const res = await fetch(`/api/canvases/${encodeURIComponent(id)}/restore`, { method: 'POST' });
-        if(!res.ok) throw new Error('restore failed');
-        deletedCanvases = deletedCanvases.filter(c => c.id !== id);
-        await loadAll();           // restored canvas returns to its stored project
-        renderTrash();
-        setStatus(L('已恢复','Restored'));
-    } catch(e){ console.error(e); setStatus(L('恢复失败','Restore failed')); }
-}
-async function purgeCanvas(id){
-    try {
-        const res = await fetch(`/api/canvases/${encodeURIComponent(id)}/purge`, { method: 'DELETE' });
-        if(!res.ok) throw new Error('purge failed');
-        deletedCanvases = deletedCanvases.filter(c => c.id !== id);
-        renderTrash();
-        const n = deletedCanvases.length;
-        trashBadge.textContent = String(n);
-        trashBadge.classList.toggle('visible', n > 0);
-        setStatus(L('已彻底删除','Deleted'));
-    } catch(e){ console.error(e); setStatus(L('删除失败','Delete failed')); }
-}
-
-/* ===== Event bindings ===== */
-newCanvasBtn.addEventListener('click', () => openCreateCard(boardCenterWorld()));
-emptyCreateCanvasBtn?.addEventListener('mousedown', e => e.stopPropagation());
-emptyCreateCanvasBtn?.addEventListener('click', e => {
-    e.stopPropagation();
-    openCreateCard(boardCenterWorld());
-});
-boardRefreshBtn.addEventListener('click', loadAll);
-boardResetViewBtn.addEventListener('click', arrangeCurrentProjectDeck);
-pasteCanvasBtn?.addEventListener('click', pasteCanvas);
-
-newProjectBtn.addEventListener('click', openNewProject);
-newProjectConfirm.addEventListener('click', createProject);
-newProjectCancel.addEventListener('click', closeNewProject);
-newProjectInput.addEventListener('keydown', e => {
-    if(e.key === 'Enter'){ e.preventDefault(); createProject(); }
-    if(e.key === 'Escape'){ e.preventDefault(); closeNewProject(); }
-});
-
-trashEntryBtn.addEventListener('click', () => {
-    if(trashPanel.classList.contains('active')) closeTrashView();
-    else openTrashView();
-});
-trashCloseBtn.addEventListener('click', closeTrashView);
-if(workspaceBrand){
-    workspaceBrand.setAttribute('role', 'button');
-    workspaceBrand.setAttribute('tabindex', '0');
-    workspaceBrand.setAttribute('aria-label', '返回花海画布首页');
-    const openHome = () => {
-        if(window.parent && window.parent !== window && typeof window.parent.switchUI === 'function'){
-            const home = window.parent.document.querySelector('.nav-item[onclick*="home"]');
-            window.parent.switchUI(home, 'home');
-        }else{
-            window.location.href = '/';
-        }
-    };
-    workspaceBrand.addEventListener('click', openHome);
-    workspaceBrand.addEventListener('keydown', event => {
-        if(event.key === 'Enter' || event.key === ' '){
-            event.preventDefault();
-            openHome();
-        }
-    });
-}
-
-// close card menu when clicking outside
-document.addEventListener('mousedown', e => {
-    if(document.querySelector('.ws-card-pop') && !e.target.closest('.ws-card-pop') && !e.target.closest('.ws-card-menu')){
-        closeCardMenu();
+                <div class="hh-card-reflection ws-card-reflection" aria-hidden="true"></div>
+            </article>
+        `;
     }
-    if(document.querySelector('.ws-card.confirming-delete') && !e.target.closest('.ws-card.confirming-delete')){
-        boardWorld.querySelectorAll('.ws-card.confirming-delete').forEach(el => el.classList.remove('confirming-delete'));
+
+    function renderBoard(){
+        const items = sortedCanvases();
+        // 顶栏保持设计稿的稳定信息层级；当前项目由左栏选中态表达。
+        projectNameEl.textContent = '项目管理';
+        canvasCountEl.textContent = items.length;
+        boardWorld.innerHTML = items.map(canvasCard).join('');
+        boardEmpty.hidden = items.length !== 0;
+        bindCardEvents(items);
+        requestAnimationFrame(resetView);
     }
-});
 
-document.addEventListener('keydown', e => {
-    if(e.key !== 'Escape') return;
-    closeCardMenu();
-    closeCreateCard();
-    boardWorld.querySelectorAll('.ws-card.confirming-delete').forEach(el => el.classList.remove('confirming-delete'));
-    if(trashPanel.classList.contains('active')) closeTrashView();
-});
+    function bindCardEvents(items){
+        const byId = id => items.find(item => String(item.id) === String(id));
+        boardWorld.querySelectorAll('[data-card-open]').forEach(button => button.addEventListener('click', () => openCanvas(byId(button.dataset.cardOpen))));
+        boardWorld.querySelectorAll('[data-canvas-card]').forEach(card => {
+            card.addEventListener('dblclick', event => {
+                if(event.target.closest('button')) return;
+                openCanvas(byId(card.dataset.canvasCard));
+            });
+        });
+        boardWorld.querySelectorAll('[data-card-rename]').forEach(button => button.addEventListener('click', () => openRenameDialog(byId(button.dataset.cardRename))));
+        boardWorld.querySelectorAll('[data-card-duplicate]').forEach(button => button.addEventListener('click', () => duplicateCanvas(button.dataset.cardDuplicate)));
+        boardWorld.querySelectorAll('[data-card-menu]').forEach(button => {
+            button.addEventListener('click', async () => {
+                const id = button.dataset.cardMenu;
+                const item = byId(id);
+                const action = window.prompt('输入“重命名”、“复制”或“删除”', '重命名');
+                if(action === '重命名') openRenameDialog(item);
+                else if(action === '复制') await duplicateCanvas(id);
+                else if(action === '删除' && window.confirm(`把“${item?.title || '未命名画布'}”移入回收站？`)) await deleteCanvas(id);
+            });
+        });
+        if(window.lucide) lucide.createIcons();
+    }
 
-// language switch from parent (index.html) via postMessage
-window.addEventListener('message', event => {
-    if(event.origin && event.origin !== location.origin) return;
-    if(event.data?.type === 'studio-lang'){
-        if(event.data.lang && window.StudioI18n) StudioI18n.set(event.data.lang);
-        window.StudioI18n?.apply?.();
+    function render(){
         renderProjects();
         renderBoard();
-        if(trashPanel.classList.contains('active')) renderTrash();
-        refreshIcons();
+        if(window.lucide) lucide.createIcons();
     }
-});
 
-/* ===== Boot ===== */
-window.StudioI18n?.apply?.();
-applyViewport();
-loadAll();
-refreshIcons();
-window.addEventListener('load', () => setTimeout(resetView, 320), {once:true});
-let huahaiResizeTimer = null;
-window.addEventListener('resize', () => {
-    clearTimeout(huahaiResizeTimer);
-    huahaiResizeTimer = setTimeout(resetView, 180);
-});
+    async function loadAll(){
+        try {
+            const [projectData, canvasData, trashData] = await Promise.all([
+                api('/api/projects'),
+                api('/api/canvases'),
+                api('/api/canvases/trash')
+            ]);
+            projects = (projectData.projects || []).slice().sort((a,b) => Number(a.order || 0) - Number(b.order || 0));
+            canvases = canvasData.canvases || [];
+            deletedCanvases = trashData.canvases || [];
+            if(!projects.some(item => item.id === currentProjectId)) currentProjectId = projects[0]?.id || 'default';
+            trashBadge.textContent = deletedCanvases.length;
+            render();
+        } catch(error){
+            setStatus(error.message || '项目读取失败', 'error');
+        }
+    }
+
+    async function createProject(name){
+        try {
+            const result = await api('/api/projects', {
+                method:'POST',
+                headers:{'Content-Type':'application/json'},
+                body:JSON.stringify({name})
+            });
+            currentProjectId = result.project?.id || currentProjectId;
+            newProjectForm.hidden = true;
+            await loadAll();
+            setStatus('项目已创建');
+        } catch(error){ setStatus(error.message, 'error'); }
+    }
+
+    async function renameProject(id, name){
+        try {
+            await api(`/api/projects/${encodeURIComponent(id)}`, {
+                method:'POST',
+                headers:{'Content-Type':'application/json'},
+                body:JSON.stringify({name})
+            });
+            await loadAll();
+            setStatus('项目已重命名');
+        } catch(error){ setStatus(error.message, 'error'); }
+    }
+
+    async function deleteProject(id){
+        try {
+            await api(`/api/projects/${encodeURIComponent(id)}`, {method:'DELETE'});
+            currentProjectId = 'default';
+            await loadAll();
+            setStatus('项目已删除，画布已移回默认项目');
+        } catch(error){ setStatus(error.message, 'error'); }
+    }
+
+    function openCreateDialog(){
+        dialogMode = 'create';
+        dialogCanvasId = '';
+        canvasDialogTitle.textContent = '新建画布';
+        canvasNameInput.value = '';
+        canvasDialog.showModal();
+        setTimeout(() => canvasNameInput.focus(), 0);
+    }
+
+    function openRenameDialog(item){
+        if(!item) return;
+        dialogMode = 'rename';
+        dialogCanvasId = item.id;
+        canvasDialogTitle.textContent = '重命名画布';
+        canvasNameInput.value = item.title || '';
+        canvasDialog.showModal();
+        setTimeout(() => canvasNameInput.select(), 0);
+    }
+
+    async function submitCanvasDialog(){
+        const title = canvasNameInput.value.trim() || '未命名画布';
+        try {
+            if(dialogMode === 'rename'){
+                await api(`/api/canvases/${encodeURIComponent(dialogCanvasId)}/meta`, {
+                    method:'POST',
+                    headers:{'Content-Type':'application/json'},
+                    body:JSON.stringify({title})
+                });
+                setStatus('画布已重命名');
+                await loadAll();
+            } else {
+                const result = await api('/api/canvases', {
+                    method:'POST',
+                    headers:{'Content-Type':'application/json'},
+                    body:JSON.stringify({title, icon:'layers', kind:'smart', project:currentProjectId})
+                });
+                setStatus('智能画布已创建');
+                await loadAll();
+                if(result.canvas) openCanvas(result.canvas);
+            }
+        } catch(error){ setStatus(error.message, 'error'); }
+    }
+
+    async function duplicateCanvas(canvasId){
+        try {
+            const sourceData = await api(`/api/canvases/${encodeURIComponent(canvasId)}`);
+            const source = sourceData.canvas || sourceData;
+            const title = `${source.title || '未命名画布'} 副本`.slice(0,80);
+            const created = await api('/api/canvases', {
+                method:'POST',
+                headers:{'Content-Type':'application/json'},
+                body:JSON.stringify({
+                    title, icon:source.icon || 'layers', kind:'smart',
+                    project:source.project || currentProjectId || 'default'
+                })
+            });
+            await api(`/api/canvases/${encodeURIComponent(created.canvas.id)}`, {
+                method:'PUT',
+                headers:{'Content-Type':'application/json'},
+                body:JSON.stringify({
+                    title,
+                    icon:source.icon || 'layers',
+                    nodes:source.nodes || [],
+                    connections:source.connections || [],
+                    viewport:source.viewport || {},
+                    logs:source.logs || [],
+                    settings:source.settings || {}
+                })
+            });
+            await loadAll();
+            setStatus('画布已复制');
+        } catch(error){ setStatus(error.message, 'error'); }
+    }
+
+    async function deleteCanvas(id){
+        try {
+            await api(`/api/canvases/${encodeURIComponent(id)}`, {method:'DELETE'});
+            await loadAll();
+            setStatus('画布已移入回收站');
+        } catch(error){ setStatus(error.message, 'error'); }
+    }
+
+    function renderTrash(){
+        trashList.innerHTML = deletedCanvases.length ? deletedCanvases.map(item => `
+            <article>
+                <div><strong>${escapeHtml(item.title || '未命名画布')}</strong><small>${escapeHtml(formatTime(item.deleted_at || item.updated_at))}</small></div>
+                <button type="button" data-trash-restore="${escapeHtml(item.id)}">恢复</button>
+                <button type="button" class="danger" data-trash-purge="${escapeHtml(item.id)}">永久删除</button>
+            </article>
+        `).join('') : '<div class="hh-home-empty">回收站为空</div>';
+        trashList.querySelectorAll('[data-trash-restore]').forEach(button => button.addEventListener('click', async () => {
+            await api(`/api/canvases/${encodeURIComponent(button.dataset.trashRestore)}/restore`, {method:'POST'});
+            await loadAll();
+            renderTrash();
+            setStatus('画布已恢复');
+        }));
+        trashList.querySelectorAll('[data-trash-purge]').forEach(button => button.addEventListener('click', async () => {
+            if(!window.confirm('永久删除后无法恢复，继续吗？')) return;
+            await api(`/api/canvases/${encodeURIComponent(button.dataset.trashPurge)}/purge`, {method:'DELETE'});
+            await loadAll();
+            renderTrash();
+            setStatus('画布已永久删除');
+        }));
+    }
+
+    document.getElementById('newProjectBtn').addEventListener('click', () => {
+        newProjectForm.hidden = false;
+        newProjectInput.value = '';
+        newProjectInput.focus();
+    });
+    document.getElementById('newProjectCancel').addEventListener('click', () => { newProjectForm.hidden = true; });
+    newProjectForm.addEventListener('submit', event => {
+        event.preventDefault();
+        const name = newProjectInput.value.trim();
+        if(name) createProject(name);
+    });
+    document.getElementById('boardRefresh').addEventListener('click', loadAll);
+    boardResetViewBtn.addEventListener('click', arrangeCurrentProjectDeck);
+    document.getElementById('newCanvasBtn').addEventListener('click', openCreateDialog);
+    document.getElementById('emptyCreateCanvasBtn').addEventListener('click', openCreateDialog);
+    document.getElementById('trashEntry').addEventListener('click', () => {
+        trashPanel.hidden = false;
+        renderProjects();
+        renderTrash();
+    });
+    document.getElementById('trashClose').addEventListener('click', () => {
+        trashPanel.hidden = true;
+        render();
+    });
+    document.getElementById('canvasNameForm').addEventListener('submit', event => {
+        if(event.submitter?.value === 'cancel') return;
+        event.preventDefault();
+        canvasDialog.close();
+        submitCanvasDialog();
+    });
+
+    loadAll();
+    if(window.lucide) lucide.createIcons();
+})();
