@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-07-31T00:55:56.965Z",
+  "generatedAt": "2026-07-31T01:12:01.949Z",
   "viewport": "1280x720",
   "browser": "visible Chrome via CDP",
   "initial": {
@@ -47,6 +47,14 @@
     "ripple": 0,
     "flowAnimation": "none"
   },
+  "preferences": {
+    "initialTheme": "dark",
+    "initialLang": "zh",
+    "switchedTheme": "light",
+    "switchedLang": "en",
+    "restoredTheme": "dark",
+    "restoredLang": "zh"
+  },
   "consoleErrors": [],
   "assertions": {
     "composerUsable": true,
@@ -59,6 +67,7 @@
     "batchInterface": true,
     "connectionStates": true,
     "reducedMotion": true,
+    "themeAndLanguage": true,
     "noConsoleErrors": true
   },
   "passed": true

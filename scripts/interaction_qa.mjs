@@ -182,6 +182,27 @@ try {
         };
     })()`);
 
+    const preferences = await evaluate(cdp, `(async () => {
+        const initialTheme = document.documentElement.classList.contains('studio-theme-dark') ? 'dark' : 'light';
+        const initialLang = window.StudioI18n?.lang?.() || '';
+        window.postMessage({type:'studio-theme', theme:'light'}, location.origin);
+        window.postMessage({type:'studio-lang', lang:'en'}, location.origin);
+        await new Promise(resolve => setTimeout(resolve, 260));
+        const switchedTheme = document.documentElement.classList.contains('studio-theme-dark') ? 'dark' : 'light';
+        const switchedLang = window.StudioI18n?.lang?.() || '';
+        window.postMessage({type:'studio-theme', theme:'dark'}, location.origin);
+        window.postMessage({type:'studio-lang', lang:'zh'}, location.origin);
+        await new Promise(resolve => setTimeout(resolve, 180));
+        return {
+            initialTheme,
+            initialLang,
+            switchedTheme,
+            switchedLang,
+            restoredTheme:document.documentElement.classList.contains('studio-theme-dark') ? 'dark' : 'light',
+            restoredLang:window.StudioI18n?.lang?.() || ''
+        };
+    })()`);
+
     const report = {
         generatedAt:new Date().toISOString(),
         viewport:`${viewportWidth}x${viewportHeight}`,
@@ -192,6 +213,7 @@ try {
         responsiveComposer,
         batch,
         reducedMotion,
+        preferences,
         consoleErrors:cdp.errors,
         assertions:{
             composerUsable:Boolean(initial.composerOpen && initial.composerInShell),
@@ -207,6 +229,14 @@ try {
             batchInterface:Boolean(batch.hubOpen && batch.proxy),
             connectionStates:initial.normalFlow >= 3 && initial.highlightedFlow >= 1,
             reducedMotion:Boolean(reducedMotion.media && reducedMotion.ripple === 0 && reducedMotion.flowAnimation === 'none'),
+            themeAndLanguage:Boolean(
+                preferences.initialTheme === 'dark'
+                && preferences.initialLang === 'zh'
+                && preferences.switchedTheme === 'light'
+                && preferences.switchedLang === 'en'
+                && preferences.restoredTheme === 'dark'
+                && preferences.restoredLang === 'zh'
+            ),
             noConsoleErrors:cdp.errors.length === 0
         }
     };
