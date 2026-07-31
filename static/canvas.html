@@ -3,6 +3,12 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <script>
+        (function () {
+            var target = '/static/smart-canvas.html' + window.location.search + window.location.hash;
+            window.location.replace(target);
+        })();
+    </script>
     <link rel="icon" href="/static/images/huahai-logo.png" type="image/png">
     <title>花海画布 · 无限画布</title>
     <script>

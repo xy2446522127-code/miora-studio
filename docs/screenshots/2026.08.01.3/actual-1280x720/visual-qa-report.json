@@ -1,0 +1,155 @@
+{
+  "generatedAt": "2026-07-31T00:54:05.021Z",
+  "viewport": {
+    "width": 1280,
+    "height": 720,
+    "deviceScaleFactor": 1,
+    "mobile": false
+  },
+  "results": [
+    {
+      "name": "01-home",
+      "url": "http://127.0.0.1:3000/",
+      "file": "F:\\huabu\\docs\\screenshots\\2026.08.01.3\\actual-1280x720\\01-home.png",
+      "audit": {
+        "title": "花海画布",
+        "bodyWidth": 1280,
+        "bodyHeight": 720,
+        "viewport": [
+          1280,
+          720
+        ],
+        "horizontalOverflow": false,
+        "dialogs": 0,
+        "visibleText": "首页\n本地功能\n文生图\n细节增强\n图片编辑\n角度控制\n在线生图\nGPT 对话\n项目管理\n智能画布\n素材库\n插件中心\nAPI 设置\n更多设置\n白天模式\n中文\n工作流设置\n项目主页\nv08.01"
+      },
+      "consoleErrors": []
+    },
+    {
+      "name": "02-project-manager",
+      "url": "http://127.0.0.1:3000/static/canvas-list.html",
+      "file": "F:\\huabu\\docs\\screenshots\\2026.08.01.3\\actual-1280x720\\02-project-manager.png",
+      "audit": {
+        "title": "花海画布 · 项目管理",
+        "bodyWidth": 1280,
+        "bodyHeight": 1648,
+        "viewport": [
+          1280,
+          720
+        ],
+        "horizontalOverflow": false,
+        "dialogs": 0,
+        "visibleText": "项目管理\n默认项目\n9\n花海启航\n1\n回收站\n0\n项目管理\n9\n更新时间：新 → 旧\n新建画布\n花海画布\n11\n10 节点\n07/31 06:10\n继续编辑\n花海画布\n11\n6 节点\n07/31 03:40\n继续编辑\n花海画布\n未命名画布\n3 节点\n07/31 03:12\n继续编辑\n花海画布\n111\n10 节点\n07/31 02:19\n继续编辑\n花海画布\n111\n7 节点\n07/30 03:33\n继续编辑\n花海画布\n画布 03:31\n0 节点\n07/30 03:32\n继续编辑\n花海画布\n未命名画布\n2 节点\n07/30 03:31\n继续编辑\n花海画布\n未命名画布\n1 节点\n07/29 19:53\n继续编辑\n花海画布\n未命名画布\n0 节点\n07/29 18:47\n继续编辑"
+      },
+      "consoleErrors": []
+    },
+    {
+      "name": "03-smart-canvas",
+      "url": "http://127.0.0.1:3000/static/smart-canvas.html?id=cb39b1ad92af4238a24be6b6586ca303",
+      "file": "F:\\huabu\\docs\\screenshots\\2026.08.01.3\\actual-1280x720\\03-smart-canvas.png",
+      "audit": {
+        "title": "海报智能构图 · 视觉验收",
+        "bodyWidth": 1280,
+        "bodyHeight": 720,
+        "viewport": [
+          1280,
+          720
+        ],
+        "horizontalOverflow": false,
+        "dialogs": 0,
+        "visibleText": "花海画布\n花海画布\n63%\n预览\n导出\n选择\n连接\n图片\n提示词\n生成\n输出\n模板库\n分隔符\nLLM\n预览\n裁剪\n扩图\n遮罩\n画笔\n宫格切分\n下载\n花海视觉参考.png\n1536 x 1024\n上传节点\n上传节点\n拖拽 / 粘贴 / 点击上传\n支持图片 / 视频 / 音频，也可直接文生图\n上传节点\n上传节点\n拖拽 / 粘贴 / 点击上传\n支持图片 / 视频 / 音频，也可直接文生图\n预览\n裁剪\n扩图\n遮罩\n画笔\n宫格切分\n下载\n花海视觉参考.png\n1536 x 1024\n海报智能构图 · 视觉验收\n成果\n全部\n1\n图片\n1\n视频\n0\n任务\n0\n生成成果\n当前画布 · 1 项\n当前画布\n当前项目\n全部\n图片\n视频\n任务\nIMAGE\n花海视觉参考.png\n海报智能构图 · 视觉验收\n\n已完成\n拖入画布\n复制\n素材库\n定位\n整理选中\n画布缩放\n63%\nCtrl + 滚轮\nAPI生成\n插件生成\nAPI生成\n插件生成\n图片\n视频\n模板库\nBigLongXia API\ngpt-image-2\n尺寸\n3:2 · 4K\n高\n1 张\n运行"
+      },
+      "consoleErrors": []
+    },
+    {
+      "name": "04-batch-link",
+      "url": "http://127.0.0.1:3000/static/smart-canvas.html?id=cb39b1ad92af4238a24be6b6586ca303",
+      "file": "F:\\huabu\\docs\\screenshots\\2026.08.01.3\\actual-1280x720\\04-batch-link.png",
+      "audit": {
+        "title": "海报智能构图 · 视觉验收",
+        "bodyWidth": 1280,
+        "bodyHeight": 720,
+        "viewport": [
+          1280,
+          720
+        ],
+        "horizontalOverflow": false,
+        "dialogs": 0,
+        "visibleText": "花海画布\n花海画布\n63%\n预览\n导出\n选择\n连接\n图片\n提示词\n生成\n输出\n模板库\n分隔符\nLLM\n预览\n裁剪\n扩图\n遮罩\n画笔\n宫格切分\n下载\n花海视觉参考.png\n1536 x 1024\n上传节点\n上传节点\n拖拽 / 粘贴 / 点击上传\n支持图片 / 视频 / 音频，也可直接文生图\n上传节点\n上传节点\n拖拽 / 粘贴 / 点击上传\n支持图片 / 视频 / 音频，也可直接文生图\n预览\n裁剪\n扩图\n遮罩\n画笔\n宫格切分\n下载\n花海视觉参考.png\n1536 x 1024\n海报智能构图 · 视觉验收\n成果\n全部\n1\n图片\n1\n视频\n0\n任务\n0\n生成成果\n当前画布 · 1 项\n当前画布\n当前项目\n全部\n图片\n视频\n任务\nIMAGE\n花海视觉参考.png\n海报智能构图 · 视觉验收\n\n已完成\n拖入画布\n复制\n素材库\n定位\n整理选中\n画布缩放\n63%\nCtrl + 滚轮\n已选择 3 个节点\n3\nAPI生成\n插件生成\nAPI生成\n插件生成\n图片\n视频\n模板库\nBigLongXia API\ngpt-image-2\n尺寸\n3:2 · 4K\n高\n1 张\n运行"
+      },
+      "consoleErrors": []
+    },
+    {
+      "name": "05-api-generation",
+      "url": "http://127.0.0.1:3000/static/smart-canvas.html?id=cb39b1ad92af4238a24be6b6586ca303",
+      "file": "F:\\huabu\\docs\\screenshots\\2026.08.01.3\\actual-1280x720\\05-api-generation.png",
+      "audit": {
+        "title": "海报智能构图 · 视觉验收",
+        "bodyWidth": 1280,
+        "bodyHeight": 720,
+        "viewport": [
+          1280,
+          720
+        ],
+        "horizontalOverflow": false,
+        "dialogs": 0,
+        "visibleText": "花海画布\n花海画布\n63%\n预览\n导出\n选择\n连接\n图片\n提示词\n生成\n输出\n模板库\n分隔符\nLLM\n预览\n裁剪\n扩图\n遮罩\n画笔\n宫格切分\n下载\n花海视觉参考.png\n1536 x 1024\n上传节点\n上传节点\n拖拽 / 粘贴 / 点击上传\n支持图片 / 视频 / 音频，也可直接文生图\n上传节点\n上传节点\n拖拽 / 粘贴 / 点击上传\n支持图片 / 视频 / 音频，也可直接文生图\n预览\n裁剪\n扩图\n遮罩\n画笔\n宫格切分\n下载\n花海视觉参考.png\n1536 x 1024\n海报智能构图 · 视觉验收\n成果\n全部\n1\n图片\n1\n视频\n0\n任务\n0\n生成成果\n当前画布 · 1 项\n当前画布\n当前项目\n全部\n图片\n视频\n任务\nIMAGE\n花海视觉参考.png\n海报智能构图 · 视觉验收\n\n已完成\n拖入画布\n复制\n素材库\n定位\n整理选中\n画布缩放\n63%\nCtrl + 滚轮\nAPI生成\n插件生成\nAPI生成\n插件生成\n图片\n视频\n图1\n上游输入\n深海科技风海报，未来感，数据流，发光纹理，产品发布，简洁布局，高对比，电影级光效。\n模板库\nBigLongXia API\ngpt-image-2\n尺寸\n3:2 · 4K\n高\n1 张\n运行"
+      },
+      "consoleErrors": []
+    },
+    {
+      "name": "06-plugin-generation",
+      "url": "http://127.0.0.1:3000/static/smart-canvas.html?id=cb39b1ad92af4238a24be6b6586ca303",
+      "file": "F:\\huabu\\docs\\screenshots\\2026.08.01.3\\actual-1280x720\\06-plugin-generation.png",
+      "audit": {
+        "title": "海报智能构图 · 视觉验收",
+        "bodyWidth": 1280,
+        "bodyHeight": 720,
+        "viewport": [
+          1280,
+          720
+        ],
+        "horizontalOverflow": false,
+        "dialogs": 0,
+        "visibleText": "花海画布\n花海画布\n63%\n预览\n导出\n选择\n连接\n图片\n提示词\n生成\n输出\n模板库\n分隔符\nLLM\n预览\n裁剪\n扩图\n遮罩\n画笔\n宫格切分\n下载\n花海视觉参考.png\n1536 x 1024\n上传节点\n上传节点\n拖拽 / 粘贴 / 点击上传\n支持图片 / 视频 / 音频，也可直接文生图\n上传节点\n上传节点\n拖拽 / 粘贴 / 点击上传\n支持图片 / 视频 / 音频，也可直接文生图\n预览\n裁剪\n扩图\n遮罩\n画笔\n宫格切分\n下载\n花海视觉参考.png\n1536 x 1024\n海报智能构图 · 视觉验收\n成果\n全部\n1\n图片\n1\n视频\n0\n任务\n0\n生成成果\n当前画布 · 1 项\n当前画布\n当前项目\n全部\n图片\n视频\n任务\nIMAGE\n花海视觉参考.png\n海报智能构图 · 视觉验收\n\n已完成\n拖入画布\n复制\n素材库\n定位\n整理选中\n画布缩放\n63%\nCtrl + 滚轮\nAPI生成\n插件生成\nAPI生成\n插件生成\n图片\n视频\n图1\n上游输入\n深海科技风海报，未来感，数据流，发光纹理，产品发布，简洁布局，高对比，电影级光效。\n模板库\nGemini 创作助手\n选择图片插件\nGemini 创作助手\n浏览器账号\nGPT 图像助手\n浏览器账号\nGemini Web\n浏览器辅助插件\n运行后打开官网，等待你确认并自动接收下载结果\n尺寸\n3:2 · 4K\n高\n1 张\n运行"
+      },
+      "consoleErrors": []
+    },
+    {
+      "name": "07-results-rail",
+      "url": "http://127.0.0.1:3000/static/smart-canvas.html?id=cb39b1ad92af4238a24be6b6586ca303",
+      "file": "F:\\huabu\\docs\\screenshots\\2026.08.01.3\\actual-1280x720\\07-results-rail.png",
+      "audit": {
+        "title": "海报智能构图 · 视觉验收",
+        "bodyWidth": 1280,
+        "bodyHeight": 720,
+        "viewport": [
+          1280,
+          720
+        ],
+        "horizontalOverflow": false,
+        "dialogs": 0,
+        "visibleText": "花海画布\n花海画布\n63%\n预览\n导出\n选择\n连接\n图片\n提示词\n生成\n输出\n模板库\n分隔符\nLLM\n预览\n裁剪\n扩图\n遮罩\n画笔\n宫格切分\n下载\n花海视觉参考.png\n1536 x 1024\n上传节点\n上传节点\n拖拽 / 粘贴 / 点击上传\n支持图片 / 视频 / 音频，也可直接文生图\n上传节点\n上传节点\n拖拽 / 粘贴 / 点击上传\n支持图片 / 视频 / 音频，也可直接文生图\n预览\n裁剪\n扩图\n遮罩\n画笔\n宫格切分\n下载\n花海视觉参考.png\n1536 x 1024\n海报智能构图 · 视觉验收\n成果\n全部\n1\n图片\n1\n视频\n0\n任务\n0\n生成成果\n当前画布 · 1 项\n当前画布\n当前项目\n全部\n图片\n视频\n任务\nIMAGE\n花海视觉参考.png\n海报智能构图 · 视觉验收\n\n已完成\n拖入画布\n复制\n素材库\n定位\n整理选中\n画布缩放\n63%\nCtrl + 滚轮\nAPI生成\n插件生成\nAPI生成\n插件生成\n图片\n视频\n模板库\nBigLongXia API\ngpt-image-2\n尺寸\n3:2 · 4K\n高\n1 张\n运行"
+      },
+      "consoleErrors": []
+    },
+    {
+      "name": "08-plugin-center",
+      "url": "http://127.0.0.1:3000/static/plugin-center.html",
+      "file": "F:\\huabu\\docs\\screenshots\\2026.08.01.3\\actual-1280x720\\08-plugin-center.png",
+      "audit": {
+        "title": "插件中心 · 花海画布",
+        "bodyWidth": 1651,
+        "bodyHeight": 940,
+        "viewport": [
+          1280,
+          720
+        ],
+        "horizontalOverflow": false,
+        "dialogs": 0,
+        "visibleText": "花海画布\n回收站\n插件中心\n打开插件文件夹\n刷新插件\n下载 AI 说明书\n已安装\n制作插件\n运行日志\n内置插件\nGemini 创作助手\n\n打开 Gemini 官方网页，复用用户自己的浏览器登录状态并接入下载成果。\n\n已启用\n图片生成\n浏览器登录\n下载自动接入\n查看能力 ›\n账号登录\nGPT 图像助手\n\n打开 ChatGPT 官方网页，复用用户自己的浏览器登录状态并接入下载成果。\n\n已启用\n图片生成\n浏览器登录\n下载自动接入\n查看能力 ›\n账号登录\n示例：风格迁移\n\n演示如何构建图像处理插件，包含配置表单与任务流程。\n\n示例\n安装示例 \n下载 AI 制作说明书.txt\n目录\n花海画布插件开发规范\n1. 目录结构\n2. plugin.json\n3. 能力声明\n4. 配置表单\n5. 任务生命周期\n6. 本地存储与安全\n7. 自检与调试\n花海画布插件开发规范\n\n本文档帮助你快速构建符合规范、可安全运行的花海画布插件。\n\n1. 目录结构\n\n一个插件是一个独立文件夹，建议结构如下：\n\nmy-plugin/\n├─ plugin.json       # 插件清单（必需）\n├─ icon.png          # 插件图标（可选）\n├─ README.md         # 插件说明（可选）\n├─ backend/\n│  └─ runner.py      # 本地任务入口\n└─ assets/           # 资源文件（可选）\n2. plugin.json\n\n声明插件基本信息、运行时、媒体能力与最小权限。\n\n{\n  \"id\": \"my-image-plugin\",\n  \"name\": \"我的生图插件\",\n  \"version\": \"1.0.0\",\n  \"runtime\": \"python-external-plugin\",\n  \"entry\": \"backend/runner.py\",\n  \"mediaKinds\": [\"image\"],\n  \"capabilities\": [\"image\", \"submitTask\", \"pollTask\", \"fetchArtifacts\"]\n}\n3. 能力声明\n\n智能画布只会列出与当前图片或视频任务相匹配的插件。\n\n4. 配置表单\n\n敏感凭据只保存在本机 data/local/，不得写入插件源码。\n\n5. 任务生命周期\n\n任务需覆盖创建、运行、进度更新、完成、失败和取消。\n\n6. 本地存储与安全\n\n网络地址必须声明白名单；文件访问限制在授权目录。\n\n7. 自检与调试\n\n安装前运行结构、入口、能力、权限和版本兼容检查。\n\n复制示例\n下载模板\n运行自检\n插件自检\n自检通过\n检查项（8 项）\nplugin.json 结构有效\n必填字段完整\n图标或入口文件可访问\n能力声明有效\n配置 Schema 有效\n入口文件可加载\n权限声明合规\n版本要求兼容\n建议提供 256 × 256 的插件图标。\n安装本地插件"
+      },
+      "consoleErrors": []
+    }
+  ]
+}

@@ -1,0 +1,122 @@
+{
+  "generatedAt": "2026-07-31T08:57:16+0800",
+  "base": "http://127.0.0.1:3000",
+  "passed": true,
+  "checks": [
+    {
+      "name": "app-info",
+      "passed": true,
+      "detail": "status=200, version=2026.08.01.3"
+    },
+    {
+      "name": "page:/",
+      "passed": true,
+      "detail": "status=200"
+    },
+    {
+      "name": "page:/static/home.html",
+      "passed": true,
+      "detail": "status=200"
+    },
+    {
+      "name": "page:/static/canvas-list.html",
+      "passed": true,
+      "detail": "status=200"
+    },
+    {
+      "name": "page:/static/smart-canvas.html",
+      "passed": true,
+      "detail": "status=200"
+    },
+    {
+      "name": "page:/static/plugin-center.html",
+      "passed": true,
+      "detail": "status=200"
+    },
+    {
+      "name": "plugin-manual",
+      "passed": true,
+      "detail": "status=200, bytes=6286, type="
+    },
+    {
+      "name": "plugins",
+      "passed": true,
+      "detail": "status=200, count=5"
+    },
+    {
+      "name": "project-create",
+      "passed": true,
+      "detail": "status=200"
+    },
+    {
+      "name": "canvas-create",
+      "passed": true,
+      "detail": "status=200"
+    },
+    {
+      "name": "canvas-save",
+      "passed": true,
+      "detail": "status=200"
+    },
+    {
+      "name": "canvas-load",
+      "passed": true,
+      "detail": "status=200"
+    },
+    {
+      "name": "workflow-export",
+      "passed": true,
+      "detail": "status=200, bytes=330"
+    },
+    {
+      "name": "canvas-trash",
+      "passed": true,
+      "detail": "status=200"
+    },
+    {
+      "name": "canvas-restore",
+      "passed": true,
+      "detail": "status=200"
+    },
+    {
+      "name": "canvas-trash-again",
+      "passed": true,
+      "detail": "status=200"
+    },
+    {
+      "name": "canvas-purge",
+      "passed": true,
+      "detail": "status=200"
+    },
+    {
+      "name": "project-delete",
+      "passed": true,
+      "detail": "status=200"
+    },
+    {
+      "name": "asset-library",
+      "passed": true,
+      "detail": "status=200"
+    },
+    {
+      "name": "canvas-assets",
+      "passed": true,
+      "detail": "status=200"
+    },
+    {
+      "name": "workflows",
+      "passed": true,
+      "detail": "status=200"
+    },
+    {
+      "name": "providers",
+      "passed": true,
+      "detail": "status=200"
+    },
+    {
+      "name": "update-connectivity",
+      "passed": true,
+      "detail": "status=200"
+    }
+  ]
+}

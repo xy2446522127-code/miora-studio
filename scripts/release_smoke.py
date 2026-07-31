@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import io
 import json
+import os
 import sys
 import time
 import urllib.error
@@ -13,7 +14,10 @@ from pathlib import Path
 BASE = "http://127.0.0.1:3000"
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
 EXPECTED_VERSION = (PROJECT_ROOT / "VERSION").read_text(encoding="utf-8").strip()
-REPORT = PROJECT_ROOT / "docs" / "screenshots" / "2026.08.01.1" / "release-smoke.json"
+REPORT = Path(os.environ.get(
+    "HUAHAI_RELEASE_SMOKE_REPORT",
+    PROJECT_ROOT / "docs" / "screenshots" / EXPECTED_VERSION / "release-smoke.json",
+))
 
 
 def request(path: str, method: str = "GET", payload: dict | None = None) -> tuple[int, bytes, dict[str, str]]:

@@ -1,8 +1,6 @@
 (function () {
     'use strict';
 
-    const hiddenPages = new Set(['zimage', 'enhance', 'klein', 'angle', 'online', 'gpt-chat']);
-
     async function openLatestSmartCanvas() {
         try {
             const response = await fetch('/api/canvases', { cache: 'no-store' });
@@ -35,13 +33,6 @@
     }
 
     function installProductNavigation() {
-        hiddenPages.forEach(page => {
-            const item = navItem(page);
-            if (item) item.hidden = true;
-        });
-        document.getElementById('local-nav-toggle')?.setAttribute('hidden', '');
-        document.getElementById('local-nav-group')?.setAttribute('hidden', '');
-
         const canvasItem = navItem('canvas');
         if (canvasItem) {
             const text = canvasItem.querySelector('.nav-text');

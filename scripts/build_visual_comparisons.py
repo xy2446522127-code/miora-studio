@@ -1,12 +1,22 @@
+import os
 from pathlib import Path
 
 from PIL import Image, ImageDraw, ImageFont
 
 
 ROOT = Path(__file__).resolve().parents[1]
-REFERENCE = ROOT / "docs" / "design-reference" / "huahai-final-2026-07-31"
-ACTUAL = ROOT / "docs" / "screenshots" / "2026.08.01.1" / "actual-1672x941"
-OUTPUT = ROOT / "docs" / "screenshots" / "2026.08.01.1" / "comparisons-1672x941"
+REFERENCE = Path(os.environ.get(
+    "HUAHAI_REFERENCE_DIR",
+    ROOT / "docs" / "design-reference" / "huahai-final-2026-07-31",
+))
+ACTUAL = Path(os.environ.get(
+    "HUAHAI_ACTUAL_DIR",
+    ROOT / "docs" / "screenshots" / "2026.08.01.3" / "actual-1672x941",
+))
+OUTPUT = Path(os.environ.get(
+    "HUAHAI_COMPARISON_DIR",
+    ROOT / "docs" / "screenshots" / "2026.08.01.3" / "comparisons-1672x941",
+))
 
 PAIRS = [
     ("01-home.png", "01-home.png", "HOME"),

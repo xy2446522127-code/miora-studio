@@ -1134,7 +1134,7 @@ function exceedsFourKStandard(width, height){
 function withOutpaintDisplaySettings(node, baseSettings){
     const size = validOutpaintSize(node);
     if(!size) return baseSettings;
-    const engine = ['api','volcengine','modelscope','comfy','runninghub'].includes(baseSettings?.engine) ? baseSettings.engine : 'api';
+    const engine = ['api','plugin'].includes(baseSettings?.engine) ? baseSettings.engine : 'api';
     const next = {
         ...baseSettings,
         resolution:'custom',
@@ -1145,17 +1145,6 @@ function withOutpaintDisplaySettings(node, baseSettings){
         outpaintResolutionLocked:true
     };
     if(isApiLikeEngine(engine)) next.apiKind = 'image';
-    if(engine === 'modelscope'){
-        next.msResolution = 'custom';
-        next.msRatio = '';
-        next.msCustomWidth = size.width;
-        next.msCustomHeight = size.height;
-        next.msCustomSize = `${size.width}x${size.height}`;
-    }
-    if(engine === 'comfy'){
-        next.width = size.width;
-        next.height = size.height;
-    }
     return next;
 }
 function stripOutpaintDisplaySettings(settingsObj, node=null){
