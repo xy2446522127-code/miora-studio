@@ -1,0 +1,37 @@
+{
+  "generatedAt": "2026-07-31T22:21:00+08:00",
+  "browser": "visible Microsoft Edge",
+  "referenceImages": 4,
+  "promptPolicy": "verbatim user prompt; no rewrite or hidden style extraction",
+  "plugins": {
+    "gemini-creator": {
+      "loggedIn": true,
+      "attachmentCount": 4,
+      "promptVerified": true,
+      "submitted": true,
+      "generationCompleted": true,
+      "downloadCaptured": true,
+      "canvasAssetImported": true,
+      "output": {
+        "width": 1375,
+        "height": 768,
+        "format": "PNG"
+      }
+    },
+    "gpt-creator": {
+      "loggedIn": true,
+      "attachmentCount": 4,
+      "promptVerified": true,
+      "submitted": true,
+      "generationCompleted": true,
+      "downloadCaptured": true,
+      "canvasAssetImported": true,
+      "output": {
+        "width": 1672,
+        "height": 941,
+        "format": "PNG"
+      }
+    }
+  },
+  "privacy": "Reference images, generated media, browser profiles, cookies, and local plugin jobs remain in Git-ignored local directories."
+}

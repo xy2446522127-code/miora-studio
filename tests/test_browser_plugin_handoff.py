@@ -102,6 +102,13 @@ def test_windows_helper_requires_attachment_and_prompt_confirmation_before_submi
     assert "Get-AttachmentSnapshot" in helper
     assert "Invoke-OrClick $uploadText" in helper
     assert "[System.Windows.Forms.Clipboard]::SetText($quotedNames)" in helper
+    assert "[System.Windows.Automation.ExpandCollapsePattern]::Pattern" in helper
+    assert "$expand.Expand()" in helper
+    assert "ExpandCollapse LeafNode" in helper
+    assert "sleeping tab" in helper
+    assert "[System.Windows.Automation.ControlType]::Pane" in helper
+    assert "[System.Windows.Automation.ControlType]::Window" in helper
+    assert "Sort-Object Score, Order -Descending" in helper
 
 
 def test_backend_launches_handoff_in_sta_and_requires_real_submission():

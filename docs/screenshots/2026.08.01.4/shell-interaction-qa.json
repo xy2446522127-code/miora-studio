@@ -1,0 +1,265 @@
+{
+  "generatedAt": "2026-07-31T14:29:24.561Z",
+  "browser": "visible Microsoft Edge via CDP",
+  "viewport": "1440x900",
+  "navigation": [
+    {
+      "page": "home",
+      "activePage": "home",
+      "activeFrame": true,
+      "loaded": true,
+      "title": "花海画布 · 首页",
+      "bodyText": 204,
+      "horizontalOverflow": false,
+      "dimensions": {
+        "scrollWidth": 1224,
+        "clientWidth": 1224,
+        "innerWidth": 1239
+      },
+      "overflowElements": [],
+      "navVisible": true
+    },
+    {
+      "page": "zimage",
+      "activePage": "zimage",
+      "activeFrame": true,
+      "loaded": true,
+      "title": "文生图",
+      "bodyText": 73,
+      "horizontalOverflow": false,
+      "dimensions": {
+        "scrollWidth": 1229,
+        "clientWidth": 1229,
+        "innerWidth": 1239
+      },
+      "overflowElements": [],
+      "navVisible": true
+    },
+    {
+      "page": "enhance",
+      "activePage": "enhance",
+      "activeFrame": true,
+      "loaded": true,
+      "title": "细节增强",
+      "bodyText": 114,
+      "horizontalOverflow": false,
+      "dimensions": {
+        "scrollWidth": 1229,
+        "clientWidth": 1229,
+        "innerWidth": 1239
+      },
+      "overflowElements": [],
+      "navVisible": true
+    },
+    {
+      "page": "klein",
+      "activePage": "klein",
+      "activeFrame": true,
+      "loaded": true,
+      "title": "图片编辑",
+      "bodyText": 91,
+      "horizontalOverflow": false,
+      "dimensions": {
+        "scrollWidth": 1229,
+        "clientWidth": 1229,
+        "innerWidth": 1239
+      },
+      "overflowElements": [],
+      "navVisible": true
+    },
+    {
+      "page": "angle",
+      "activePage": "angle",
+      "activeFrame": true,
+      "loaded": true,
+      "title": "角度控制",
+      "bodyText": 141,
+      "horizontalOverflow": false,
+      "dimensions": {
+        "scrollWidth": 1229,
+        "clientWidth": 1229,
+        "innerWidth": 1239
+      },
+      "overflowElements": [],
+      "navVisible": true
+    },
+    {
+      "page": "online",
+      "activePage": "online",
+      "activeFrame": true,
+      "loaded": true,
+      "title": "在线生图",
+      "bodyText": 181,
+      "horizontalOverflow": false,
+      "dimensions": {
+        "scrollWidth": 1229,
+        "clientWidth": 1229,
+        "innerWidth": 1239
+      },
+      "overflowElements": [],
+      "navVisible": true
+    },
+    {
+      "page": "gpt-chat",
+      "activePage": "gpt-chat",
+      "activeFrame": true,
+      "loaded": true,
+      "title": "GPT 对话",
+      "bodyText": 95,
+      "horizontalOverflow": false,
+      "dimensions": {
+        "scrollWidth": 1239,
+        "clientWidth": 1229,
+        "innerWidth": 1239
+      },
+      "overflowElements": [
+        {
+          "tag": "div",
+          "id": "",
+          "className": "chat-shell",
+          "left": 0,
+          "right": 1239,
+          "width": 1239
+        }
+      ],
+      "navVisible": true
+    },
+    {
+      "page": "canvas",
+      "activePage": "canvas",
+      "activeFrame": true,
+      "loaded": true,
+      "title": "花海画布 · 项目管理",
+      "bodyText": 33,
+      "horizontalOverflow": false,
+      "dimensions": {
+        "scrollWidth": 1440,
+        "clientWidth": 1425,
+        "innerWidth": 1440
+      },
+      "overflowElements": [
+        {
+          "tag": "div",
+          "id": "",
+          "className": "hh-projects",
+          "left": 0,
+          "right": 1440,
+          "width": 1440
+        },
+        {
+          "tag": "main",
+          "id": "",
+          "className": "hh-project-main",
+          "left": 244,
+          "right": 1440,
+          "width": 1196
+        },
+        {
+          "tag": "header",
+          "id": "",
+          "className": "hh-project-topbar",
+          "left": 244,
+          "right": 1440,
+          "width": 1196
+        },
+        {
+          "tag": "section",
+          "id": "board",
+          "className": "hh-project-board",
+          "left": 244,
+          "right": 1440,
+          "width": 1196
+        }
+      ],
+      "navVisible": true
+    },
+    {
+      "page": "asset-manager",
+      "activePage": "asset-manager",
+      "activeFrame": true,
+      "loaded": true,
+      "title": "素材库管理",
+      "bodyText": 89,
+      "horizontalOverflow": false,
+      "dimensions": {
+        "scrollWidth": 1229,
+        "clientWidth": 1229,
+        "innerWidth": 1239
+      },
+      "overflowElements": [],
+      "navVisible": true
+    },
+    {
+      "page": "plugin-center",
+      "activePage": "plugin-center",
+      "activeFrame": true,
+      "loaded": true,
+      "title": "插件中心 · 花海画布",
+      "bodyText": 1076,
+      "horizontalOverflow": false,
+      "dimensions": {
+        "scrollWidth": 1425,
+        "clientWidth": 1425,
+        "innerWidth": 1440
+      },
+      "overflowElements": [],
+      "navVisible": true
+    },
+    {
+      "page": "api-settings",
+      "activePage": "api-settings",
+      "activeFrame": true,
+      "loaded": true,
+      "title": "API 设置",
+      "bodyText": 662,
+      "horizontalOverflow": false,
+      "dimensions": {
+        "scrollWidth": 1229,
+        "clientWidth": 1229,
+        "innerWidth": 1239
+      },
+      "overflowElements": [],
+      "navVisible": true
+    },
+    {
+      "page": "comfyui-settings",
+      "activePage": "comfyui-settings",
+      "activeFrame": true,
+      "loaded": true,
+      "title": "工作流设置",
+      "bodyText": 202,
+      "horizontalOverflow": false,
+      "dimensions": {
+        "scrollWidth": 1229,
+        "clientWidth": 1229,
+        "innerWidth": 1239
+      },
+      "overflowElements": [],
+      "navVisible": true
+    }
+  ],
+  "preferences": {
+    "beforeTheme": "dark",
+    "afterTheme": "light",
+    "childTheme": "light",
+    "beforeLang": "zh",
+    "afterLang": "en",
+    "childLang": "en",
+    "remembered": "gpt-chat",
+    "restoredTheme": "dark",
+    "restoredLang": "zh"
+  },
+  "consoleErrors": [],
+  "assertions": {
+    "allPagesLoaded": true,
+    "allPagesHaveContent": true,
+    "noPageOverflow": true,
+    "allPrimaryNavigationVisible": true,
+    "themeBroadcast": true,
+    "languageBroadcast": true,
+    "activePageRemembered": true,
+    "preferencesRestored": true,
+    "noConsoleErrors": true
+  },
+  "passed": true
+}

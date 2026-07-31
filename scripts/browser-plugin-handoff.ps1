@@ -85,17 +85,44 @@ function Find-FirstElement {
         [scriptblock]$Predicate
     )
     $items = Get-AllDescendants $Root
+    $matches = @()
     for ($index = 0; $index -lt $items.Count; $index += 1) {
         $item = $items.Item($index)
         try {
             if (& $Predicate $item) {
-                return $item
+                $score = 0
+                $rect = $item.Current.BoundingRectangle
+                if (-not $item.Current.IsOffscreen) { $score += 100 }
+                if (-not $rect.IsEmpty -and $rect.Width -gt 0 -and $rect.Height -gt 0) { $score += 25 }
+
+                # Edge can keep the accessibility tree of a sleeping tab next
+                # to the active page. Controls in the active web content are
+                # parented below a Pane, while stale tab controls can hang
+                # directly below the browser Window. Prefer the active tree so
+                # clicks never land on an invisible duplicate composer.
+                $walker = [System.Windows.Automation.TreeWalker]::ControlViewWalker
+                $ancestor = $item
+                for ($level = 0; $level -lt 16 -and $ancestor; $level += 1) {
+                    $ancestor = $walker.GetParent($ancestor)
+                    if (-not $ancestor) { break }
+                    if ($ancestor.Current.ControlType -eq [System.Windows.Automation.ControlType]::Window) {
+                        break
+                    }
+                    if ($ancestor.Current.ControlType -eq [System.Windows.Automation.ControlType]::Pane) {
+                        $score += 200
+                        break
+                    }
+                }
+                $matches += [pscustomobject]@{ Element = $item; Score = $score; Order = $index }
             }
         } catch {
             continue
         }
     }
-    return $null
+    if (@($matches).Count -eq 0) {
+        return $null
+    }
+    return (@($matches) | Sort-Object Score, Order -Descending | Select-Object -First 1).Element
 }
 
 function Wait-ForElement {
@@ -137,6 +164,18 @@ function Invoke-OrClick {
     if ($Element.TryGetCurrentPattern([System.Windows.Automation.SelectionItemPattern]::Pattern, [ref]$selection)) {
         $selection.Select()
         return
+    }
+    $expand = $null
+    if ($Element.TryGetCurrentPattern([System.Windows.Automation.ExpandCollapsePattern]::Pattern, [ref]$expand)) {
+        if ($expand.Current.ExpandCollapseState -eq [System.Windows.Automation.ExpandCollapseState]::Collapsed) {
+            $expand.Expand()
+            return
+        }
+        if ($expand.Current.ExpandCollapseState -eq [System.Windows.Automation.ExpandCollapseState]::Expanded) {
+            return
+        }
+        # Chromium exposes menu items as ExpandCollapse LeafNode controls.
+        # They still need a physical click to launch the native file picker.
     }
     $rect = $Element.Current.BoundingRectangle
     if ($rect.IsEmpty -or $rect.Width -le 0 -or $rect.Height -le 0) {

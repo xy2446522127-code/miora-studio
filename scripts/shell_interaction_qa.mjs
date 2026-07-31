@@ -11,10 +11,10 @@ const wait = ms => new Promise(resolve => setTimeout(resolve, ms));
 
 async function openPage(url) {
     const response = await fetch(
-        `http://127.0.0.1:${port}/json/new?${encodeURIComponent(url)}`,
+        `http://127.0.0.1:${port}/json/new?${encodeURIComponent('about:blank')}`,
         { method: 'PUT' },
     );
-    if (!response.ok) throw new Error(`Unable to open visible Chrome tab: ${response.status}`);
+    if (!response.ok) throw new Error(`Unable to open visible Microsoft Edge tab: ${response.status}`);
     const target = await response.json();
     const socket = new WebSocket(target.webSocketDebuggerUrl);
     await new Promise((resolve, reject) => {
@@ -73,6 +73,13 @@ async function evaluate(cdp, expression) {
         awaitPromise: true,
         returnByValue: true,
     });
+    if (response.exceptionDetails) {
+        throw new Error(
+            response.exceptionDetails.exception?.description
+            || response.exceptionDetails.text
+            || 'Runtime.evaluate failed'
+        );
+    }
     return response.result?.value;
 }
 
@@ -202,7 +209,7 @@ try {
     };
     const report = {
         generatedAt: new Date().toISOString(),
-        browser: 'visible Chrome via CDP',
+        browser: 'visible Microsoft Edge via CDP',
         viewport: '1440x900',
         navigation,
         preferences,

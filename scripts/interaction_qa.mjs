@@ -45,7 +45,7 @@ async function purgeCanvas(id) {
 }
 
 async function openPage(url) {
-    const target = await fetch(`http://127.0.0.1:${port}/json/new?${encodeURIComponent(url)}`, {method:'PUT'}).then(response => response.json());
+    const target = await fetch(`http://127.0.0.1:${port}/json/new?${encodeURIComponent('about:blank')}`, {method:'PUT'}).then(response => response.json());
     const socket = new WebSocket(target.webSocketDebuggerUrl);
     await new Promise((resolve, reject) => {
         socket.addEventListener('open', resolve, {once:true});
@@ -81,13 +81,35 @@ async function openPage(url) {
         deviceScaleFactor: 1,
         mobile: viewportWidth < 720
     });
+    await send('Page.addScriptToEvaluateOnNewDocument', {
+        source:`try {
+            localStorage.setItem('studio_theme', 'dark');
+            localStorage.setItem('studio_lang', 'zh');
+        } catch (_) {}`
+    });
     await send('Page.navigate', {url});
-    await wait(3800);
+    let fixtureReady = false;
+    for(let attempt = 0; attempt < 100; attempt += 1){
+        const probe = await send('Runtime.evaluate', {
+            expression:`({ready:document.readyState,node:Boolean(document.querySelector('.image-node[data-id="qa-api"]'))})`,
+            returnByValue:true
+        });
+        const state = probe.result?.value || {};
+        if(state.ready === 'complete' && state.node){
+            fixtureReady = true;
+            break;
+        }
+        await wait(100);
+    }
+    if(!fixtureReady) throw new Error('Smart-canvas interaction fixture did not become ready');
     return {socket, send, errors};
 }
 
 async function evaluate(cdp, expression) {
     const result = await cdp.send('Runtime.evaluate', {expression, awaitPromise:true, returnByValue:true});
+    if(result.exceptionDetails){
+        throw new Error(result.exceptionDetails.exception?.description || result.exceptionDetails.text || 'Runtime.evaluate failed');
+    }
     return result.result?.value;
 }
 
@@ -175,10 +197,11 @@ try {
     await cdp.send('Emulation.setEmulatedMedia', {features:[{name:'prefers-reduced-motion',value:'reduce'}]});
     const reducedMotion = await evaluate(cdp, `(() => {
         document.querySelector('[data-engine-mode="plugin"]')?.click();
+        const flow = document.querySelector('.conn-flow');
         return {
             media:matchMedia('(prefers-reduced-motion: reduce)').matches,
             ripple:document.querySelectorAll('.huahai-ripple').length,
-            flowAnimation:getComputedStyle(document.querySelector('.conn-flow')).animationName
+            flowAnimation:flow ? getComputedStyle(flow).animationName : ''
         };
     })()`);
 
@@ -206,7 +229,7 @@ try {
     const report = {
         generatedAt:new Date().toISOString(),
         viewport:`${viewportWidth}x${viewportHeight}`,
-        browser:'visible Chrome via CDP',
+        browser:'visible Microsoft Edge via CDP',
         initial,
         tabSwitch,
         zoom:{before:beforeZoom, after:canvasZoom, composerWheelScale},
@@ -228,7 +251,7 @@ try {
             ),
             batchInterface:Boolean(batch.hubOpen && batch.proxy),
             connectionStates:initial.normalFlow >= 3 && initial.highlightedFlow >= 1,
-            reducedMotion:Boolean(reducedMotion.media && reducedMotion.ripple === 0 && reducedMotion.flowAnimation === 'none'),
+            reducedMotion:Boolean(reducedMotion?.media && reducedMotion.ripple === 0 && reducedMotion.flowAnimation === 'none'),
             themeAndLanguage:Boolean(
                 preferences.initialTheme === 'dark'
                 && preferences.initialLang === 'zh'
@@ -244,6 +267,7 @@ try {
     await fs.mkdir(path.dirname(output), {recursive:true});
     await fs.writeFile(output, JSON.stringify(report, null, 2), 'utf8');
     console.log(JSON.stringify(report, null, 2));
+    if(!report.passed) process.exitCode = 1;
 } finally {
     if(cdp){
         await cdp.send('Page.close').catch(() => {});

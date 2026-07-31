@@ -182,6 +182,37 @@ async function createQaCanvas() {
     return canvasId;
 }
 
+async function createProjectManagerFixtures() {
+    const projectResponse = await fetch(`${base}/api/projects`, {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ name: '潮汐项目 · 视觉验收' })
+    });
+    if (!projectResponse.ok) throw new Error(`Project fixture group create failed: ${projectResponse.status}`);
+    const projectBody = await projectResponse.json();
+    const projectId = String(projectBody.project?.id || '');
+    if (!projectId) throw new Error('Project fixture group returned no project id');
+    const titles = ['海报设计', '品牌提案', '视觉探索', '动态概念', '字体实验', '产品草图', '插画创作', '界面探索'];
+    const ids = [];
+    for (const title of titles) {
+        const response = await fetch(`${base}/api/canvases`, {
+            method: 'POST',
+            headers: { 'content-type': 'application/json' },
+            body: JSON.stringify({ title, icon: 'layers', kind: 'smart', project: projectId })
+        });
+        if (!response.ok) throw new Error(`Project fixture create failed: ${response.status}`);
+        const body = await response.json();
+        const id = String((body.canvas || body).id || '');
+        if (!id) throw new Error('Project fixture returned no canvas id');
+        ids.push(id);
+    }
+    return { projectId, ids };
+}
+
+async function purgeQaCanvases(ids) {
+    for (const id of ids || []) await purgeQaCanvas(id);
+}
+
 async function purgeQaCanvas(canvasId) {
     if (!canvasId) return;
     await fetch(`${base}/api/canvases/${encodeURIComponent(canvasId)}`, { method: 'DELETE' }).catch(() => {});
@@ -189,7 +220,11 @@ async function purgeQaCanvas(canvasId) {
 }
 
 async function capture(name, url, setupExpression = '', settleMs = 3200, pointer = null) {
-    const target = await newPage(url);
+    // Attach CDP before the application starts loading. Opening the final URL first
+    // lets the page read stale localStorage and render before our QA bootstrap is
+    // installed, which made project-manager captures intermittently show the
+    // default project instead of the dedicated fixture project.
+    const target = await newPage('about:blank');
     const cdp = await connect(target.webSocketDebuggerUrl);
     await cdp.send('Page.enable');
     await cdp.send('Runtime.enable');
@@ -201,10 +236,29 @@ async function capture(name, url, setupExpression = '', settleMs = 3200, pointer
         source: `try {
             localStorage.setItem('studio_theme', 'dark');
             localStorage.setItem('canvas_theme', 'dark');
+            const qaProject = new URL(location.href).searchParams.get('qaProject');
+            if (qaProject) localStorage.setItem('canvasListCurrentProjectId', qaProject);
         } catch (_) {}`
     });
     await cdp.send('Page.navigate', { url });
     await wait(settleMs);
+    if (url.includes('/static/smart-canvas.html')) {
+        await cdp.send('Runtime.evaluate', {
+            expression: `(async () => {
+                for (let attempt = 0; attempt < 120; attempt += 1) {
+                    const ready = typeof nodes !== 'undefined'
+                        && Array.isArray(nodes)
+                        && nodes.some(node => node?.id === 'qa-prompt')
+                        && document.title.includes('视觉验收');
+                    if (ready) return true;
+                    await new Promise(resolve => setTimeout(resolve, 100));
+                }
+                throw new Error('QA smart canvas did not load fixture nodes');
+            })()`,
+            awaitPromise: true,
+            returnByValue: true
+        });
+    }
     if (setupExpression) {
         await cdp.send('Runtime.evaluate', { expression: setupExpression, awaitPromise: true, returnByValue: true });
         await wait(700);
@@ -221,6 +275,9 @@ async function capture(name, url, setupExpression = '', settleMs = 3200, pointer
             viewport: [innerWidth, innerHeight],
             horizontalOverflow: document.documentElement.scrollWidth > innerWidth + 1,
             dialogs: [...document.querySelectorAll('dialog[open]')].length,
+            appNodeCount: typeof nodes !== 'undefined' && Array.isArray(nodes) ? nodes.length : null,
+            selectedNodeCount: typeof selectedIds !== 'undefined' && Array.isArray(selectedIds) ? selectedIds.length : null,
+            projectCardCount: document.querySelectorAll('.hh-canvas-card').length,
             visibleText: document.body.innerText.slice(0, 4000)
         }))()`,
         returnByValue: true
@@ -234,13 +291,15 @@ async function capture(name, url, setupExpression = '', settleMs = 3200, pointer
 }
 
 const results = [];
-results.push(await capture('01-home', `${base}/`, `(() => {
-    const trigger = document.querySelector('.nav-item[onclick*="home"]');
-    if (window.switchUI) window.switchUI(trigger, 'home', {skipRemember:true});
-})()`, 5200));
-results.push(await capture('02-project-manager', `${base}/static/canvas-list.html`, '', 3200, {x:430,y:260}));
+let projectFixture = null;
 let qaCanvasId = '';
 try {
+    results.push(await capture('01-home', `${base}/`, `(() => {
+        const trigger = document.querySelector('.nav-item[onclick*="home"]');
+        if (window.switchUI) window.switchUI(trigger, 'home', {skipRemember:true});
+    })()`, 5200));
+    projectFixture = await createProjectManagerFixtures();
+    results.push(await capture('02-project-manager', `${base}/static/canvas-list.html?qaProject=${encodeURIComponent(projectFixture.projectId)}`, '', 3200, {x:430,y:260}));
     qaCanvasId = await createQaCanvas();
     const canvasUrl = `${base}/static/smart-canvas.html?id=${encodeURIComponent(qaCanvasId)}`;
     results.push(await capture('03-smart-canvas', canvasUrl, `(() => {
@@ -339,12 +398,26 @@ try {
     })()`, 3600));
 } finally {
     await purgeQaCanvas(qaCanvasId);
+    await purgeQaCanvases(projectFixture?.ids || []);
+    if (projectFixture?.projectId) {
+        await fetch(`${base}/api/projects/${encodeURIComponent(projectFixture.projectId)}`, {method:'DELETE'}).catch(() => {});
+    }
 }
 results.push(await capture('08-plugin-center', `${base}/static/plugin-center.html`));
 
+const canvasCaptures = results.filter(item => /^(03|04|05|06|07)-/.test(item.name));
+const assertions = {
+    noHorizontalOverflow: results.every(item => !item.audit.horizontalOverflow),
+    noConsoleErrors: results.every(item => item.consoleErrors.length === 0),
+    projectFixturesVisible: Number(results.find(item => item.name === '02-project-manager')?.audit?.projectCardCount || 0) === 8,
+    canvasFixturesLoaded: canvasCaptures.every(item => Number(item.audit.appNodeCount || 0) >= 4),
+    batchSelectionVisible: Number(results.find(item => item.name === '04-batch-link')?.audit?.selectedNodeCount || 0) === 3,
+};
+const passed = Object.values(assertions).every(Boolean);
+
 await fs.writeFile(
     path.join(outputDir, 'visual-qa-report.json'),
-    JSON.stringify({ generatedAt: new Date().toISOString(), viewport, results }, null, 2),
+    JSON.stringify({ generatedAt: new Date().toISOString(), viewport, assertions, passed, results }, null, 2),
     'utf8'
 );
 console.log(JSON.stringify(results.map(item => ({
@@ -353,3 +426,4 @@ console.log(JSON.stringify(results.map(item => ({
     overflow: item.audit.horizontalOverflow,
     consoleErrors: item.consoleErrors
 })), null, 2));
+if (!passed) process.exitCode = 1;
