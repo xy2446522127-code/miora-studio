@@ -34,7 +34,6 @@ class HuahaiBrandingTests(unittest.TestCase):
             "static/index.html",
             "static/home.html",
             "static/canvas-list.html",
-            "static/canvas.html",
             "static/smart-canvas.html",
             "static/zimage.html",
             "static/enhance.html",
@@ -85,8 +84,8 @@ class HuahaiBrandingTests(unittest.TestCase):
     def test_canvas_creation_focus_mode_and_zoom_feedback(self):
         root = Path(__file__).resolve().parents[1]
         index = (root / "static/index.html").read_text(encoding="utf-8")
-        canvas = (root / "static/js/canvas.js").read_text(encoding="utf-8")
-        inspector = (root / "static/js/canvas-inspector.js").read_text(encoding="utf-8")
+        page = (root / "static/smart-canvas.html").read_text(encoding="utf-8")
+        canvas = (root / "static/js/smart-canvas.js").read_text(encoding="utf-8")
         css = (root / "static/css/huahai.css").read_text(encoding="utf-8")
 
         self.assertIn("studio-canvas-creation-mode", index)
@@ -94,9 +93,9 @@ class HuahaiBrandingTests(unittest.TestCase):
         self.assertIn("canvas-creation-active", css)
         self.assertIn("sidebar:focus-within", css)
         self.assertIn("zoom: 1 !important", css)
-        self.assertIn("huahaiCanvasZoomPercent", canvas)
-        self.assertIn("setCanvasViewportScale", canvas)
-        self.assertIn("Ctrl + 滚轮", inspector)
+        self.assertIn("smartCanvasZoomPercent", page)
+        self.assertIn("setSmartCanvasViewportScale", canvas)
+        self.assertIn("Ctrl + 滚轮", page)
 
     def test_buttons_use_one_shared_control_system(self):
         root = Path(__file__).resolve().parents[1]
@@ -109,20 +108,15 @@ class HuahaiBrandingTests(unittest.TestCase):
 
     def test_canvas_node_creation_actions_remain_available(self):
         root = Path(__file__).resolve().parents[1]
-        inspector = (root / "static/js/canvas-inspector.js").read_text(encoding="utf-8")
-        canvas = (root / "static/js/canvas.js").read_text(encoding="utf-8")
-        for action, function_name in (
-            ("prompt", "addPromptNode"),
-            ("image", "addImageNode"),
-            ("generator", "addGeneratorNode"),
-            ("output", "addOutputNode"),
-        ):
-            self.assertIn(f'data-hh-action="{action}"', inspector)
-            self.assertIn(function_name, inspector)
-        self.assertIn("defaultNodePoint", canvas)
-        self.assertIn('data-create-generator-input="prompt"', canvas)
-        self.assertIn('data-create-generator-input="image"', canvas)
-        self.assertIn("createGeneratorInputNode", canvas)
+        page = (root / "static/smart-canvas.html").read_text(encoding="utf-8")
+        canvas = (root / "static/js/smart-canvas.js").read_text(encoding="utf-8")
+        for node_type in ("image", "group", "prompt", "loop"):
+            self.assertIn(f'data-create-type="{node_type}"', page)
+        self.assertIn("createNodeFromMenu", canvas)
+        self.assertIn("createPromptNode", canvas)
+        self.assertIn("createImageNodeAt", canvas)
+        self.assertIn("createSmartGroupNode", canvas)
+        self.assertIn("createLoopNode", canvas)
 
     def test_smart_canvas_uses_native_functional_controls(self):
         root = Path(__file__).resolve().parents[1]
@@ -148,55 +142,53 @@ class HuahaiBrandingTests(unittest.TestCase):
         root = Path(__file__).resolve().parents[1]
         script = (root / "static/js/canvas-list.js").read_text(encoding="utf-8")
         page = (root / "static/canvas-list.html").read_text(encoding="utf-8")
-        css = (root / "static/css/canvas-list.css").read_text(encoding="utf-8")
+        css = (root / "static/css/huahai-product.css").read_text(encoding="utf-8")
 
         self.assertIn("chronologicalCanvasesInProject", script)
-        self.assertIn("arrangeCurrentProjectDeck", script)
-        self.assertIn("boardResetViewBtn.addEventListener('click', arrangeCurrentProjectDeck)", script)
-        self.assertNotIn("attachCardDrag(card, c)", script)
-        self.assertNotIn("board.addEventListener('wheel', onBoardWheel", script)
+        self.assertIn("sortedCanvases()", script)
+        self.assertNotIn("draggable=", script)
         self.assertIn("更新时间：新 → 旧", page)
-        self.assertIn("grid-template-columns:repeat(4", css)
-        self.assertIn("ws-card-reflection", script)
+        self.assertIn("grid-template-columns: repeat(4", css)
+        self.assertIn("grid-template-columns: 244px", css)
+        self.assertIn("padding: 28px 52px 90px", css)
+        self.assertIn("min-height: 293px", css)
+        self.assertIn("hh-card-reflection", script)
 
-    def test_shared_canvas_upgrades_are_present_in_both_modes(self):
+    def test_smart_canvas_contains_all_canvas_upgrades(self):
         root = Path(__file__).resolve().parents[1]
-        normal_page = (root / "static/canvas.html").read_text(encoding="utf-8")
         smart_page = (root / "static/smart-canvas.html").read_text(encoding="utf-8")
-        normal_script = (root / "static/js/canvas.js").read_text(encoding="utf-8")
         smart_script = (root / "static/js/smart-canvas.js").read_text(encoding="utf-8")
 
-        self.assertIn("huahai-batch-links.js", normal_page)
         self.assertIn("huahai-batch-links.js", smart_page)
-        self.assertIn("batch-proxy-port", normal_script)
         self.assertIn("smart-batch-proxy-port", smart_script)
-        self.assertIn('id="canvasResultsRail"', normal_page)
         self.assertIn('id="smartResultsRail"', smart_page)
-        self.assertIn("videoProviderPlugins", normal_script)
         self.assertIn("smartVideoProviderPlugins", smart_script)
-        self.assertIn("/api/generated-assets/reveal", normal_script)
         self.assertIn("/api/generated-assets/reveal", smart_script)
         self.assertIn('id="smartCanvasZoomPercent"', smart_page)
         self.assertIn("setSmartCanvasViewportScale", smart_script)
         self.assertIn("smartViewportScalePercent", smart_script)
         self.assertNotIn("智能建议", smart_page)
 
-    def test_both_canvases_restore_sharp_visible_media_after_zoom(self):
+    def test_empty_generation_nodes_show_real_setting_summaries(self):
         root = Path(__file__).resolve().parents[1]
-        normal_script = (root / "static/js/canvas.js").read_text(encoding="utf-8")
+        smart_script = (root / "static/js/smart-canvas.js").read_text(encoding="utf-8")
+        smart_css = (root / "static/css/smart-canvas.css").read_text(encoding="utf-8")
+
+        self.assertIn("generationNodeSummaryHtml", smart_script)
+        self.assertIn(
+            "if(imgs.length === 0 && node.runSettings)",
+            smart_script,
+        )
+        self.assertIn("generation-node-summary", smart_css)
+        self.assertIn("generation-node-open", smart_css)
+
+    def test_smart_canvas_restores_sharp_visible_media_after_zoom(self):
+        root = Path(__file__).resolve().parents[1]
         smart_script = (root / "static/js/smart-canvas.js").read_text(encoding="utf-8")
 
-        for source, prefix in (
-            (normal_script, "Canvas"),
-            (smart_script, "Smart"),
-        ):
-            self.assertIn(f"schedule{prefix}ImageResolutionSync", source)
-            self.assertIn(f"{prefix.lower()}ViewportWantsHighRes", source)
-            self.assertIn(f"{prefix.lower()}ImageNearViewport", source)
-        self.assertIn(
-            "selectedNode || (canvasViewportWantsHighRes() && canvasImageNearViewport(img))",
-            normal_script,
-        )
+        self.assertIn("scheduleSmartImageResolutionSync", smart_script)
+        self.assertIn("smartViewportWantsHighRes", smart_script)
+        self.assertIn("smartImageNearViewport", smart_script)
         self.assertIn(
             "imageSelected || (smartViewportWantsHighRes() && smartImageNearViewport(img))",
             smart_script,

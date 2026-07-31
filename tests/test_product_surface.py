@@ -19,11 +19,15 @@ class ProductSurfaceTests(unittest.TestCase):
 
     def test_ordinary_canvas_links_migrate_to_smart_canvas(self):
         canvas = (ROOT / "static/canvas.html").read_text(encoding="utf-8")
-        redirect_at = canvas.index("window.location.replace(target)")
-        first_stylesheet = canvas.index('rel="stylesheet"')
-
-        self.assertLess(redirect_at, first_stylesheet)
         self.assertIn("'/static/smart-canvas.html' + window.location.search + window.location.hash", canvas)
+        self.assertIn("window.location.replace(target)", canvas)
+        self.assertNotIn("/static/js/canvas.js", canvas)
+        self.assertNotIn("/static/css/canvas.css", canvas)
+        self.assertNotIn("Modelscope生成", canvas)
+        self.assertNotIn("ComfyUI 生成", canvas)
+        self.assertFalse((ROOT / "static/js/canvas.js").exists())
+        self.assertFalse((ROOT / "static/js/canvas-inspector.js").exists())
+        self.assertFalse((ROOT / "static/css/canvas.css").exists())
 
     def test_smart_canvas_exposes_only_api_and_dynamic_plugin_modes(self):
         page = (ROOT / "static/smart-canvas.html").read_text(encoding="utf-8")
@@ -42,6 +46,17 @@ class ProductSurfaceTests(unittest.TestCase):
             "const engine = ['api','plugin'].includes(baseSettings?.engine) ? baseSettings.engine : 'api';",
             script,
         )
+
+    def test_history_and_assets_are_exposed_only_as_smart_canvas(self):
+        backend = (ROOT / "main.py").read_text(encoding="utf-8")
+        assets = (ROOT / "static/js/asset-manager.js").read_text(encoding="utf-8")
+
+        self.assertIn('def normalize_canvas_kind(kind="smart"):', backend)
+        self.assertIn('return "smart"', backend)
+        self.assertNotIn('{"id": "classic", "name":', backend)
+        self.assertIn("filter(cat => cat.id === 'smart')", assets)
+        self.assertNotIn("cat.id === 'classic'", assets)
+        self.assertNotIn("/static/canvas.html?id=", assets)
 
     def test_update_surface_only_uses_project_github(self):
         index = (ROOT / "static/index.html").read_text(encoding="utf-8")

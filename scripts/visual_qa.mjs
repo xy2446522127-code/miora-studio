@@ -57,7 +57,7 @@ async function createQaCanvas() {
         headers: { 'content-type': 'application/json' },
         body: JSON.stringify({
             title: '海报智能构图 · 视觉验收',
-            icon: 'layers',
+            icon: 'sparkles',
             kind: 'smart',
             project: 'default'
         })
@@ -80,8 +80,8 @@ async function createQaCanvas() {
             type: 'smart-prompt',
             x: 120,
             y: 210,
-            w: 316,
-            h: 230,
+            w: 460,
+            h: 292,
             title: '提示词',
             text: '深海科技风海报，未来感，数据流，发光纹理，产品发布，简洁布局，高对比，电影级光效。',
             images: []
@@ -90,10 +90,10 @@ async function createQaCanvas() {
             id: 'qa-material',
             type: 'smart-image',
             x: 120,
-            y: 520,
+            y: 465,
             title: '素材',
             images: [image],
-            scale: 1
+            scale: 1.8
         },
         {
             id: 'qa-api',
@@ -102,7 +102,7 @@ async function createQaCanvas() {
             y: 320,
             title: 'API 生成',
             images: [],
-            scale: 1,
+            scale: 1.5,
             runSettings: {
                 engine: 'api',
                 apiKind: 'image',
@@ -122,7 +122,7 @@ async function createQaCanvas() {
             y: 320,
             title: '插件生成',
             images: [],
-            scale: 1,
+            scale: 1.5,
             runSettings: {
                 engine: 'plugin',
                 apiKind: 'image',
@@ -141,7 +141,7 @@ async function createQaCanvas() {
             y: 285,
             title: '输出',
             images: [image],
-            scale: 1
+            scale: 1.8
         }
     ];
     const connections = [
@@ -155,10 +155,10 @@ async function createQaCanvas() {
         headers: { 'content-type': 'application/json' },
         body: JSON.stringify({
             title: '海报智能构图 · 视觉验收',
-            icon: 'layers',
+            icon: 'sparkles',
             nodes,
             connections,
-            viewport: { x: 120, y: 30, scale: 0.78 },
+            viewport: { x: 120, y: 30, scale: 0.63 },
             logs: [],
             settings: {
                 engine: 'api',
@@ -245,20 +245,39 @@ try {
     const canvasUrl = `${base}/static/smart-canvas.html?id=${encodeURIComponent(qaCanvasId)}`;
     results.push(await capture('03-smart-canvas', canvasUrl, `(() => {
         document.querySelector('.smart-designer-rail')?.classList.add('qa-open');
-        if (typeof fitAllNodesViewport === 'function') fitAllNodesViewport();
+        viewport.scale = .63;
+        viewport.x = 118;
+        viewport.y = 24;
+        if (typeof applyViewport === 'function') applyViewport();
     })()`, 3600, {x:34,y:300}));
     results.push(await capture('04-batch-link', canvasUrl, `(() => {
         document.querySelector('.smart-designer-rail')?.classList.add('qa-open');
-        if (typeof fitAllNodesViewport === 'function') fitAllNodesViewport();
         selectedId = 'qa-prompt';
         selectedIds = ['qa-prompt', 'qa-material', 'qa-api'];
         if (typeof syncSelectionUi === 'function') syncSelectionUi();
+        viewport.scale = .63;
+        viewport.x = 118;
+        viewport.y = 24;
+        if (typeof applyViewport === 'function') applyViewport();
     })()`, 3600, {x:34,y:300}));
     results.push(await capture('05-api-generation', canvasUrl, `(async () => {
         document.querySelector('.smart-designer-rail')?.classList.add('qa-open');
-        if (typeof fitAllNodesViewport === 'function') fitAllNodesViewport();
+        nodes = nodes.filter(node => node.id !== 'qa-plugin');
+        const output = nodes.find(node => node.id === 'qa-output');
+        if (output) {
+            output.x = 1260;
+            output.y = 285;
+        }
+        if (canvas) {
+            canvas.connections = [
+                { id: 'qa-c1', from: 'qa-prompt', to: 'qa-api', kind: 'input' },
+                { id: 'qa-c2', from: 'qa-material', to: 'qa-api', kind: 'input' },
+                { id: 'qa-c3', from: 'qa-api', to: 'qa-output', kind: 'input' }
+            ];
+        }
         selectedId = 'qa-api';
         selectedIds = ['qa-api'];
+        if (typeof render === 'function') render();
         if (typeof syncSelectionUi === 'function') syncSelectionUi();
         if (typeof updateComposer === 'function') updateComposer();
         await new Promise(resolve => setTimeout(resolve, 450));
@@ -267,12 +286,35 @@ try {
             select.value = 'api';
             select.dispatchEvent(new Event('change', {bubbles:true}));
         }
+        viewport.scale = .63;
+        viewport.x = 118;
+        viewport.y = 24;
+        if (typeof applyViewport === 'function') applyViewport();
     })()`, 3600, {x:34,y:300}));
     results.push(await capture('06-plugin-generation', canvasUrl, `(async () => {
         document.querySelector('.smart-designer-rail')?.classList.add('qa-open');
-        if (typeof fitAllNodesViewport === 'function') fitAllNodesViewport();
+        nodes = nodes.filter(node => node.id !== 'qa-plugin');
+        const plugin = nodes.find(node => node.id === 'qa-api');
+        const output = nodes.find(node => node.id === 'qa-output');
+        if (plugin) {
+            plugin.x = 620;
+            plugin.y = 320;
+            plugin.title = '插件生成';
+        }
+        if (output) {
+            output.x = 1260;
+            output.y = 285;
+        }
+        if (canvas) {
+            canvas.connections = [
+                { id: 'qa-c1', from: 'qa-prompt', to: 'qa-api', kind: 'input' },
+                { id: 'qa-c2', from: 'qa-material', to: 'qa-api', kind: 'input' },
+                { id: 'qa-c3', from: 'qa-api', to: 'qa-output', kind: 'input' }
+            ];
+        }
         selectedId = 'qa-api';
         selectedIds = ['qa-api'];
+        if (typeof render === 'function') render();
         if (typeof syncSelectionUi === 'function') syncSelectionUi();
         if (typeof updateComposer === 'function') updateComposer();
         await new Promise(resolve => setTimeout(resolve, 450));
@@ -283,8 +325,16 @@ try {
             await new Promise(resolve => setTimeout(resolve, 360));
             document.querySelector('#dynamicParams .provider-control > .smart-pill')?.click();
         }
+        viewport.scale = .63;
+        viewport.x = 118;
+        viewport.y = 24;
+        if (typeof applyViewport === 'function') applyViewport();
     })()`, 3600, {x:34,y:300}));
     results.push(await capture('07-results-rail', canvasUrl, `(() => {
+        viewport.scale = .63;
+        viewport.x = 118;
+        viewport.y = 24;
+        if (typeof applyViewport === 'function') applyViewport();
         document.querySelector('.smart-results-rail-btn[data-smart-results-kind="all"]')?.click();
     })()`, 3600));
 } finally {

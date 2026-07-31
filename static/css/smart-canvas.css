@@ -352,6 +352,99 @@ body.smart-node-resize .smart-node-floating-menu,
 .empty-node .node-body { flex:1 1 auto; min-height:0; padding:10px 10px 6px; overflow:hidden; }
 .node-drop { width:100%; height:100%; min-height:0; border-radius:15px; border:1px dashed var(--line); display:flex; flex-direction:column; align-items:center; justify-content:center; gap:7px; color:var(--faint); background:var(--soft); font-size:12px; font-weight:800; padding:12px; box-sizing:border-box; text-align:center; overflow:hidden; }
 .node-drop i { width:24px; height:24px; }
+.generation-node-summary {
+    width:100%;
+    height:100%;
+    min-height:0;
+    padding:12px;
+    border:1px solid rgba(94,218,248,.22);
+    border-radius:15px;
+    background:
+        radial-gradient(circle at 18% 0%, rgba(42,200,239,.13), transparent 42%),
+        linear-gradient(160deg, rgba(12,43,67,.72), rgba(7,24,43,.74));
+    display:flex;
+    flex-direction:column;
+    gap:9px;
+    color:var(--text);
+    box-sizing:border-box;
+    overflow:hidden;
+    pointer-events:none;
+}
+.generation-node-summary[data-generation-engine="plugin"] {
+    background:
+        radial-gradient(circle at 18% 0%, rgba(111,111,255,.15), transparent 42%),
+        linear-gradient(160deg, rgba(22,38,70,.76), rgba(7,24,43,.74));
+}
+.generation-node-summary-main {
+    display:grid;
+    grid-template-columns:34px minmax(0,1fr) auto;
+    align-items:center;
+    gap:9px;
+}
+.generation-node-summary-icon {
+    width:34px;
+    height:34px;
+    border-radius:11px;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    color:#8deaff;
+    background:rgba(15,72,110,.56);
+    border:1px solid rgba(94,218,248,.28);
+}
+.generation-node-summary[data-generation-engine="plugin"] .generation-node-summary-icon {
+    color:#c3c9ff;
+    background:rgba(69,64,145,.38);
+    border-color:rgba(158,163,255,.3);
+}
+.generation-node-summary-icon i,.generation-node-summary-icon svg { width:17px; height:17px; }
+.generation-node-summary-copy { min-width:0; display:flex; flex-direction:column; gap:3px; }
+.generation-node-summary-copy strong { font-size:12px; font-weight:900; line-height:1.1; }
+.generation-node-summary-copy small { color:var(--muted); font-size:9.5px; font-weight:700; line-height:1.2; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.generation-node-kind {
+    height:22px;
+    padding:0 7px;
+    border-radius:999px;
+    display:inline-flex;
+    align-items:center;
+    gap:4px;
+    color:var(--muted);
+    background:rgba(3,19,34,.56);
+    border:1px solid rgba(148,163,184,.2);
+    font-size:9px;
+    font-weight:800;
+}
+.generation-node-kind i,.generation-node-kind svg { width:11px; height:11px; }
+.generation-node-model {
+    min-width:0;
+    padding:8px 9px;
+    border-radius:10px;
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    gap:8px;
+    color:var(--muted);
+    background:rgba(3,19,34,.5);
+    border:1px solid rgba(148,163,184,.18);
+    font-size:9.5px;
+}
+.generation-node-model strong { min-width:0; color:var(--text); font-size:10px; font-weight:800; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.generation-node-meta { color:var(--muted); font-size:9.5px; font-weight:750; line-height:1.2; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.generation-node-open {
+    margin-top:auto;
+    min-height:30px;
+    border-radius:10px;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    gap:6px;
+    color:#dff9ff;
+    background:linear-gradient(180deg, rgba(31,119,163,.36), rgba(14,73,108,.44));
+    border:1px solid rgba(94,218,248,.28);
+    font-size:10px;
+    font-weight:850;
+}
+.generation-node-open i,.generation-node-open svg { width:13px; height:13px; }
 .upload-node-main { display:flex; align-items:center; justify-content:center; width:42px; height:42px; flex:0 0 auto; border-radius:15px; background:var(--card); color:var(--text); border:1px solid var(--line); box-shadow:0 10px 24px rgba(15,23,42,.08); }
 .upload-node-main i,.upload-node-main svg { width:22px; height:22px; }
 .upload-node-title { color:var(--text); font-size:13px; font-weight:900; line-height:1; }

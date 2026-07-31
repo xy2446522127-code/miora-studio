@@ -405,7 +405,7 @@ body.huahai-product-page {
     width: 100vw;
     min-height: 100vh;
     display: grid;
-    grid-template-columns: 280px minmax(0, 1fr);
+    grid-template-columns: 244px minmax(0, 1fr);
     background:
         radial-gradient(760px 430px at 74% 38%, rgba(12, 111, 168, .10), transparent 73%),
         var(--hh-bg);
@@ -645,7 +645,7 @@ body.huahai-product-page {
 
 .hh-project-board {
     min-height: calc(100vh - 104px);
-    padding: 48px 60px 90px;
+    padding: 28px 52px 90px;
     overflow: hidden;
     position: relative;
     background:
@@ -658,7 +658,7 @@ body.huahai-product-page {
 .hh-project-grid {
     display: grid;
     grid-template-columns: repeat(4, minmax(220px, 1fr));
-    gap: 50px 30px;
+    gap: 0 30px;
 }
 
 .hh-canvas-card {
@@ -667,7 +667,7 @@ body.huahai-product-page {
 }
 
 .hh-card-surface {
-    min-height: 348px;
+    min-height: 293px;
     padding: 18px;
     overflow: hidden;
     position: relative;

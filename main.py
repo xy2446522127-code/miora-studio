@@ -2685,8 +2685,8 @@ class ConversationCreateRequest(BaseModel):
 
 class CanvasCreateRequest(BaseModel):
     title: str = "未命名画布"
-    icon: str = "🧩"
-    kind: str = "classic"
+    icon: str = "sparkles"
+    kind: str = "smart"
     project: Optional[str] = None
     board_x: Optional[float] = None
     board_y: Optional[float] = None
@@ -3215,8 +3215,9 @@ def save_canvas(canvas):
         with open(canvas_path(canvas["id"]), 'w', encoding='utf-8') as f:
             json.dump(canvas, f, ensure_ascii=False, indent=2)
 
-def normalize_canvas_kind(kind="classic"):
-    return "smart" if str(kind or "").strip().lower() == "smart" else "classic"
+def normalize_canvas_kind(kind="smart"):
+    """All legacy canvases open through the single supported smart-canvas surface."""
+    return "smart"
 
 # ===== 项目（按项目分类管理画布）=====
 PROJECTS_PATH = os.path.join(DATA_DIR, "projects.json")
@@ -3282,13 +3283,13 @@ def list_projects():
         out.append(rec)
     return out
 
-def new_canvas(title="未命名画布", icon="layers", kind="classic", project=None, board_x=None, board_y=None):
+def new_canvas(title="未命名画布", icon="sparkles", kind="smart", project=None, board_x=None, board_y=None):
     timestamp = now_ms()
     canvas_kind = normalize_canvas_kind(kind)
     canvas = {
         "id": uuid.uuid4().hex,
-        "title": (title or ("智能画布" if canvas_kind == "smart" else "未命名画布"))[:80],
-        "icon": (icon or ("sparkles" if canvas_kind == "smart" else "🧩"))[:32],
+        "title": (title or "智能画布")[:80],
+        "icon": (icon or "sparkles")[:32],
         "kind": canvas_kind,
         "owner": "",
         "color": "",
@@ -3480,7 +3481,7 @@ def extract_canvas_assets(canvas):
                 "kind": kind,
                 "canvas_id": canvas_id,
                 "canvas_title": record.get("title") or "未命名画布",
-                "canvas_kind": record.get("kind") or "classic",
+                "canvas_kind": normalize_canvas_kind(record.get("kind")),
                 "canvas_icon": record.get("icon") or "layers",
                 "canvas_owner": record.get("owner") or "",
                 "canvas_color": record.get("color") or "",
@@ -3502,8 +3503,8 @@ def extract_canvas_assets(canvas):
 def canvas_assets_index():
     canvases = []
     items = []
-    canvas_counts = {"all": 0, "smart": 0, "classic": 0}
-    item_counts = {"all": 0, "smart": 0, "classic": 0}
+    canvas_counts = {"all": 0, "smart": 0}
+    item_counts = {"all": 0, "smart": 0}
     cleanup_expired_canvas_trash()
     for filename in os.listdir(CANVAS_DIR):
         if not filename.endswith(".json"):
@@ -3520,7 +3521,7 @@ def canvas_assets_index():
         record["asset_count"] = len(canvas_items)
         canvases.append(record)
         items.extend(canvas_items)
-        kind = record.get("kind") or "classic"
+        kind = normalize_canvas_kind(record.get("kind"))
         canvas_counts["all"] += 1
         canvas_counts[kind] = canvas_counts.get(kind, 0) + 1
         item_counts["all"] += len(canvas_items)
@@ -3530,7 +3531,6 @@ def canvas_assets_index():
     categories = [
         {"id": "all", "name": "全部画布", "count": item_counts.get("all", 0), "canvas_count": canvas_counts.get("all", 0)},
         {"id": "smart", "name": "智能画布", "count": item_counts.get("smart", 0), "canvas_count": canvas_counts.get("smart", 0)},
-        {"id": "classic", "name": "普通画布", "count": item_counts.get("classic", 0), "canvas_count": canvas_counts.get("classic", 0)},
     ]
     return {"categories": categories, "canvases": canvases, "items": items}
 
@@ -17552,10 +17552,7 @@ async def update_canvas(canvas_id: str, payload: CanvasSaveRequest):
             canvas["kind"] = normalize_canvas_kind(canvas.get("kind"))
             canvas["nodes"] = payload.nodes
             canvas["connections"] = payload.connections
-            if canvas["kind"] == "smart":
-                canvas["viewport"] = payload.viewport
-            else:
-                canvas["viewport"] = canvas.get("viewport") or {"x": 0, "y": 0, "scale": 1}
+            canvas["viewport"] = payload.viewport
             canvas["logs"] = payload.logs[-500:]
             canvas["settings"] = payload.settings or {}
             save_canvas(canvas)

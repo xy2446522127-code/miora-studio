@@ -942,10 +942,9 @@ function currentWorkflowItems(){
 }
 function canvasAssetCategories(){
     const cats = Array.isArray(canvasAssetsData.categories) && canvasAssetsData.categories.length
-        ? canvasAssetsData.categories.filter(cat => ['smart','classic'].includes(cat.id))
+        ? canvasAssetsData.categories.filter(cat => cat.id === 'smart')
         : [
-            {id:'smart', name:'智能画布', count:(canvasAssetsData.items || []).filter(item => item.canvas_kind === 'smart').length, canvas_count:(canvasAssetsData.canvases || []).filter(item => item.kind === 'smart').length},
-            {id:'classic', name:'普通画布', count:(canvasAssetsData.items || []).filter(item => item.canvas_kind !== 'smart').length, canvas_count:(canvasAssetsData.canvases || []).filter(item => item.kind !== 'smart').length}
+            {id:'smart', name:'智能画布', count:(canvasAssetsData.items || []).length, canvas_count:(canvasAssetsData.canvases || []).length}
         ];
     return cats;
 }
@@ -972,13 +971,13 @@ function canvasAssetCountForCanvas(canvasId){
 }
 function canvasAssetsForCategory(categoryId=activeCanvasAssetCategory){
     let list = Array.isArray(canvasAssetsData.canvases) ? canvasAssetsData.canvases.slice() : [];
-    list = list.filter(canvas => (canvas.kind || 'classic') === categoryId);
+    if(categoryId !== 'smart') return [];
     return list.sort((a, b) => String(a.title || '').localeCompare(String(b.title || ''), 'zh-Hans-CN', {numeric:true, sensitivity:'base'}));
 }
 function canvasAssetOpenUrl(canvas){
     if(!canvas?.id) return '';
     const id = encodeURIComponent(canvas.id);
-    return canvas.kind === 'smart' ? `/static/smart-canvas.html?id=${id}` : `/static/canvas.html?id=${id}`;
+    return `/static/smart-canvas.html?id=${id}`;
 }
 function activeCanvasAssetCanvas(){
     if(!activeCanvasAssetCanvasId) return null;
@@ -1001,7 +1000,7 @@ function canvasAssetKindLabel(item){
     return '图片';
 }
 function canvasKindLabel(kind){
-    return kind === 'smart' ? '智能画布' : '普通画布';
+    return '智能画布';
 }
 function canvasAssetSortLabel(){
     const map = {canvas_asc:'画布名称', updated_desc:'最近更新', updated_asc:'最早更新', name_asc:'名称 A-Z', kind:'类型'};
@@ -1010,7 +1009,7 @@ function canvasAssetSortLabel(){
 function currentCanvasAssetItems(){
     const q = String(canvasAssetQuery || '').trim().toLowerCase();
     let list = uniqueCanvasAssets(canvasAssetsData.items || []).filter(item => {
-        if((item.canvas_kind || 'classic') !== activeCanvasAssetCategory) return false;
+        if(activeCanvasAssetCategory !== 'smart') return false;
         if(activeCanvasAssetCanvasId && item.canvas_id !== activeCanvasAssetCanvasId) return false;
         if(!q) return true;
         return [
@@ -1283,7 +1282,6 @@ function normalizeCanvasAssetState(){
         activeCanvasAssetCanvasId
         && (
             !activeCanvas
-            || (activeCanvas.kind || 'classic') !== activeCanvasAssetCategory
         )
     ) activeCanvasAssetCanvasId = '';
     const items = currentCanvasAssetItems();
@@ -1450,7 +1448,7 @@ function renderCanvasAssetTreeBranch(cat){
     const containsActive = cat.id === activeCanvasAssetCategory && !!activeCanvasAssetCanvasId;
     return `<div class="tree-branch ${cat.id === activeCanvasAssetCategory ? 'expanded' : ''}">
         <button class="tree-row tree-parent ${activeParent ? 'active' : ''} ${containsActive ? 'contains-active' : ''}" type="button" data-canvas-asset-cat="${escapeAttr(cat.id)}">
-            <span class="tree-row-icon"><i data-lucide="${cat.id === 'smart' ? 'sparkles' : cat.id === 'classic' ? 'layout-grid' : 'layout-dashboard'}"></i></span>
+            <span class="tree-row-icon"><i data-lucide="sparkles"></i></span>
             <span class="tree-row-name">${escapeHtml(cat.name || '画布')}</span>
             <span class="tree-row-count">${Number(cat.count || 0)}</span>
         </button>
@@ -1460,7 +1458,7 @@ function renderCanvasAssetTreeBranch(cat){
                 const count = canvasAssetCountForCanvas(canvas.id);
                 return `<button class="tree-row tree-child ${active ? 'active' : ''}" type="button" data-canvas-asset-canvas="${escapeAttr(canvas.id)}" data-canvas-asset-canvas-cat="${escapeAttr(cat.id)}">
                     <span class="tree-elbow"></span>
-                    <span class="tree-row-icon"><i data-lucide="${canvas.kind === 'smart' ? 'sparkles' : 'file-image'}"></i></span>
+                    <span class="tree-row-icon"><i data-lucide="sparkles"></i></span>
                     <span class="tree-row-name" title="${escapeAttr(canvas.title || '未命名画布')}">${escapeHtml(canvas.title || '未命名画布')}</span>
                     <span class="tree-row-count">${count}</span>
                 </button>`;

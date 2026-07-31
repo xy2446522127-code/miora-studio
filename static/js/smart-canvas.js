@@ -7922,6 +7922,33 @@ function smartGroupBodyHtml(node){
         ${members.length ? '' : `<div class="smart-group-empty"><i data-lucide="plus"></i><span>拖入图片自动收进分组</span></div>`}
     </div>`;
 }
+function generationNodeSummaryHtml(node, layout){
+    const run = node?.runSettings || {};
+    const engine = String(run.engine || settings.engine || 'api').toLowerCase() === 'plugin' ? 'plugin' : 'api';
+    const kind = String(run.apiKind || settings.apiKind || 'image').toLowerCase() === 'video' ? 'video' : 'image';
+    const source = engine === 'plugin'
+        ? String(run.pluginId || run.plugin_id || tr('smart.noGenerationSource'))
+        : String(run.provider_name || run.provider_id || tr('smart.noGenerationSource'));
+    const model = String(run.model || '').trim();
+    const ratio = String(run.ratio || run.aspect || '').trim();
+    const resolution = String(run.resolution || '').trim();
+    const quality = String(run.quality || '').trim();
+    const summary = [ratio, resolution, quality].filter(Boolean).join(' · ') || tr('smart.generatorReady');
+    const title = engine === 'plugin' ? tr('smart.enginePlugin') : tr('smart.engineApi');
+    return `<div class="generation-node-summary" data-generation-engine="${escapeAttr(engine)}">
+        <div class="generation-node-summary-main">
+            <span class="generation-node-summary-icon"><i data-lucide="${engine === 'plugin' ? 'puzzle' : 'sparkles'}"></i></span>
+            <span class="generation-node-summary-copy">
+                <strong>${escapeHtml(title)}</strong>
+                <small>${escapeHtml(source)}</small>
+            </span>
+            <span class="generation-node-kind"><i data-lucide="${kind === 'video' ? 'film' : 'image'}"></i>${escapeHtml(kind === 'video' ? tr('smart.kindVideo') : tr('smart.kindImage'))}</span>
+        </div>
+        ${model ? `<div class="generation-node-model"><span>${escapeHtml(tr('smart.model'))}</span><strong>${escapeHtml(model)}</strong></div>` : ''}
+        <div class="generation-node-meta">${escapeHtml(summary)}</div>
+        <div class="generation-node-open"><i data-lucide="sliders-horizontal"></i><span>${escapeHtml(tr('smart.editGenerationParameters'))}</span></div>
+    </div>`;
+}
 function nodeBodyHtml(node, layout){
     if(node.type === 'smart-group') return smartGroupBodyHtml(node);
     if(node.type === 'smart-prompt') return promptNodeBodyHtml(node);
@@ -7944,6 +7971,7 @@ function nodeBodyHtml(node, layout){
         const rows = Math.ceil(count / cols);
         return `<div class="loading-skeleton" style="grid-template-columns:repeat(${cols}, 1fr);grid-template-rows:repeat(${rows}, 1fr);width:${layout.width}px;height:${layout.height}px;padding:8px;box-sizing:border-box">${Array.from({length:count}).map(() => `<div class="loading-cell"></div>`).join('')}</div>`;
     }
+    if(imgs.length === 0 && node.runSettings) return generationNodeSummaryHtml(node, layout);
     if(imgs.length > 1){
         const visibleRows = Math.max(1, Math.min(MEDIA_GROUP_MAX_VISIBLE_ROWS, Number(layout.visibleRows || layout.rows || 1)));
         const maxHeight = visibleRows * Number(layout.thumb || 96) + Math.max(0, visibleRows - 1) * 8;

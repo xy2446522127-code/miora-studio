@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-07-31T01:11:39.647Z",
+  "generatedAt": "2026-07-31T05:47:11.541Z",
   "viewport": "1440x900",
   "browser": "visible Chrome via CDP",
   "initial": {
@@ -24,15 +24,15 @@
   "zoom": {
     "before": 0.82,
     "after": {
-      "scale": 0.9935698239112183,
-      "label": "99%"
+      "scale": 1.0936809799940364,
+      "label": "109%"
     },
-    "composerWheelScale": 0.9935698239112183
+    "composerWheelScale": 1.0936809799940364
   },
   "responsiveComposer": {
     "exists": true,
     "panelTop": 92,
-    "panelBottom": 808,
+    "panelBottom": 805.34375,
     "viewportBottom": 900,
     "scrollable": false,
     "runVisible": true

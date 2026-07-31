@@ -3,6 +3,10 @@
     window.StudioI18n.register({
         "smart.title": { zh: "智能画布", en: "Smart Canvas" },
         "smart.engineApi": { zh: "API生成", en: "API" },
+        "smart.enginePlugin": { zh: "插件生成", en: "Plugin" },
+        "smart.generatorReady": { zh: "参数已就绪", en: "Ready" },
+        "smart.editGenerationParameters": { zh: "点击编辑生成参数", en: "Click to edit generation settings" },
+        "smart.noGenerationSource": { zh: "未选择生成来源", en: "No generation source" },
         "smart.engineVolcengine": { zh: "火山引擎", en: "Volcengine" },
         "smart.engineMs": { zh: "Modelscope生成", en: "Modelscope" },
         "smart.engineComfy": { zh: "ComfyUI生成", en: "ComfyUI" },
